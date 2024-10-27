@@ -9,7 +9,7 @@
   <Identity
     Name="17045a4a-2b2e-4e47-a7c0-fe3b65211537"
     Publisher="CN=kobayashi"
-    Version="1.0.2.0" />
+    Version="1.0.3.0" />
 
   <Properties>
     <DisplayName>RedmineClient.WapProject</DisplayName>
