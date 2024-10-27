@@ -1,4 +1,5 @@
-﻿using RedmineClient.Models;
+﻿using RedmineClient.Api;
+using RedmineClient.Models;
 using RedmineClient.ViewModels.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
@@ -39,9 +40,12 @@ namespace RedmineClient.Views.Windows
         {
             AppConfig.Load();
 
-            var a = new RedmineApi();
-            a.GetProjects();
+            var a = new Project();
+            Task.Run(() => a.GetProjects());
 
+            var b = new Issue();
+            var bb = Task.Run(() => b.GetIssues(0, 1));
+            var count = ((XmlData.Issues)bb.Result).IssueList;
             Show();
         }
 

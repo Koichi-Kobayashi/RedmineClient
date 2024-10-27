@@ -8,7 +8,7 @@
     public class Issues
     {
         [XmlElement("issue")]
-        public List<Issues> IssueList { get; set; }
+        public List<Issue> IssueList { get; set; }
 
         [XmlAttribute("type")]
         public string Type { get; set; }
