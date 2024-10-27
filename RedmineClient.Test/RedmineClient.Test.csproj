@@ -11,7 +11,7 @@
       -->
     <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
     <PlatformTarget>x64</PlatformTarget>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
