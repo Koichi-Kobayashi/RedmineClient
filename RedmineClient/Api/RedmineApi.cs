@@ -7,12 +7,19 @@ namespace RedmineClient.Api
     internal class RedmineApi
     {
         private string apiBase;
+        private bool isApiAvailable;
+
+        public bool IsApiAvailable { get => isApiAvailable; }
 
         protected string ApiBase { get => apiBase; set => apiBase = value; }
 
         public RedmineApi()
         {
             apiBase = ZString.Concat(AppConfig.RedmineHost, "/", "{0}", ".xml?key=", AppConfig.ApiKey);
+            if (!string.IsNullOrEmpty(AppConfig.RedmineHost) && !string.IsNullOrEmpty(AppConfig.ApiKey))
+            {
+                isApiAvailable = true;
+            }
         }
 
         protected virtual async Task<HttpResponseMessage> GetHttpResponseMessage(string api)

@@ -43,9 +43,8 @@ namespace RedmineClient.Views.Windows
             var a = new Project();
             Task.Run(() => a.GetProjects());
 
-            var b = new Issue();
-            var bb = Task.Run(() => b.GetIssues(0, 1));
-            var count = ((XmlData.Issues)bb.Result).IssueList;
+            Test();
+
             Show();
         }
 
@@ -74,5 +73,14 @@ namespace RedmineClient.Views.Windows
             throw new NotImplementedException();
         }
 
+        private void Test()
+        {
+            var b = new Issue();
+            if (b.IsApiAvailable)
+            {
+                var bb = Task.Run(() => b.GetIssues(0, 1));
+                var count = ((XmlData.Issues)bb.Result).IssueList;
+            }
+        }
     }
 }
