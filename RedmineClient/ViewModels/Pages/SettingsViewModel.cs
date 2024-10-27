@@ -1,4 +1,5 @@
-﻿using Wpf.Ui.Appearance;
+﻿using System.Configuration;
+using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
 namespace RedmineClient.ViewModels.Pages
