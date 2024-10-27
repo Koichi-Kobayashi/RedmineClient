@@ -9,6 +9,12 @@ namespace RedmineClient.ViewModels.Pages
         private bool _isInitialized = false;
 
         [ObservableProperty]
+        private string _redmineHost = String.Empty;
+
+        [ObservableProperty]
+        private string _apiKey = String.Empty;
+
+        [ObservableProperty]
         private string _appVersion = String.Empty;
 
         [ObservableProperty]

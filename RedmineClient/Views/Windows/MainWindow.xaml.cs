@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using RedmineClient.Models;
+using RedmineClient.ViewModels.Pages;
 using RedmineClient.ViewModels.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
@@ -37,7 +38,7 @@ namespace RedmineClient.Views.Windows
 
         public void ShowWindow()
         {
-            LoadAppSettings();
+            AppConfig.Load();
             Show();
         }
 
@@ -52,8 +53,6 @@ namespace RedmineClient.Views.Windows
         {
             base.OnClosed(e);
 
-            SaveSettings();
-
             // Make sure that closing this window will begin the process of closing the application.
             Application.Current.Shutdown();
         }
@@ -66,27 +65,6 @@ namespace RedmineClient.Views.Windows
         public void SetServiceProvider(IServiceProvider serviceProvider)
         {
             throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// 設定情報の読み込み
-        /// </summary>
-        private void LoadAppSettings()
-        {
-            // テーマ
-            var currentTheme = (ApplicationTheme)Enum.Parse(typeof(ApplicationTheme), ConfigurationManager.AppSettings["ApplicationTheme"].ToString());
-            ApplicationThemeManager.Apply(currentTheme);
-
-        }
-
-        /// <summary>
-        /// 設定情報の
-        /// </summary>
-        private static void SaveSettings()
-        {
-            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-            config.AppSettings.Settings["ApplicationTheme"].Value = ApplicationThemeManager.GetAppTheme().ToString();
-            config.Save();
         }
 
     }
