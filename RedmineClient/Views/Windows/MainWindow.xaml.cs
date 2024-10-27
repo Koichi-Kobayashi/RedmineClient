@@ -1,5 +1,4 @@
 ﻿using RedmineClient.Models;
-using RedmineClient.ViewModels.Pages;
 using RedmineClient.ViewModels.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
@@ -39,6 +38,9 @@ namespace RedmineClient.Views.Windows
         public void ShowWindow()
         {
             AppConfig.Load();
+
+            var a = new RedmineApi();
+            a.GetProjects();
             Show();
         }
 
