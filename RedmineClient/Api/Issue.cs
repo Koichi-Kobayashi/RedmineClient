@@ -10,6 +10,10 @@ namespace RedmineClient.Api
 
         public Issue() { }
 
+        /// <summary>
+        /// Issueを取得
+        /// </summary>
+        /// <returns></returns>
         public async Task<Issues> GetIssues()
         {
             apiBase = base.ApiBase;
@@ -22,6 +26,12 @@ namespace RedmineClient.Api
             return CustomXMLSerializer.LoadXmlDataString<Issues>(responseBody);
         }
 
+        /// <summary>
+        /// Issueを取得
+        /// </summary>
+        /// <param name="offset">取得開始位置</param>
+        /// <param name="limit">取得件数</param>
+        /// <returns></returns>
         public async Task<Issues> GetIssues(int offset, int limit)
         {
             apiBase = ZString.Format(ZString.Concat(base.ApiBase, "&offset={1}&limit={2}"), RestApiName.Issues, offset, limit);
