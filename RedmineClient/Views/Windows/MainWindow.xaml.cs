@@ -41,6 +41,7 @@ namespace RedmineClient.Views.Windows
 
             var a = new RedmineApi();
             a.GetProjects();
+
             Show();
         }
 
