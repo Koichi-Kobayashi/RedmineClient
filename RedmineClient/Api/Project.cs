@@ -15,6 +15,8 @@ namespace RedmineClient.Api
         {
             // 非同期でGETリクエストを送信
             HttpResponseMessage response = await GetHttpResponseMessage(RestApiName.Projects);
+            if (response == null) { return null; }
+
             string responseBody = await response.Content.ReadAsStringAsync();
             projects = CustomXMLSerializer.LoadXmlDataString<Projects>(responseBody);
 

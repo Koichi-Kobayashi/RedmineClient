@@ -27,7 +27,14 @@ namespace RedmineClient.Api
             HttpClient client = new HttpClient();
 
             // 非同期でGETリクエストを送信
-            return await client.GetAsync(ZString.Format(apiBase, api));
+            try
+            {
+                return await client.GetAsync(ZString.Format(apiBase, api));
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 

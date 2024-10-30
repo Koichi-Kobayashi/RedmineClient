@@ -79,7 +79,10 @@ namespace RedmineClient.Views.Windows
             if (b.IsApiAvailable)
             {
                 var bb = Task.Run(() => b.GetIssues(0, 1));
-                var count = ((XmlData.Issues)bb.Result).IssueList;
+                if (bb.Result != null)
+                {
+                    var count = ((XmlData.Issues)bb.Result).IssueList;
+                }
             }
         }
     }

@@ -20,6 +20,7 @@ namespace RedmineClient.Api
 
             // 非同期でGETリクエストを送信
             HttpResponseMessage response = await GetHttpResponseMessage(RestApiName.Issues);
+            if (response == null) { return null; }
 
             // レスポンスの内容を取得
             string responseBody = await response.Content.ReadAsStringAsync();
@@ -38,6 +39,7 @@ namespace RedmineClient.Api
 
             // 非同期でGETリクエストを送信
             HttpResponseMessage response = await GetHttpResponseMessage(RestApiName.Issues);
+            if (response == null) { return null; }
 
             // レスポンスの内容を取得
             string responseBody = await response.Content.ReadAsStringAsync();
@@ -50,7 +52,14 @@ namespace RedmineClient.Api
             HttpClient client = new HttpClient();
 
             // 非同期でGETリクエストを送信
-            return await client.GetAsync(ZString.Format(apiBase, api));
+            try
+            {
+                return await client.GetAsync(ZString.Format(apiBase, api));
+            }
+            catch (HttpRequestException ex)
+            {
+                return null;
+            }
         }
     }
 }

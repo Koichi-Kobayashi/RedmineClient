@@ -20,8 +20,11 @@ namespace RedmineClient.Views.Pages
         private void InitializeData()
         {
             Dashboard dashboard = new Dashboard(ViewModel);
-            var pro = dashboard.GetProjects();
-            ViewModel.Projects = pro.Result.ProjectList;
+            var projectResult = dashboard.GetProjects();
+            if (projectResult.Result != null)
+            {
+                ViewModel.Projects = projectResult.Result.ProjectList;
+            }
         }
     }
 }
