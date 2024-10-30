@@ -12,18 +12,22 @@ namespace RedmineClient.Views.Pages
         {
             ViewModel = viewModel;
             DataContext = this;
-            InitializeData();
 
             InitializeComponent();
         }
 
-        private void InitializeData()
+        private async void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            await InitializeData();
+        }
+
+        private async Task InitializeData()
         {
             Dashboard dashboard = new Dashboard(ViewModel);
-            var projectResult = dashboard.GetProjects();
-            if (projectResult.Result != null)
+            var projectResult = await dashboard.GetProjects();
+            if (projectResult != null)
             {
-                ViewModel.Projects = projectResult.Result.ProjectList;
+                ViewModel.Projects = projectResult.ProjectList;
             }
         }
     }

@@ -40,10 +40,10 @@ namespace RedmineClient.Views.Windows
         {
             AppConfig.Load();
 
-            var a = new Project();
-            Task.Run(() => a.GetProjects());
+            //var a = new Project();
+            //Task.Run(() => a.GetProjects());
 
-            Test();
+            //Test();
 
             Show();
         }
