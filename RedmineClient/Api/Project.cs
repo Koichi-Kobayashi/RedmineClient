@@ -5,17 +5,20 @@ namespace RedmineClient.Api
 {
     internal class Project : RedmineApi
     {
+        private Projects projects = new Projects();
+
+        public Projects Projects { get => projects; }
+
         public Project() { }
 
-        public async Task GetProjects()
+        public async Task<Projects> GetProjects()
         {
             // 非同期でGETリクエストを送信
             HttpResponseMessage response = await GetHttpResponseMessage(RestApiName.Projects);
-
-            // レスポンスの内容を表示
             string responseBody = await response.Content.ReadAsStringAsync();
-            var xml = CustomXMLSerializer.LoadXmlDataString<Projects>(responseBody);
-            Console.WriteLine(responseBody);
+            projects = CustomXMLSerializer.LoadXmlDataString<Projects>(responseBody);
+
+            return projects;
         }
 
     }

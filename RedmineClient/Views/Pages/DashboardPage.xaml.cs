@@ -1,4 +1,5 @@
-﻿using RedmineClient.ViewModels.Pages;
+﻿using RedmineClient.Models;
+using RedmineClient.ViewModels.Pages;
 using Wpf.Ui.Controls;
 
 namespace RedmineClient.Views.Pages
@@ -11,8 +12,16 @@ namespace RedmineClient.Views.Pages
         {
             ViewModel = viewModel;
             DataContext = this;
+            InitializeData();
 
             InitializeComponent();
+        }
+
+        private void InitializeData()
+        {
+            Dashboard dashboard = new Dashboard(ViewModel);
+            var pro = dashboard.GetProjects();
+            ViewModel.Projects = pro.Result.ProjectList;
         }
     }
 }
