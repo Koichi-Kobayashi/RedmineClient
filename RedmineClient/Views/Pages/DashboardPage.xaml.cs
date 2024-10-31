@@ -28,6 +28,7 @@ namespace RedmineClient.Views.Pages
             if (projectResult != null)
             {
                 ViewModel.Projects = projectResult.ProjectList;
+                ViewModel.ProjectSelectedIndex = 0;
             }
         }
     }

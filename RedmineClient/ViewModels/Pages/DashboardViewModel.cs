@@ -10,6 +10,9 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private List<Project> _projects = new List<Project>();
 
+        [ObservableProperty]
+        private int _projectSelectedIndex = 0;
+
         public DashboardViewModel() { }
 
         [RelayCommand]
