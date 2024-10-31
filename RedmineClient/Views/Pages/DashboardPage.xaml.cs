@@ -31,5 +31,18 @@ namespace RedmineClient.Views.Pages
                 ViewModel.ProjectSelectedIndex = 0;
             }
         }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var window = Window.GetWindow(this) as FluentWindow;
+            if (window != null)
+            {
+                var progressRing = window.FindName("ProgressRing") as ProgressRing;
+                if (progressRing != null)
+                {
+                    progressRing.Visibility = Visibility.Visible;
+                }
+            }
+        }
     }
 }

@@ -25,11 +25,14 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="50" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <ui:Button Grid.Column="0" Command="{Binding ViewModel.CounterIncrementCommand, Mode=OneWay}" Content="Click me!" Icon="Fluent24" />
         <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding ViewModel.Counter, Mode=OneWay}" />
 
         <ComboBox Grid.Row="1" DisplayMemberPath="Name" IsReadOnly="True" ItemsSource="{Binding ViewModel.Projects}" SelectedIndex="{Binding ViewModel.ProjectSelectedIndex}" />
+
+        <ui:Button Grid.Row="2" Content="ボタン" Click="Button_Click" />
     </Grid>
 </Page>
