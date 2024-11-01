@@ -30,6 +30,12 @@ namespace RedmineClient.Views.Pages
                 ViewModel.Projects = projectResult.ProjectList;
                 ViewModel.ProjectSelectedIndex = 0;
             }
+
+            var issuesResult = await dashboard.GetIssues();
+            if (issuesResult != null)
+            {
+                ViewModel.Issues = issuesResult.IssueList;
+            }
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

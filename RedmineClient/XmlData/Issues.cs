@@ -19,54 +19,78 @@
 
     public class Issue
     {
+        [RedmineHeader("ID")]
         [XmlElement("id")]
         public int Id { get; set; }
 
+        [RedmineHeader("プロジェクト")]
         [XmlElement("project")]
-        public Project Project { get; set; }
+        public IssueProject Project { get; set; }
 
+        [RedmineHeader("トラッカー")]
         [XmlElement("tracker")]
         public Tracker Tracker { get; set; }
 
+        [RedmineHeader("ステータス")]
         [XmlElement("status")]
         public Status Status { get; set; }
 
+        [RedmineHeader("優先度")]
         [XmlElement("priority")]
         public Priority Priority { get; set; }
 
+        [RedmineHeader("作成者")]
         [XmlElement("author")]
         public Author Author { get; set; }
 
+        [RedmineHeader("カテゴリー")]
         [XmlElement("category")]
         public Category Category { get; set; }
 
+        [RedmineHeader("題名")]
         [XmlElement("subject")]
         public string Subject { get; set; }
 
+        [RedmineHeader("説明")]
         [XmlElement("description")]
         public string Description { get; set; }
 
+        [RedmineHeader("開始日")]
         [XmlElement("start_date")]
         public DateTime StartDate { get; set; }
 
+        [RedmineHeader("期日")]
         [XmlElement("due_date")]
         public string DueDate { get; set; }
 
+        [RedmineHeader("進捗率")]
         [XmlElement("done_ratio")]
         public int DoneRatio { get; set; }
 
+        [RedmineHeader("予定工数")]
         [XmlElement("estimated_hours")]
         public string EstimatedHours { get; set; }
 
         [XmlArray("custom_fields")]
         [XmlArrayItem("custom_field")]
-        public List<CustomField> CustomFields { get; set; }
+        public List<IssueCustomField> CustomFields { get; set; }
 
+        [RedmineHeader("作成日時")]
         [XmlElement("created_on")]
         public DateTime CreatedOn { get; set; }
 
+        [RedmineHeader("更新日時")]
         [XmlElement("updated_on")]
         public DateTime UpdatedOn { get; set; }
+    }
+
+    public class IssueProject
+    {
+        [XmlAttribute("name")]
+        public string Name { get; set; }
+
+        [XmlAttribute("id")]
+        public int Id { get; set; }
     }
 
     public class Tracker
@@ -114,7 +138,7 @@
         public int Id { get; set; }
     }
 
-    public class CustomField
+    public class IssueCustomField
     {
         [XmlAttribute("name")]
         public string Name { get; set; }
@@ -122,7 +146,7 @@
         [XmlAttribute("id")]
         public int Id { get; set; }
 
-        [XmlText]
-        public string Value { get; set; }
+        [XmlElement("custom_field")]
+        public string CustomField { get; set; }
     }
 }
