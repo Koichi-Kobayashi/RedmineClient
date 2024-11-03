@@ -146,7 +146,7 @@
         [XmlAttribute("id")]
         public int Id { get; set; }
 
-        [XmlElement("custom_field")]
-        public string CustomField { get; set; }
+        [XmlElement("value")]
+        public string Value { get; set; }
     }
 }
