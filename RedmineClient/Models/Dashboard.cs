@@ -1,17 +1,10 @@
-﻿using RedmineClient.ViewModels.Pages;
-using RedmineClient.XmlData;
+﻿using RedmineClient.XmlData;
 
 namespace RedmineClient.Models
 {
     public class Dashboard
     {
-        private DashboardViewModel viewModel;
-
-        public Dashboard() : this(new DashboardViewModel()) { }
-        public Dashboard(DashboardViewModel viewModel)
-        {
-            this.viewModel = viewModel;
-        }
+        public Dashboard() { }
 
         public Task<Projects> GetProjects()
         {
