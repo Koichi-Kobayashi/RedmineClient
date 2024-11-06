@@ -42,8 +42,15 @@
 
         <ui:Button Grid.Row="2" Click="Button_Click" Content="ボタン" />
 
-        <ui:DataGrid Grid.Row="3" HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch" AutoGenerateColumns="False">
-            <DataGrid.Columns />
+        <ui:DataGrid Grid.Row="3" HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch" AutoGenerateColumns="False" ItemsSource="{Binding ViewModel.Issues}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding Id}" Header=" # " />
+                <DataGridTextColumn Binding="{Binding Tracker.Name}" Header="トラッカー" />
+                <DataGridTextColumn Binding="{Binding Status.Name}" Header="ステータス" />
+                <DataGridTextColumn Binding="{Binding Priority.Name}" Header="優先度" />
+                <DataGridTextColumn Binding="{Binding Subject}" Header="題名" />
+                <DataGridTextColumn Binding="{Binding Author.Name}" Header="担当者" />
+            </DataGrid.Columns>
         </ui:DataGrid>
     </Grid>
 </Page>
