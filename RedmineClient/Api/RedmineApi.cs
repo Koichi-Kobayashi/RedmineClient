@@ -18,6 +18,11 @@ namespace RedmineClient.Api
 
         public RedmineApi()
         {
+            if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey))
+            {
+                isApiAvailable = false;
+            }
+
             apiBase = ZString.Concat(AppConfig.RedmineHost, "/", "{0}", ".xml?key=", AppConfig.ApiKey);
             if (!string.IsNullOrEmpty(AppConfig.RedmineHost) && !string.IsNullOrEmpty(AppConfig.ApiKey))
             {
@@ -32,9 +37,9 @@ namespace RedmineClient.Api
             return await BaseHttpResponseMessage(postData.GetUrl(), jsonString);
         }
 
-        private static async Task<HttpResponseMessage> BaseHttpResponseMessage(string url, string jsonString)
+        private async Task<HttpResponseMessage> BaseHttpResponseMessage(string url, string jsonString)
         {
-
+            if (isApiAvailable == false) return null;
             HttpClient client = new HttpClient();
 
             // ヘッダーを追加
@@ -58,6 +63,7 @@ namespace RedmineClient.Api
 
         protected virtual async Task<HttpResponseMessage> GetHttpResponseMessage(string api)
         {
+            if (isApiAvailable == false) return null;
             HttpClient client = new HttpClient();
 
             // 非同期でGETリクエストを送信

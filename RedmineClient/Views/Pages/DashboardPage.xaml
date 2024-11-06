@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helper="clr-namespace:RedmineClient.Helpers"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:local="clr-namespace:RedmineClient.Views.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -16,6 +17,10 @@
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <helper:DateTimeToYYYYMMDDConverter x:Key="DateTimeToYYYYMMDDConverter" />
+    </Page.Resources>
 
     <i:Interaction.Triggers>
         <i:EventTrigger EventName="Loaded">
@@ -49,7 +54,8 @@
                 <DataGridTextColumn Binding="{Binding Status.Name}" Header="ステータス" />
                 <DataGridTextColumn Binding="{Binding Priority.Name}" Header="優先度" />
                 <DataGridTextColumn Binding="{Binding Subject}" Header="題名" />
-                <DataGridTextColumn Binding="{Binding Author.Name}" Header="担当者" />
+                <DataGridTextColumn Binding="{Binding AssignedTo.Name}" Header="担当者" />
+                <DataGridTextColumn Binding="{Binding UpdatedOn, Converter={StaticResource DateTimeToYYYYMMDDConverter}}" Header="更新日" />
             </DataGrid.Columns>
         </ui:DataGrid>
     </Grid>

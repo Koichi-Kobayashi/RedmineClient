@@ -17,6 +17,7 @@ namespace RedmineClient.Api
         public async Task<Issues> GetIssues()
         {
             apiBase = base.ApiBase;
+            if (string.IsNullOrEmpty(apiBase)) return null;
 
             // 非同期でGETリクエストを送信
             HttpResponseMessage response = await GetHttpResponseMessage(RestApiName.Issues);
@@ -49,6 +50,7 @@ namespace RedmineClient.Api
 
         protected override async Task<HttpResponseMessage> GetHttpResponseMessage(string api)
         {
+            if (IsApiAvailable == false) return null;
             HttpClient client = new HttpClient();
 
             // 非同期でGETリクエストを送信

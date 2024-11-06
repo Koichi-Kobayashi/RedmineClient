@@ -7,14 +7,20 @@
     [XmlRoot("issues")]
     public class Issues
     {
-        [XmlElement("issue")]
-        public List<Issue> IssueList { get; set; }
+        [XmlAttribute("total_count")]
+        public int TotalCount { get; set; }
+
+        [XmlAttribute("offset")]
+        public int Offset { get; set; }
+
+        [XmlAttribute("limit")]
+        public int Limit { get; set; }
 
         [XmlAttribute("type")]
         public string Type { get; set; }
 
-        [XmlAttribute("count")]
-        public int Count { get; set; }
+        [XmlElement("issue")]
+        public List<Issue> IssueList { get; set; }
     }
 
     public class Issue
@@ -35,31 +41,31 @@
         /// トラッカー
         /// </summary>
         [XmlElement("tracker")]
-        public Tracker Tracker { get; set; }
+        public IssueTracker Tracker { get; set; }
 
         /// <summary>
         /// ステータス
         /// </summary>
         [XmlElement("status")]
-        public Status Status { get; set; }
+        public IssueStatus Status { get; set; }
 
         /// <summary>
         /// 優先度
         /// </summary>
         [XmlElement("priority")]
-        public Priority Priority { get; set; }
+        public IssuePriority Priority { get; set; }
 
         /// <summary>
         /// 作成者
         /// </summary>
         [XmlElement("author")]
-        public Author Author { get; set; }
+        public IssueAuthor Author { get; set; }
 
         /// <summary>
-        /// カテゴリー
+        /// 担当者
         /// </summary>
-        [XmlElement("category")]
-        public Category Category { get; set; }
+        [XmlElement("assigned_to")]
+        public IssueAssignedTo AssignedTo { get; set; }
 
         /// <summary>
         /// 題名
@@ -83,7 +89,7 @@
         /// 期日
         /// </summary>
         [XmlElement("due_date")]
-        public string DueDate { get; set; }
+        public DateTime DueDate { get; set; }
 
         /// <summary>
         /// 進捗率
@@ -92,10 +98,34 @@
         public int DoneRatio { get; set; }
 
         /// <summary>
+        /// プライベートかどうか
+        /// </summary>
+        [XmlElement("is_private")]
+        public bool IsPrivate { get; set; }
+
+        /// <summary>
         /// 予定工数
         /// </summary>
         [XmlElement("estimated_hours")]
-        public string EstimatedHours { get; set; }
+        public double EstimatedHours { get; set; }
+
+        /// <summary>
+        /// 予定工数合計
+        /// </summary>
+        [XmlElement("total_estimated_hours")]
+        public double TotalEstimatedHours { get; set; }
+
+        /// <summary>
+        /// 作業時間
+        /// </summary>
+        [XmlElement("spent_hours")]
+        public double SpentHours { get; set; }
+
+        /// <summary>
+        /// 作業時間合計
+        /// </summary>
+        [XmlElement("total_spent_hours")]
+        public double TotalSpentHours { get; set; }
 
         /// <summary>
         /// カスタムフィールド
@@ -115,6 +145,12 @@
         /// </summary>
         [XmlElement("updated_on")]
         public DateTime UpdatedOn { get; set; }
+
+        /// <summary>
+        /// 終了日時
+        /// </summary>
+        [XmlElement("closed_on")]
+        public DateTime? ClosedOn { get; set; } // Nullable DateTime for optional element
     }
 
     /// <summary>
@@ -122,65 +158,69 @@
     /// </summary>
     public class IssueProject
     {
-        [XmlAttribute("name")]
-        public string Name { get; set; }
-
         [XmlAttribute("id")]
         public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
     }
 
-    public class Tracker
+    public class IssueTracker
     {
-        [XmlAttribute("name")]
-        public string Name { get; set; }
-
         [XmlAttribute("id")]
         public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
     }
 
-    public class Status
+    public class IssueStatus
     {
+        [XmlAttribute("id")]
+        public int Id { get; set; }
+
         [XmlAttribute("name")]
         public string Name { get; set; }
 
-        [XmlAttribute("id")]
-        public int Id { get; set; }
+
+        [XmlAttribute("is_closed")]
+        public bool IsClosed { get; set; }
     }
 
-    public class Priority
+    public class IssuePriority
     {
-        [XmlAttribute("name")]
-        public string Name { get; set; }
-
         [XmlAttribute("id")]
         public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
     }
 
-    public class Author
+    public class IssueAuthor
     {
-        [XmlAttribute("name")]
-        public string Name { get; set; }
-
         [XmlAttribute("id")]
         public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
     }
 
-    public class Category
+    public class IssueAssignedTo
     {
-        [XmlAttribute("name")]
-        public string Name { get; set; }
-
         [XmlAttribute("id")]
         public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
     }
 
     public class IssueCustomField
     {
-        [XmlAttribute("name")]
-        public string Name { get; set; }
-
         [XmlAttribute("id")]
         public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
 
         [XmlElement("value")]
         public string Value { get; set; }
