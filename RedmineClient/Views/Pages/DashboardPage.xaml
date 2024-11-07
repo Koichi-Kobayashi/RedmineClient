@@ -45,7 +45,13 @@
 
         <ComboBox Grid.Row="1" DisplayMemberPath="Name" IsReadOnly="True" ItemsSource="{Binding ViewModel.Projects}" SelectedIndex="{Binding ViewModel.ProjectSelectedIndex}" />
 
-        <ui:Button Grid.Row="2" Click="Button_Click" Content="ボタン" />
+        <ui:Button Grid.Row="2" Content="ボタン">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="Click">
+                    <i:InvokeCommandAction Command="{Binding ViewModel.ProgressRingCommand}" />
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+        </ui:Button>
 
         <ui:DataGrid Grid.Row="3" HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch" AutoGenerateColumns="False" ItemsSource="{Binding ViewModel.Issues}">
             <DataGrid.Columns>

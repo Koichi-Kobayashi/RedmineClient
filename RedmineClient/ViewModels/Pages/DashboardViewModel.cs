@@ -1,5 +1,7 @@
 ﻿using RedmineClient.Models;
+using RedmineClient.Views.Pages;
 using RedmineClient.XmlData;
+using Wpf.Ui.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -53,6 +55,29 @@ namespace RedmineClient.ViewModels.Pages
         private void OnCounterIncrement()
         {
             Counter++;
+        }
+
+        [RelayCommand]
+        private void OnProgressRing(DashboardPage page)
+        {
+            var activeWindow = Application.Current.Windows
+                                          .OfType<Window>()
+                                          .SingleOrDefault(x => x.IsActive);
+            if (activeWindow != null)
+            {
+                var progressRing = activeWindow.FindName("ProgressRing") as ProgressRing;
+                if (progressRing != null)
+                {
+                    if (progressRing.Visibility == Visibility.Hidden)
+                    {
+                        progressRing.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        progressRing.Visibility = Visibility.Hidden;
+                    }
+                }
+            }
         }
     }
 }
