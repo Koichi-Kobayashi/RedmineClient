@@ -3,6 +3,7 @@ using RedmineClient.Models;
 using RedmineClient.ViewModels;
 using RedmineClient.ViewModels.Windows;
 using Wpf.Ui;
+using Wpf.Ui.Abstractions;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
@@ -16,7 +17,6 @@ namespace RedmineClient.Views.Windows
 
         public MainWindow(
             MainWindowViewModel viewModel,
-            IPageService pageService,
             INavigationService navigationService
         )
         {
@@ -26,7 +26,6 @@ namespace RedmineClient.Views.Windows
             SystemThemeWatcher.Watch(this);
 
             InitializeComponent();
-            SetPageService(pageService);
 
             navigationService.SetNavigationControl(RootNavigation);
 
@@ -41,7 +40,7 @@ namespace RedmineClient.Views.Windows
 
         public bool Navigate(Type pageType) => RootNavigation.Navigate(pageType);
 
-        public void SetPageService(IPageService pageService) => RootNavigation.SetPageService(pageService);
+        public void SetPageService(INavigationViewPageProvider navigationViewPageProvider) => RootNavigation.SetPageProviderService(navigationViewPageProvider);
 
         public void ShowWindow()
         {
@@ -79,5 +78,6 @@ namespace RedmineClient.Views.Windows
             _snackbarService.SetSnackbarPresenter(SnackbarPresenter);
             _snackbarService.Show(message.Title, message.Message, message.appearance, message.iconElement, message.timeSpan);
         }
+
     }
 }

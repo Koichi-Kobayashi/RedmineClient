@@ -1,6 +1,6 @@
 ﻿using System.Windows.Media;
 using RedmineClient.Models;
-using Wpf.Ui.Controls;
+using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -42,6 +42,16 @@ namespace RedmineClient.ViewModels.Pages
             Colors = colorCollection;
 
             _isInitialized = true;
+        }
+
+        public Task OnNavigatedToAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task OnNavigatedFromAsync()
+        {
+            throw new NotImplementedException();
         }
     }
 }

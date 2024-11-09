@@ -10,6 +10,7 @@ using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Pages;
 using RedmineClient.Views.Windows;
 using Wpf.Ui;
+using Wpf.Ui.DependencyInjection;
 
 namespace RedmineClient
 {
@@ -28,10 +29,9 @@ namespace RedmineClient
             .ConfigureAppConfiguration(c => { c.SetBasePath(Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)); })
             .ConfigureServices((context, services) =>
             {
-                services.AddHostedService<ApplicationHostService>();
+                services.AddNavigationViewPageProvider();
 
-                // Page resolver service
-                services.AddSingleton<IPageService, PageService>();
+                services.AddHostedService<ApplicationHostService>();
 
                 // Theme manipulation
                 services.AddSingleton<IThemeService, ThemeService>();
@@ -57,12 +57,9 @@ namespace RedmineClient
         /// <summary>
         /// Gets registered service.
         /// </summary>
-        /// <typeparam name="T">Type of the service to get.</typeparam>
-        /// <returns>Instance of the service or <see langword="null"/>.</returns>
-        public static T GetService<T>()
-            where T : class
+        public static IServiceProvider Services
         {
-            return _host.Services.GetService(typeof(T)) as T;
+            get { return _host.Services; }
         }
 
         /// <summary>

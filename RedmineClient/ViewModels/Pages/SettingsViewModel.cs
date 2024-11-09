@@ -1,7 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Messaging;
 using RedmineClient.Models;
+using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Appearance;
-using Wpf.Ui.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -76,6 +76,34 @@ namespace RedmineClient.ViewModels.Pages
             AppConfig.Save();
 
             WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "設定を保存しました。" });
+        }
+
+        public async Task OnNavigatedToAsync()
+        {
+            using CancellationTokenSource cts = new();
+
+            await DispatchAsync(OnNavigatedFrom, cts.Token);
+        }
+
+        public Task OnNavigatedFromAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Dispatches the specified action on the UI thread.
+        /// </summary>
+        /// <param name="action">The action to be dispatched.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        protected static async Task DispatchAsync(Action action, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await Application.Current.Dispatcher.InvokeAsync(action);
         }
     }
 }
