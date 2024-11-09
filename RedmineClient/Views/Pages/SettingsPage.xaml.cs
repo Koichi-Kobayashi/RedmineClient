@@ -23,12 +23,5 @@ namespace RedmineClient.Views.Pages
             ViewModel.RedmineHost = AppConfig.RedmineHost;
             ViewModel.ApiKey = AppConfig.ApiKey;
         }
-
-        private void 保存ボタン_Click(object sender, RoutedEventArgs e)
-        {
-            AppConfig.RedmineHost = ViewModel.RedmineHost;
-            AppConfig.ApiKey = ViewModel.ApiKey;
-            AppConfig.Save();
-        }
     }
 }

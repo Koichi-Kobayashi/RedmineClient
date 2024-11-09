@@ -8,7 +8,7 @@
     xmlns:local="clr-namespace:RedmineClient.Views.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    Title="DashboardPage"
+    Title="チケット一覧"
     d:DataContext="{d:DesignInstance local:DashboardPage,
                                      IsDesignTimeCreatable=False}"
     d:DesignHeight="450"
@@ -38,6 +38,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <ui:Button Grid.Column="0" Command="{Binding ViewModel.CounterIncrementCommand, Mode=OneWay}" Content="Click me!" Icon="Fluent24" />
@@ -64,5 +65,7 @@
                 <DataGridTextColumn Binding="{Binding UpdatedOn, Converter={StaticResource DateTimeToYYYYMMDDConverter}}" Header="更新日" />
             </DataGrid.Columns>
         </ui:DataGrid>
+
+        <ui:SnackbarPresenter x:Name="SnackbarPresenter" Grid.Row="4" />
     </Grid>
 </Page>

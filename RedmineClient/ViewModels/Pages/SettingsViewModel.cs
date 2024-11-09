@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using CommunityToolkit.Mvvm.Messaging;
+using RedmineClient.Models;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
@@ -65,6 +66,16 @@ namespace RedmineClient.ViewModels.Pages
 
                     break;
             }
+        }
+
+        [RelayCommand]
+        private void OnSave()
+        {
+            AppConfig.RedmineHost = RedmineHost;
+            AppConfig.ApiKey = ApiKey;
+            AppConfig.Save();
+
+            WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "設定を保存しました。" });
         }
     }
 }

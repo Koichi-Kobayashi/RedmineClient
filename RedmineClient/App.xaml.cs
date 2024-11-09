@@ -10,7 +10,6 @@ using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Pages;
 using RedmineClient.Views.Windows;
 using Wpf.Ui;
-using Wpf.Ui.Appearance;
 
 namespace RedmineClient
 {

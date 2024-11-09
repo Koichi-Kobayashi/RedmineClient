@@ -1,5 +1,6 @@
-﻿using RedmineClient.Api;
+﻿using CommunityToolkit.Mvvm.Messaging;
 using RedmineClient.Models;
+using RedmineClient.ViewModels;
 using RedmineClient.ViewModels.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
@@ -10,6 +11,8 @@ namespace RedmineClient.Views.Windows
     public partial class MainWindow : INavigationWindow
     {
         public MainWindowViewModel ViewModel { get; }
+
+        private readonly ISnackbarService _snackbarService;
 
         public MainWindow(
             MainWindowViewModel viewModel,
@@ -26,6 +29,10 @@ namespace RedmineClient.Views.Windows
             SetPageService(pageService);
 
             navigationService.SetNavigationControl(RootNavigation);
+
+            // PageクラスからSnackbarを呼び出すメッセージを受け取ったときのメソッドを登録
+            WeakReferenceMessenger.Default.Register<SnackbarMessage>(this, (r, m) => ShowSnackbar(m));
+            _snackbarService = new SnackbarService();
         }
 
         #region INavigationWindow methods
@@ -39,12 +46,6 @@ namespace RedmineClient.Views.Windows
         public void ShowWindow()
         {
             AppConfig.Load();
-
-            //var a = new Project();
-            //Task.Run(() => a.GetProjects());
-
-            //Test();
-
             Show();
         }
 
@@ -73,17 +74,10 @@ namespace RedmineClient.Views.Windows
             throw new NotImplementedException();
         }
 
-        private void Test()
+        private void ShowSnackbar(SnackbarMessage message)
         {
-            var b = new Issue();
-            if (b.IsApiAvailable)
-            {
-                var bb = Task.Run(() => b.GetIssues(0, 1));
-                if (bb.Result != null)
-                {
-                    var count = ((XmlData.Issues)bb.Result).IssueList;
-                }
-            }
+            _snackbarService.SetSnackbarPresenter(SnackbarPresenter);
+            _snackbarService.Show(message.Title, message.Message, message.appearance, message.iconElement, message.timeSpan);
         }
     }
 }
