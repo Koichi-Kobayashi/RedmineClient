@@ -60,6 +60,7 @@ namespace RedmineClient.Api
             }
             catch (HttpRequestException ex)
             {
+                MessageBox.Show(ex.Message);
                 return null;
             }
         }

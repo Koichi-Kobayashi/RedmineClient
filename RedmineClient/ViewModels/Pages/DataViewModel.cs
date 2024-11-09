@@ -6,8 +6,6 @@ namespace RedmineClient.ViewModels.Pages
 {
     public partial class DataViewModel : ObservableObject, INavigationAware
     {
-        private bool _isInitialized = false;
-
         [ObservableProperty]
         private IEnumerable<DataColor> _colors;
 
@@ -43,8 +41,6 @@ namespace RedmineClient.ViewModels.Pages
                 );
 
             Colors = colorCollection;
-
-            _isInitialized = true;
         }
 
         public virtual async Task OnNavigatedFromAsync()

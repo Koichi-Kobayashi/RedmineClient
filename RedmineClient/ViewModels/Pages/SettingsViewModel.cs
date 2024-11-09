@@ -7,8 +7,6 @@ namespace RedmineClient.ViewModels.Pages
 {
     public partial class SettingsViewModel : ObservableObject, INavigationAware
     {
-        private bool _isInitialized = false;
-
         [ObservableProperty]
         private string _redmineHost = String.Empty;
 
@@ -38,7 +36,6 @@ namespace RedmineClient.ViewModels.Pages
             CurrentTheme = ApplicationThemeManager.GetAppTheme();
             AppVersion = $"UiDesktopApp1 - {GetAssemblyVersion()}";
 
-            _isInitialized = true;
             return Task.CompletedTask;
         }
 
