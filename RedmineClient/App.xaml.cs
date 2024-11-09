@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RedmineClient.Models;
 using RedmineClient.Services;
 using RedmineClient.ViewModels.Pages;
 using RedmineClient.ViewModels.Windows;
