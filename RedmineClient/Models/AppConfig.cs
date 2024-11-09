@@ -3,7 +3,7 @@ using Wpf.Ui.Appearance;
 
 namespace RedmineClient.Models
 {
-    public static class AppConfig
+    public class AppConfig
     {
         public static string RedmineHost { get; set; }
 
@@ -26,9 +26,13 @@ namespace RedmineClient.Models
         /// </summary>
         public static void Load()
         {
-            RedmineHost = ConfigurationManager.AppSettings["RedmineHost"].ToString();
-            ApiKey = ConfigurationManager.AppSettings["ApiKey"].ToString();
-            var currentTheme = (ApplicationTheme)Enum.Parse(typeof(ApplicationTheme), ConfigurationManager.AppSettings["ApplicationTheme"].ToString());
+            var redmineHost = ConfigurationManager.AppSettings["RedmineHost"];
+            RedmineHost = string.IsNullOrEmpty(redmineHost) != true ? redmineHost : "";
+            var apiKey = ConfigurationManager.AppSettings["ApiKey"];
+            ApiKey = string.IsNullOrEmpty(apiKey) != true ? apiKey : "";
+            var applicationTheme = ConfigurationManager.AppSettings["ApplicationTheme"];
+            applicationTheme = string.IsNullOrEmpty(applicationTheme) != true ? applicationTheme : "";
+            var currentTheme = (ApplicationTheme)Enum.Parse(typeof(ApplicationTheme), applicationTheme);
             ApplicationThemeManager.Apply(currentTheme);
         }
     }

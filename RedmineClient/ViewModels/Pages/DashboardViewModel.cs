@@ -47,7 +47,10 @@ namespace RedmineClient.ViewModels.Pages
             await DispatchAsync(OnNavigatedFrom, cts.Token);
         }
 
-        public virtual async Task OnNavigatedFrom() { }
+        public virtual async Task OnNavigatedFrom()
+        {
+            await Task.CompletedTask;
+        }
 
         /// <summary>
         /// Dispatches the specified Func on the UI thread.
