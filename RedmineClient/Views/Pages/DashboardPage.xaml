@@ -22,12 +22,6 @@
         <helper:DateTimeToYYYYMMDDConverter x:Key="DateTimeToYYYYMMDDConverter" />
     </Page.Resources>
 
-    <i:Interaction.Triggers>
-        <i:EventTrigger EventName="Loaded">
-            <i:InvokeCommandAction Command="{Binding ViewModel.LoadedCommand}" />
-        </i:EventTrigger>
-    </i:Interaction.Triggers>
-
     <Grid VerticalAlignment="Top">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />

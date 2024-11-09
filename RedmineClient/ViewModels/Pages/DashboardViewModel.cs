@@ -1,11 +1,12 @@
 ﻿using RedmineClient.Models;
 using RedmineClient.Views.Pages;
 using RedmineClient.XmlData;
+using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
-    public partial class DashboardViewModel : ObservableObject
+    public partial class DashboardViewModel : ObservableObject, INavigationAware
     {
         #region コマンド
         public IAsyncRelayCommand LoadedCommand { get; }
@@ -25,9 +26,43 @@ namespace RedmineClient.ViewModels.Pages
         private List<Issue> _issues = new List<Issue>();
         #endregion
 
-        public DashboardViewModel()
+        public DashboardViewModel() { }
+
+        public virtual async Task OnNavigatedToAsync()
         {
-            LoadedCommand = new AsyncRelayCommand(Loaded);
+            using CancellationTokenSource cts = new();
+
+            await DispatchAsync(OnNavigatedTo, cts.Token);
+        }
+
+        public virtual async Task OnNavigatedTo()
+        {
+            await Loaded();
+        }
+
+        public virtual async Task OnNavigatedFromAsync()
+        {
+            using CancellationTokenSource cts = new();
+
+            await DispatchAsync(OnNavigatedFrom, cts.Token);
+        }
+
+        public virtual async Task OnNavigatedFrom() { }
+
+        /// <summary>
+        /// Dispatches the specified Func on the UI thread.
+        /// </summary>
+        /// <param name="callback">The Func to be dispatched.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        protected static async Task DispatchAsync<TResult>(Func<TResult> callback, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await Application.Current.Dispatcher.InvokeAsync(callback);
         }
 
         /// <summary>

@@ -21,20 +21,50 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private ApplicationTheme _currentTheme = ApplicationTheme.Unknown;
 
-        public void OnNavigatedTo()
+        public async Task OnNavigatedToAsync()
         {
-            if (!_isInitialized)
-                InitializeViewModel();
+            using CancellationTokenSource cts = new();
+
+            await DispatchAsync(OnNavigatedFrom, cts.Token);
         }
 
-        public void OnNavigatedFrom() { }
+        public virtual async Task OnNavigatedTo()
+        {
+            await InitializeViewModel();
+        }
 
-        private void InitializeViewModel()
+        private Task InitializeViewModel()
         {
             CurrentTheme = ApplicationThemeManager.GetAppTheme();
             AppVersion = $"UiDesktopApp1 - {GetAssemblyVersion()}";
 
             _isInitialized = true;
+            return Task.CompletedTask;
+        }
+
+        public virtual async Task OnNavigatedFromAsync()
+        {
+            using CancellationTokenSource cts = new();
+
+            await DispatchAsync(OnNavigatedFrom, cts.Token);
+        }
+
+        public virtual async Task OnNavigatedFrom() { }
+
+        /// <summary>
+        /// Dispatches the specified Func on the UI thread.
+        /// </summary>
+        /// <param name="callback">The Func to be dispatched.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        protected static async Task DispatchAsync<TResult>(Func<TResult> callback, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await Application.Current.Dispatcher.InvokeAsync(callback);
         }
 
         private string GetAssemblyVersion()
@@ -76,34 +106,6 @@ namespace RedmineClient.ViewModels.Pages
             AppConfig.Save();
 
             WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "設定を保存しました。" });
-        }
-
-        public async Task OnNavigatedToAsync()
-        {
-            using CancellationTokenSource cts = new();
-
-            await DispatchAsync(OnNavigatedFrom, cts.Token);
-        }
-
-        public Task OnNavigatedFromAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Dispatches the specified action on the UI thread.
-        /// </summary>
-        /// <param name="action">The action to be dispatched.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
-        /// <returns>A task that represents the asynchronous operation.</returns>
-        protected static async Task DispatchAsync(Action action, CancellationToken cancellationToken)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-
-            await Application.Current.Dispatcher.InvokeAsync(action);
         }
     }
 }

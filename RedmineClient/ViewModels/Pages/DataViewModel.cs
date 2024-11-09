@@ -11,14 +11,17 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private IEnumerable<DataColor> _colors;
 
-        public void OnNavigatedTo()
+        public virtual async Task OnNavigatedToAsync()
         {
-            if (!_isInitialized)
-                InitializeViewModel();
+            using CancellationTokenSource cts = new();
+
+            await DispatchAsync(OnNavigatedTo, cts.Token);
         }
 
-        public void OnNavigatedFrom() { }
-
+        public virtual void OnNavigatedTo()
+        {
+            InitializeViewModel();
+        }
         private void InitializeViewModel()
         {
             var random = new Random();
@@ -44,14 +47,29 @@ namespace RedmineClient.ViewModels.Pages
             _isInitialized = true;
         }
 
-        public Task OnNavigatedToAsync()
+        public virtual async Task OnNavigatedFromAsync()
         {
-            throw new NotImplementedException();
+            using CancellationTokenSource cts = new();
+
+            await DispatchAsync(OnNavigatedFrom, cts.Token);
         }
 
-        public Task OnNavigatedFromAsync()
+        public void OnNavigatedFrom() { }
+
+        /// <summary>
+        /// Dispatches the specified action on the UI thread.
+        /// </summary>
+        /// <param name="action">The action to be dispatched.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        protected static async Task DispatchAsync(Action action, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await Application.Current.Dispatcher.InvokeAsync(action);
         }
     }
 }
