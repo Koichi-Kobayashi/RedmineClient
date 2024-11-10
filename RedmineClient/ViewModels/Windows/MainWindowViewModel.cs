@@ -41,5 +41,11 @@ namespace RedmineClient.ViewModels.Windows
         {
             new MenuItem { Header = "チケット一覧", Tag = "tray_home" }
         };
+
+        [RelayCommand]
+        private void SelectionChanged(object parameter)
+        {
+
+        }
     }
 }

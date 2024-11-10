@@ -6,7 +6,7 @@ using Wpf.Ui.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
-    public partial class DashboardViewModel : ObservableObject, INavigationAware
+    public partial class DashboardViewModel : BaseViewModel, INavigationAware
     {
         #region コマンド
         public IAsyncRelayCommand LoadedCommand { get; }
@@ -24,6 +24,9 @@ namespace RedmineClient.ViewModels.Pages
 
         [ObservableProperty]
         private List<Issue> _issues = new List<Issue>();
+
+        //[ObservableProperty]
+        //private double _gridHeight = 0;
         #endregion
 
         public DashboardViewModel() { }

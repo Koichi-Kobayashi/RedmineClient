@@ -3,6 +3,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helper="clr-namespace:RedmineClient.Helpers"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:local="clr-namespace:RedmineClient.Views.Windows"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -21,6 +23,10 @@
     <ui:FluentWindow.InputBindings>
         <KeyBinding Key="F" Command="{Binding ElementName=AutoSuggestBox, Path=FocusCommand}" Modifiers="Control" />
     </ui:FluentWindow.InputBindings>
+
+    <i:Interaction.Behaviors>
+        <helper:ResizeBehavior />
+    </i:Interaction.Behaviors>
 
     <Grid>
         <ui:TitleBar x:Name="TitleBar" Title="{Binding ViewModel.ApplicationTitle}" Grid.Row="0" CloseWindowByDoubleClickOnIcon="True">
