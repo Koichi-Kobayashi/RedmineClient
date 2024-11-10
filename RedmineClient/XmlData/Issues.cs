@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Xml;
     using System.Xml.Serialization;
 
     [XmlRoot("issues")]
@@ -68,6 +69,18 @@
         public IssueAssignedTo AssignedTo { get; set; }
 
         /// <summary>
+        /// カテゴリー
+        /// </summary>
+        [XmlElement("category")]
+        public IssueCategory Category { get; set; }
+
+        /// <summary>
+        /// 対象バージョン
+        /// </summary>
+        [XmlElement("fixed_version")]
+        public IssueFixedVersion FixedVersion { get; set; }
+
+        /// <summary>
         /// 題名
         /// </summary>
         [XmlElement("subject")]
@@ -82,14 +95,58 @@
         /// <summary>
         /// 開始日
         /// </summary>
-        [XmlElement("start_date")]
+        [XmlIgnore]
         public DateTime StartDate { get; set; }
+        private DateTime? _startDate;
+        /// <summary>
+        /// 開始日(XML読込用)
+        /// </summary>
+        [XmlElement("start_date")]
+        public string StartDateDateTimeString
+        {
+            get
+            {
+                return _startDate.HasValue ?
+                    XmlConvert.ToString(_startDate.Value, XmlDateTimeSerializationMode.Unspecified)
+                    : string.Empty;
+            }
+            set
+            {
+                _startDate = !string.IsNullOrEmpty(value) ?
+                    XmlConvert.ToDateTime(value, XmlDateTimeSerializationMode.Unspecified)
+                    : (DateTime?)null;
+            }
+        }
 
         /// <summary>
         /// 期日
         /// </summary>
+        [XmlIgnore]
+        public DateTime? DueDate
+        {
+            get => _dueDate;
+            set => _dueDate = value;
+        }
+        private DateTime? _dueDate;
+        /// <summary>
+        /// 期日(XML読込用)
+        /// </summary>
         [XmlElement("due_date")]
-        public DateTime DueDate { get; set; }
+        public string DueDateDateTimeString
+        {
+            get
+            {
+                return _dueDate.HasValue ?
+                    XmlConvert.ToString(_dueDate.Value, XmlDateTimeSerializationMode.Unspecified)
+                    : string.Empty;
+            }
+            set
+            {
+                _dueDate = !string.IsNullOrEmpty(value) ?
+                    XmlConvert.ToDateTime(value, XmlDateTimeSerializationMode.Unspecified)
+                    : (DateTime?)null;
+            }
+        }
 
         /// <summary>
         /// 進捗率
@@ -149,8 +206,32 @@
         /// <summary>
         /// 終了日時
         /// </summary>
+        [XmlIgnore]
+        public DateTime? ClosedOn
+        {
+            get => _createdOn;
+            set => _createdOn = value;
+        }
+        private DateTime? _createdOn;
+        /// <summary>
+        /// 終了日時(XML読込用)
+        /// </summary>
         [XmlElement("closed_on")]
-        public DateTime? ClosedOn { get; set; } // Nullable DateTime for optional element
+        public string ClosedOnDateTimeString
+        {
+            get
+            {
+                return _createdOn.HasValue ?
+                    XmlConvert.ToString(_createdOn.Value, XmlDateTimeSerializationMode.Unspecified)
+                    : string.Empty;
+            }
+            set
+            {
+                _createdOn = !string.IsNullOrEmpty(value) ?
+                    XmlConvert.ToDateTime(value, XmlDateTimeSerializationMode.Unspecified)
+                    : (DateTime?)null;
+            }
+        }
     }
 
     /// <summary>
@@ -182,7 +263,6 @@
         [XmlAttribute("name")]
         public string Name { get; set; }
 
-
         [XmlAttribute("is_closed")]
         public bool IsClosed { get; set; }
     }
@@ -206,6 +286,22 @@
     }
 
     public class IssueAssignedTo
+    {
+        [XmlAttribute("id")]
+        public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
+    }
+    public class IssueCategory
+    {
+        [XmlAttribute("id")]
+        public int Id { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
+    }
+    public class IssueFixedVersion
     {
         [XmlAttribute("id")]
         public int Id { get; set; }
