@@ -92,11 +92,16 @@
         [XmlElement("description")]
         public string Description { get; set; }
 
+        #region 開始日
         /// <summary>
         /// 開始日
         /// </summary>
         [XmlIgnore]
-        public DateTime StartDate { get; set; }
+        public DateTime? StartDate
+        {
+            get => _startDate;
+            set => _startDate = value;
+        }
         private DateTime? _startDate;
         /// <summary>
         /// 開始日(XML読込用)
@@ -117,7 +122,9 @@
                     : (DateTime?)null;
             }
         }
+        #endregion
 
+        #region 期日
         /// <summary>
         /// 期日
         /// </summary>
@@ -147,6 +154,7 @@
                     : (DateTime?)null;
             }
         }
+        #endregion
 
         /// <summary>
         /// 進捗率
@@ -203,6 +211,7 @@
         [XmlElement("updated_on")]
         public DateTime UpdatedOn { get; set; }
 
+        #region 終了日時
         /// <summary>
         /// 終了日時
         /// </summary>
@@ -232,6 +241,7 @@
                     : (DateTime?)null;
             }
         }
+        #endregion
     }
 
     /// <summary>
