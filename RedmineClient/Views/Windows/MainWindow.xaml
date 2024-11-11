@@ -36,7 +36,7 @@
         </ui:TitleBar>
 
         <ui:NavigationView
-            x:Name="RootNavigation" Padding="42,0,42,0"
+            x:Name="RootNavigation" Padding="10,0,10,0"
             BreadcrumbBar="{Binding ElementName=BreadcrumbBar}"
             FooterMenuItemsSource="{Binding ViewModel.FooterMenuItems, Mode=OneWay}"
             FrameMargin="0" IsBackButtonVisible="Visible" IsPaneToggleVisible="True"
@@ -44,7 +44,7 @@
             OpenPaneLength="310" PaneDisplayMode="Left"
             TitleBar="{Binding ElementName=TitleBar, Mode=OneWay}">
             <ui:NavigationView.Header>
-                <ui:BreadcrumbBar x:Name="BreadcrumbBar" Margin="42,32,42,20" />
+                <ui:BreadcrumbBar x:Name="BreadcrumbBar" Margin="10,10,10,10" />
             </ui:NavigationView.Header>
             <ui:NavigationView.AutoSuggestBox>
                 <ui:AutoSuggestBox x:Name="AutoSuggestBox" PlaceholderText="Search">

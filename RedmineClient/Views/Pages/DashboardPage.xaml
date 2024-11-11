@@ -22,7 +22,7 @@
         <helper:DateTimeToYYYYMMDDConverter x:Key="DateTimeToYYYYMMDDConverter" />
     </Page.Resources>
 
-    <Grid x:Name="grid" VerticalAlignment="Top">
+    <Grid x:Name="grid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
@@ -61,10 +61,10 @@
         </ui:Button>
 
         <ui:DataGrid
-            Grid.Row="3" HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch" AutoGenerateColumns="False" CanUserAddRows="False"
-            EnableColumnVirtualization="True" EnableRowVirtualization="True" HeadersVisibility="Column" HorizontalScrollBarVisibility="Auto"
+            Grid.Row="3" MaxHeight="500" HorizontalAlignment="Stretch" VerticalAlignment="Top" AutoGenerateColumns="False"
+            CanUserAddRows="False" EnableColumnVirtualization="True" EnableRowVirtualization="True" HeadersVisibility="Column" HorizontalScrollBarVisibility="Auto"
             ItemsSource="{Binding ViewModel.Issues}"
-            VerticalScrollBarVisibility="Auto" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+            VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
             <DataGrid.Resources>
                 <Style TargetType="DataGridCell">
                     <Setter Property="Template">
