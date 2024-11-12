@@ -20,6 +20,8 @@ namespace RedmineClient
     /// </summary>
     public partial class App
     {
+        private Dictionary<Type, Type> ViewModels { get; set; }
+
         // The.NET Generic Host provides dependency injection, configuration, logging, and other services.
         // https://docs.microsoft.com/dotnet/core/extensions/generic-host
         // https://docs.microsoft.com/dotnet/core/extensions/dependency-injection
@@ -42,6 +44,7 @@ namespace RedmineClient
 
                 // Service containing navigation, same as INavigationWindow... but without window
                 services.AddSingleton<INavigationService, NavigationService>();
+                services.AddSingleton<WindowsProviderService>();
 
                 // Main window with navigation
                 services.AddSingleton<INavigationWindow, MainWindow>();
@@ -56,6 +59,58 @@ namespace RedmineClient
 
                 services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }).Build();
+
+        public App() : base()
+        {
+            // ViewModel と View の組み合わせを設定する
+            ViewModels = new Dictionary<Type, Type>();
+            ViewModels.Add(typeof(IssueWindowViewModel), typeof(IssueWindow));
+        }
+
+        /// <summary>
+        /// ViewModelからViewを生成する
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="viewModel"></param>
+        /// <returns></returns>
+        public Window CreateView<T>(T viewModel)
+        {
+            // ViewModel に対応する Viewが存在する？
+            if (ViewModels.ContainsKey(viewModel.GetType()))
+            {
+                // View を生成し、DataContext に ViewModel を設定する
+                Type viewType = ViewModels[viewModel.GetType()];
+                Window wnd = Activator.CreateInstance(viewType) as Window;
+                if (wnd != null)
+                    wnd.DataContext = viewModel;
+                return wnd;
+            }
+            else
+                return null;
+        }
+
+        /// <summary>
+        /// ViewModelからモーダルでViewを表示する
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="viewModel"></param>
+        /// <returns></returns>
+        public bool ShowModalView<T>(T viewModel)
+        {
+            Window view = CreateView(viewModel);
+            if (view != null)
+                return (view.ShowDialog() == true);
+            else
+                return false;
+        }
+
+        // ViewModeからモードレスでViewを表示する
+        public void ShowView<T>(T viewModel)
+        {
+            Window view = CreateView(viewModel);
+            if (view != null)
+                view.Show();
+        }
 
         /// <summary>
         /// Gets registered service.

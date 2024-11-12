@@ -1,12 +1,14 @@
 ﻿using RedmineClient.Models;
+using RedmineClient.Services;
 using RedmineClient.Views.Pages;
+using RedmineClient.Views.Windows;
 using RedmineClient.XmlData;
 using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
-    public partial class DashboardViewModel : BaseViewModel, INavigationAware
+    public partial class DashboardViewModel(WindowsProviderService windowsProviderService) : BaseViewModel, INavigationAware
     {
         #region コマンド
         public IAsyncRelayCommand LoadedCommand { get; }
@@ -28,8 +30,6 @@ namespace RedmineClient.ViewModels.Pages
         //[ObservableProperty]
         //private double _gridHeight = 0;
         #endregion
-
-        public DashboardViewModel() { }
 
         public virtual async Task OnNavigatedToAsync()
         {
@@ -120,5 +120,12 @@ namespace RedmineClient.ViewModels.Pages
                 }
             }
         }
+
+        [RelayCommand]
+        private void OnShowWindow(DashboardPage page)
+        {
+            windowsProviderService.Show<IssueWindow>();
+        }
+
     }
 }

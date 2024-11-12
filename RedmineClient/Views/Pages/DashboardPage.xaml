@@ -59,6 +59,13 @@
                 </i:EventTrigger>
             </i:Interaction.Triggers>
         </ui:Button>
+        <ui:Button Grid.Row="2" Grid.Column="1" Content="ウィンドウ表示">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="Click">
+                    <i:InvokeCommandAction Command="{Binding ViewModel.ShowWindowCommand}" />
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+        </ui:Button>
 
         <ui:DataGrid
             Grid.Row="3" MaxHeight="500" HorizontalAlignment="Stretch" VerticalAlignment="Top" AutoGenerateColumns="False"
