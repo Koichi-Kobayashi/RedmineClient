@@ -31,44 +31,9 @@ namespace RedmineClient.ViewModels.Pages
         //private double _gridHeight = 0;
         #endregion
 
-        public virtual async Task OnNavigatedToAsync()
-        {
-            using CancellationTokenSource cts = new();
-
-            await DispatchAsync(OnNavigatedTo, cts.Token);
-        }
-
-        public virtual async Task OnNavigatedTo()
+        public override async void OnNavigatedTo()
         {
             await Loaded();
-        }
-
-        public virtual async Task OnNavigatedFromAsync()
-        {
-            using CancellationTokenSource cts = new();
-
-            await DispatchAsync(OnNavigatedFrom, cts.Token);
-        }
-
-        public virtual async Task OnNavigatedFrom()
-        {
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Dispatches the specified Func on the UI thread.
-        /// </summary>
-        /// <param name="callback">The Func to be dispatched.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
-        /// <returns>A task that represents the asynchronous operation.</returns>
-        protected static async Task DispatchAsync<TResult>(Func<TResult> callback, CancellationToken cancellationToken)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-
-            await Application.Current.Dispatcher.InvokeAsync(callback);
         }
 
         /// <summary>
