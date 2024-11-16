@@ -56,6 +56,8 @@ namespace RedmineClient
                 services.AddSingleton<DataViewModel>();
                 services.AddSingleton<SettingsPage>();
                 services.AddSingleton<SettingsViewModel>();
+                services.AddSingleton<IssueWindow>();
+                services.AddSingleton<IssueWindowViewModel>();
 
                 services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }).Build();
