@@ -3,8 +3,6 @@
 // Copyright (C) Leszek Pomianowski and WPF UI Contributors.
 // All Rights Reserved.
 
-using Microsoft.Extensions.DependencyInjection;
-
 namespace RedmineClient.Services;
 
 public class WindowsProviderService
@@ -16,7 +14,7 @@ public class WindowsProviderService
         _serviceProvider = serviceProvider;
     }
 
-    public void Show<T>()
+    public Window Show<T>()
         where T : class
     {
         if (!typeof(Window).IsAssignableFrom(typeof(T)))
@@ -29,5 +27,6 @@ public class WindowsProviderService
             ?? throw new InvalidOperationException("Window is not registered as service.");
         windowInstance.Owner = Application.Current.MainWindow;
         windowInstance.Show();
+        return windowInstance;
     }
 }

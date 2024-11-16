@@ -1,5 +1,6 @@
 ﻿using RedmineClient.Models;
 using RedmineClient.Services;
+using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Pages;
 using RedmineClient.Views.Windows;
 using RedmineClient.XmlData;
@@ -92,5 +93,16 @@ namespace RedmineClient.ViewModels.Pages
             windowsProviderService.Show<IssueWindow>();
         }
 
+        [RelayCommand]
+        private void OnItemClick(Issue issue)
+        {
+            var w = windowsProviderService.Show<IssueWindow>();
+
+            if (w != null)
+            {
+                var viewModel = ((IssueWindow)w).ViewModel as IssueWindowViewModel;
+                viewModel.Issue = issue;
+            }
+        }
     }
 }

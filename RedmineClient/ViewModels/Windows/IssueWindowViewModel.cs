@@ -1,6 +1,10 @@
-﻿namespace RedmineClient.ViewModels.Windows
+﻿using RedmineClient.XmlData;
+
+namespace RedmineClient.ViewModels.Windows
 {
-    public class IssueWindowViewModel : BaseViewModel
+    public class IssueWindowViewModel : ObservableObject
     {
+        public Issue Issue { get; set; }
+
     }
 }

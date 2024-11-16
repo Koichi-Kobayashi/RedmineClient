@@ -68,8 +68,9 @@
         </ui:Button>
 
         <ui:DataGrid
-            Grid.Row="3" MaxHeight="500" HorizontalAlignment="Stretch" VerticalAlignment="Top" AutoGenerateColumns="False"
-            CanUserAddRows="False" EnableColumnVirtualization="True" EnableRowVirtualization="True" HeadersVisibility="Column" HorizontalScrollBarVisibility="Auto"
+            x:Name="dataGridIssueData" Grid.Row="3" MaxHeight="500" HorizontalAlignment="Stretch" VerticalAlignment="Top"
+            AutoGenerateColumns="False" CanUserAddRows="False" EnableColumnVirtualization="True" EnableRowVirtualization="True" HeadersVisibility="Column"
+            HorizontalScrollBarVisibility="Auto"
             ItemsSource="{Binding ViewModel.Issues}"
             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
             <DataGrid.Resources>
@@ -95,6 +96,11 @@
                 <DataGridTextColumn Binding="{Binding AssignedTo.Name}" Header="担当者" IsReadOnly="True" />
                 <DataGridTextColumn Binding="{Binding UpdatedOn, Converter={StaticResource DateTimeToYYYYMMDDConverter}}" Header="更新日" IsReadOnly="True" />
             </DataGrid.Columns>
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="MouseLeftButtonUp">
+                    <i:InvokeCommandAction Command="{Binding ViewModel.ItemClickCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=DataGrid}, Path=SelectedItem}" />
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
         </ui:DataGrid>
     </Grid>
 </Page>
