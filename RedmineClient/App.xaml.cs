@@ -1,9 +1,8 @@
 ﻿using System.IO;
-using System.Reflection;
 using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RedmineClient.DependencyModel;
 using RedmineClient.Models;
 using RedmineClient.Services;
 using RedmineClient.ViewModels.Pages;
@@ -56,8 +55,10 @@ namespace RedmineClient
                 services.AddSingleton<DataViewModel>();
                 services.AddSingleton<SettingsPage>();
                 services.AddSingleton<SettingsViewModel>();
-                services.AddSingleton<IssueWindow>();
-                services.AddSingleton<IssueWindowViewModel>();
+
+                // All other pages and view models
+                services.AddTransientFromNamespace("RedmineClient.Views", RedmineClientAssembly.Asssembly);
+                services.AddTransientFromNamespace("RedmineClient.ViewModels", RedmineClientAssembly.Asssembly);
 
                 services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }).Build();

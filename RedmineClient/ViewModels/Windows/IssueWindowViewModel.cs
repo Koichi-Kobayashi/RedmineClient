@@ -1,6 +1,6 @@
 ﻿namespace RedmineClient.ViewModels.Windows
 {
-    public class IssueWindowViewModel
+    public class IssueWindowViewModel : BaseViewModel
     {
     }
 }
