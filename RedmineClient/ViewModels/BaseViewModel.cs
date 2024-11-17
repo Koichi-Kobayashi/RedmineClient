@@ -1,6 +1,6 @@
 ﻿namespace RedmineClient.ViewModels
 {
-    public partial class BaseViewModel : ObservableObject
+    public partial class BaseViewModel : ObservableObject, IViewModel
     {
         /// <inheritdoc />
         public virtual async Task OnNavigatedToAsync()

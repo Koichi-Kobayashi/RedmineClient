@@ -14,8 +14,7 @@ public class WindowsProviderService
         _serviceProvider = serviceProvider;
     }
 
-    public Window Show<T>()
-        where T : class
+    public Window Show<T>() where T : class
     {
         if (!typeof(Window).IsAssignableFrom(typeof(T)))
         {

@@ -50,11 +50,13 @@ namespace RedmineClient
                 services.AddSingleton<MainWindowViewModel>();
 
                 services.AddSingleton<DashboardPage>();
-                services.AddSingleton<DashboardViewModel>();
                 services.AddSingleton<DataPage>();
                 services.AddSingleton<DataViewModel>();
                 services.AddSingleton<SettingsPage>();
                 services.AddSingleton<SettingsViewModel>();
+
+                services.AddTransient<IWindowFactory, WindowFactory>();
+                services.AddTransient<DashboardViewModel>();
 
                 // All other pages and view models
                 services.AddTransientFromNamespace("RedmineClient.Views", RedmineClientAssembly.Asssembly);

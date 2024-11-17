@@ -2,7 +2,7 @@
 
 namespace RedmineClient.ViewModels.Windows
 {
-    public class IssueWindowViewModel : ObservableObject
+    public class IssueWindowViewModel : BaseViewModel
     {
         public Issue Issue { get; set; }
 

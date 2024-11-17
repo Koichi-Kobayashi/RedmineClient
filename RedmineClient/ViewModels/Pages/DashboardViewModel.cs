@@ -9,7 +9,7 @@ using Wpf.Ui.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
-    public partial class DashboardViewModel(WindowsProviderService windowsProviderService) : BaseViewModel, INavigationAware
+    public partial class DashboardViewModel(IWindowFactory factory) : BaseViewModel, INavigationAware
     {
         #region コマンド
         public IAsyncRelayCommand LoadedCommand { get; }
@@ -90,19 +90,16 @@ namespace RedmineClient.ViewModels.Pages
         [RelayCommand]
         private void OnShowWindow(DashboardPage page)
         {
-            windowsProviderService.Show<IssueWindow>();
+            //windowsProviderService.Show<IssueWindow>();
         }
 
         [RelayCommand]
         private void OnItemClick(Issue issue)
         {
-            var w = windowsProviderService.Show<IssueWindow>();
-
-            if (w != null)
-            {
-                var viewModel = ((IssueWindow)w).ViewModel as IssueWindowViewModel;
-                viewModel.Issue = issue;
-            }
+            var viewModel = new IssueWindowViewModel();
+            viewModel.Issue = issue;
+            var issueWindow = factory.Create<IssueWindow>(viewModel);
+            issueWindow.Show();
         }
     }
 }
