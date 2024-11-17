@@ -22,7 +22,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <ui:TitleBar Title="WPF UI - Editor" Grid.Row="0" Icon="pack://application:,,,/Assets/wpfui.png" />
+            <ui:TitleBar Title="{Binding ViewModel.Title, Mode=OneWay}" Grid.Row="0" Icon="pack://application:,,,/Assets/wpfui.png" />
         </Grid>
     </Grid>
 </ui:FluentWindow>

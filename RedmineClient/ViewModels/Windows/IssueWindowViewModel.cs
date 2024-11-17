@@ -1,4 +1,5 @@
-﻿using RedmineClient.XmlData;
+﻿using Cysharp.Text;
+using RedmineClient.XmlData;
 
 namespace RedmineClient.ViewModels.Windows
 {
@@ -6,5 +7,9 @@ namespace RedmineClient.ViewModels.Windows
     {
         public Issue Issue { get; set; }
 
+        public string Title
+        {
+            get => ZString.Concat(Issue?.Tracker?.Name, " #", Issue?.Id);
+        }
     }
 }
