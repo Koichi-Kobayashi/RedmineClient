@@ -17,12 +17,16 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <ui:TitleBar Title="{Binding ViewModel.Title, Mode=OneWay}" Grid.Row="0" Icon="pack://application:,,,/Assets/wpfui.png" />
+            <ui:DataGrid
+                Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="False" EnableColumnVirtualization="True" EnableRowVirtualization="True"
+                HeadersVisibility="Column" HorizontalScrollBarVisibility="Auto"
+                ItemsSource="{Binding ViewModel}"
+                VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" />
         </Grid>
     </Grid>
 </ui:FluentWindow>
