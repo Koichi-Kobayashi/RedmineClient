@@ -9,7 +9,7 @@ namespace RedmineClient.Helpers
         {
             if (value is DateTime dateTime)
             {
-                return dateTime.ToString("yyyy/MM/dd");
+                return dateTime.ToYYYYMMDD();
             }
             return value;
         }

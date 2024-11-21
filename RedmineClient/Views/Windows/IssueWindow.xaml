@@ -27,6 +27,10 @@
     </Window.Resources>
 
     <Grid Margin="10,10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -69,6 +73,34 @@
                 <ui:TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding ViewModel.Issue.DoneRatio, StringFormat={}{0}％, Mode=OneWay}" />
                 <ui:TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding ViewModel.Issue.EstimatedHours, StringFormat={}{0}時間, Mode=OneWay}" />
             </Grid>
+        </Grid>
+        <Grid Grid.Row="1" helper:GridHelpers.ColumnCount="{Binding ViewModel.ColumnDefinitions.Count}" helper:GridHelpers.RowCount="{Binding ViewModel.RowDefinitions.Count}">
+            <ItemsControl ItemsSource="{Binding ViewModel.TextBlocks}">
+                <!--<ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                        </Grid>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>-->
+                <!--<ItemsControl.ItemContainerStyle>
+                    <Style>
+                        <Setter Property="Grid.Row" Value="{Binding Row}" />
+                        <Setter Property="Grid.Column" Value="{Binding Column}" />
+                    </Style>
+                </ItemsControl.ItemContainerStyle>-->
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ui:TextBlock Grid.Row="{Binding Row}" Grid.Column="{Binding Column}" Text="{Binding Text}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
         </Grid>
     </Grid>
 </ui:FluentWindow>
