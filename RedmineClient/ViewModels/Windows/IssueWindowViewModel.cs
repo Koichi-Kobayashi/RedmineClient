@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using Cysharp.Text;
+using RedmineClient.Helpers;
 using RedmineClient.XmlData;
 
 namespace RedmineClient.ViewModels.Windows
@@ -56,8 +57,8 @@ namespace RedmineClient.ViewModels.Windows
             TextBlocks.Add(new TextBlockItem { Row = 1, Column = 0, Text = Issue.Priority.Name });
             TextBlocks.Add(new TextBlockItem { Row = 2, Column = 0, Text = Issue.AssignedTo.Name });
             TextBlocks.Add(new TextBlockItem { Row = 3, Column = 0, Text = Issue.Category.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 4, Column = 2, Text = Issue.StartDate?.ToString("yyyy/MM/dd") });
-            TextBlocks.Add(new TextBlockItem { Row = 5, Column = 2, Text = Issue.DueDate?.ToString("yyyy/MM/dd") });
+            TextBlocks.Add(new TextBlockItem { Row = 4, Column = 2, Text = Issue.StartDate.ToYYYYMMDD() });
+            TextBlocks.Add(new TextBlockItem { Row = 5, Column = 2, Text = Issue.DueDate.ToYYYYMMDD() });
             TextBlocks.Add(new TextBlockItem { Row = 6, Column = 2, Text = string.Format("{0}%", Issue.DoneRatio) });
             TextBlocks.Add(new TextBlockItem { Row = 7, Column = 2, Text = string.Format("{0}時間", Issue.EstimatedHours) });
 

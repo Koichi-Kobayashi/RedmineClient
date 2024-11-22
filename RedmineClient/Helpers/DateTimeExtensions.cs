@@ -6,5 +6,9 @@
         {
             return dateTime.ToString("yyyy/MM/dd");
         }
+        public static string ToYYYYMMDD(this DateTime? dateTime)
+        {
+            return dateTime?.ToString("yyyy/MM/dd") ?? "";
+        }
     }
 }
