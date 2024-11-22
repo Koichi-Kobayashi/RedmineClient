@@ -44,6 +44,7 @@ namespace RedmineClient.ViewModels.Windows
                 ColumnDefinitions.Add(new ColumnDefinition());
             }
 
+            // 必ず表示する項目
             TextBlocks.Add(new TextBlockItem { Row = 0, Column = 0, Text = "ステータス：" });
             TextBlocks.Add(new TextBlockItem { Row = 1, Column = 0, Text = "優先度：" });
             TextBlocks.Add(new TextBlockItem { Row = 2, Column = 0, Text = "担当者：" });
@@ -59,11 +60,24 @@ namespace RedmineClient.ViewModels.Windows
             TextBlocks.Add(new TextBlockItem { Row = 3, Column = 1, Text = Issue.Category.Name });
             TextBlocks.Add(new TextBlockItem { Row = 0, Column = 3, Text = Issue.StartDate.ToYYYYMMDD() });
             TextBlocks.Add(new TextBlockItem { Row = 1, Column = 3, Text = Issue.DueDate.ToYYYYMMDD() });
-            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 3, Text = string.Format("{0}%", Issue.DoneRatio) });
-            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 3, Text = string.Format("{0}時間", Issue.EstimatedHours) });
+            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 3, Text = ZString.Format("{0}%", Issue.DoneRatio) });
+            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 3, Text = ZString.Format("{0}時間", Issue.EstimatedHours) });
 
-            foreach (var item in Issue.CustomFields)
+            // カスタムフィールド
+            for (int i = 0; i < Issue.CustomFields.Count; i++)
             {
+                var field = Issue.CustomFields[i];
+
+                if (i % 2 == 0)
+                {
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 0, Text = ZString.Format("{0}：", field.Name) });
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 1, Text = field.Value });
+                }
+                else
+                {
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 2, Text = ZString.Format("{0}：", field.Name) });
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 3, Text = field.Value });
+                }
             }
         }
     }
