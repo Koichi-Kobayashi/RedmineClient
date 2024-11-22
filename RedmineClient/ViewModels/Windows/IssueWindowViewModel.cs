@@ -48,19 +48,19 @@ namespace RedmineClient.ViewModels.Windows
             TextBlocks.Add(new TextBlockItem { Row = 1, Column = 0, Text = "優先度：" });
             TextBlocks.Add(new TextBlockItem { Row = 2, Column = 0, Text = "担当者：" });
             TextBlocks.Add(new TextBlockItem { Row = 3, Column = 0, Text = "カテゴリー：" });
-            TextBlocks.Add(new TextBlockItem { Row = 4, Column = 2, Text = "開始日：" });
-            TextBlocks.Add(new TextBlockItem { Row = 5, Column = 2, Text = "期日：" });
-            TextBlocks.Add(new TextBlockItem { Row = 6, Column = 2, Text = "進捗率：" });
-            TextBlocks.Add(new TextBlockItem { Row = 7, Column = 2, Text = "予定工数：" });
+            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 2, Text = "開始日：" });
+            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 2, Text = "期日：" });
+            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 2, Text = "進捗率：" });
+            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 2, Text = "予定工数：" });
 
-            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 0, Text = Issue.Status.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 0, Text = Issue.Priority.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 0, Text = Issue.AssignedTo.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 0, Text = Issue.Category.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 4, Column = 2, Text = Issue.StartDate.ToYYYYMMDD() });
-            TextBlocks.Add(new TextBlockItem { Row = 5, Column = 2, Text = Issue.DueDate.ToYYYYMMDD() });
-            TextBlocks.Add(new TextBlockItem { Row = 6, Column = 2, Text = string.Format("{0}%", Issue.DoneRatio) });
-            TextBlocks.Add(new TextBlockItem { Row = 7, Column = 2, Text = string.Format("{0}時間", Issue.EstimatedHours) });
+            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 1, Text = Issue.Status.Name });
+            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 1, Text = Issue.Priority.Name });
+            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 1, Text = Issue.AssignedTo.Name });
+            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 1, Text = Issue.Category.Name });
+            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 3, Text = Issue.StartDate.ToYYYYMMDD() });
+            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 3, Text = Issue.DueDate.ToYYYYMMDD() });
+            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 3, Text = string.Format("{0}%", Issue.DoneRatio) });
+            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 3, Text = string.Format("{0}時間", Issue.EstimatedHours) });
 
             foreach (var item in Issue.CustomFields)
             {
