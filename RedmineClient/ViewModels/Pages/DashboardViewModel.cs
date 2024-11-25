@@ -1,9 +1,10 @@
-﻿using RedmineClient.Models;
+﻿using Redmine.Net.Api;
+using Redmine.Net.Api.Types;
+using RedmineClient.Models;
 using RedmineClient.Services;
 using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Pages;
 using RedmineClient.Views.Windows;
-using RedmineClient.XmlData;
 using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Controls;
 
@@ -20,13 +21,15 @@ namespace RedmineClient.ViewModels.Pages
         private int _counter = 0;
 
         [ObservableProperty]
-        private List<Project> _projects = new List<Project>();
+        private List<RedmineClient.XmlData.Project> _projects = new List<RedmineClient.XmlData.Project>();
 
         [ObservableProperty]
         private int _projectSelectedIndex = 0;
 
         [ObservableProperty]
         private List<Issue> _issues = new List<Issue>();
+
+        private RedmineManager manager;
 
         //[ObservableProperty]
         //private double _gridHeight = 0;
@@ -43,19 +46,12 @@ namespace RedmineClient.ViewModels.Pages
         /// <returns></returns>
         private async Task Loaded()
         {
-            Dashboard dashboard = new();
-            var projectResult = await dashboard.GetProjects();
-            if (projectResult != null)
-            {
-                Projects = projectResult.ProjectList;
-                ProjectSelectedIndex = 0;
-            }
+            RedmineManagerOptionsBuilder builder = new RedmineManagerOptionsBuilder();
+            builder.WithHost(AppConfig.RedmineHost);
+            builder.WithApiKeyAuthentication(AppConfig.ApiKey);
+            manager = new RedmineManager(builder);
 
-            var issuesResult = await dashboard.GetIssues();
-            if (issuesResult != null)
-            {
-                Issues = issuesResult.IssueList;
-            }
+            Issues = await manager.GetAsync<Issue>();
         }
 
         [RelayCommand]

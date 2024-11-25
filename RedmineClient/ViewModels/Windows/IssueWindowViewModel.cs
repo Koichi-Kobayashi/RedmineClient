@@ -1,8 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using Cysharp.Text;
+using Redmine.Net.Api.Types;
 using RedmineClient.Helpers;
-using RedmineClient.XmlData;
 
 namespace RedmineClient.ViewModels.Windows
 {
