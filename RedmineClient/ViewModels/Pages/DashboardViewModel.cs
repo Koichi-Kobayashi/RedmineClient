@@ -1,4 +1,6 @@
-﻿using Redmine.Net.Api;
+﻿using System.Collections.Specialized;
+using Redmine.Net.Api;
+using Redmine.Net.Api.Net;
 using Redmine.Net.Api.Types;
 using RedmineClient.Models;
 using RedmineClient.Services;
@@ -51,7 +53,20 @@ namespace RedmineClient.ViewModels.Pages
             builder.WithApiKeyAuthentication(AppConfig.ApiKey);
             manager = new RedmineManager(builder);
 
-            Issues = await manager.GetAsync<Issue>();
+            try
+            {
+                var opotions = new RequestOptions()
+                {
+                    QueryString = new NameValueCollection()
+                    {
+                        {RedmineKeys.INCLUDE, RedmineKeys.JOURNALS},
+                    }
+                };
+                Issues = await manager.GetAsync<Issue>(opotions);
+            }
+            catch (Exception ex)
+            {
+            }
         }
 
         [RelayCommand]
@@ -90,8 +105,29 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         [RelayCommand]
-        private void OnItemClick(Issue issue)
+        private async Task OnItemClick(Issue issue)
         {
+            RedmineManagerOptionsBuilder builder = new RedmineManagerOptionsBuilder();
+            builder.WithHost(AppConfig.RedmineHost);
+            builder.WithApiKeyAuthentication(AppConfig.ApiKey);
+            manager = new RedmineManager(builder);
+
+            try
+            {
+                var opotions = new RequestOptions()
+                {
+                    QueryString = new NameValueCollection()
+                    {
+                        {RedmineKeys.ID, issue.Id.ToString()},
+                        {RedmineKeys.INCLUDE, RedmineKeys.JOURNALS}
+                    }
+                };
+                var a = manager.Get<Issue>(opotions);
+            }
+            catch (Exception ex)
+            {
+            }
+
             var viewModel = new IssueWindowViewModel();
             viewModel.Issue = issue;
             var issueWindow = factory.Create<IssueWindow>(viewModel);
