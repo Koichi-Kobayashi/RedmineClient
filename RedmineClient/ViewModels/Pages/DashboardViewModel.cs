@@ -21,7 +21,7 @@ namespace RedmineClient.ViewModels.Pages
         private int _counter = 0;
 
         [ObservableProperty]
-        private List<RedmineClient.XmlData.Project> _projects = new List<RedmineClient.XmlData.Project>();
+        private List<Project> _projects = new List<Project>();
 
         [ObservableProperty]
         private int _projectSelectedIndex = 0;
