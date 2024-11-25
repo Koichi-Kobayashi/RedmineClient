@@ -11,6 +11,12 @@ namespace RedmineClient.ViewModels.Pages
         private string _redmineHost = String.Empty;
 
         [ObservableProperty]
+        private string _login = String.Empty;
+
+        [ObservableProperty]
+        private string _password = String.Empty;
+
+        [ObservableProperty]
         private string _apiKey = String.Empty;
 
         [ObservableProperty]
