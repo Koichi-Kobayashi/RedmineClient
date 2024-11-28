@@ -114,24 +114,21 @@ namespace RedmineClient.ViewModels.Pages
 
             try
             {
-                var opotions = new RequestOptions()
+                var viewModel = new IssueWindowViewModel();
+                viewModel.Issue = manager.Get<Issue>(issue.Id.ToString(), new RequestOptions()
                 {
                     QueryString = new NameValueCollection()
                     {
                         {RedmineKeys.ID, issue.Id.ToString()},
                         {RedmineKeys.INCLUDE, RedmineKeys.JOURNALS}
                     }
-                };
-                var a = manager.Get<Issue>(opotions);
+                });
+                var issueWindow = factory.Create<IssueWindow>(viewModel);
+                issueWindow.Show();
             }
             catch (Exception ex)
             {
             }
-
-            var viewModel = new IssueWindowViewModel();
-            viewModel.Issue = issue;
-            var issueWindow = factory.Create<IssueWindow>(viewModel);
-            issueWindow.Show();
         }
     }
 }
