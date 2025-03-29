@@ -48,6 +48,7 @@ namespace RedmineClient.ViewModels.Pages
         /// <returns></returns>
         private async Task Loaded()
         {
+            if (String.IsNullOrEmpty(AppConfig.RedmineHost)) return;
             RedmineManagerOptionsBuilder builder = new RedmineManagerOptionsBuilder();
             builder.WithHost(AppConfig.RedmineHost);
             builder.WithApiKeyAuthentication(AppConfig.ApiKey);
@@ -107,6 +108,7 @@ namespace RedmineClient.ViewModels.Pages
         [RelayCommand]
         private async Task OnItemClick(Issue issue)
         {
+            if (issue == null) return;
             RedmineManagerOptionsBuilder builder = new RedmineManagerOptionsBuilder();
             builder.WithHost(AppConfig.RedmineHost);
             builder.WithApiKeyAuthentication(AppConfig.ApiKey);
