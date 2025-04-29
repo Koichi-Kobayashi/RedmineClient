@@ -30,7 +30,8 @@ namespace RedmineClient.ViewModels.Windows
             RowDefinitions = new ObservableCollection<RowDefinition>();
             ColumnDefinitions = new ObservableCollection<ColumnDefinition>();
             TextBlocks = new ObservableCollection<TextBlockItem>();
-            UpdateGrid(Issue.CustomFields.Count + 4, 4);
+            int count = Issue.CustomFields == null ? 0 : Issue.CustomFields.Count;
+            UpdateGrid(count + 4, 4);
         }
 
         private void UpdateGrid(int rows, int columns)
@@ -54,29 +55,30 @@ namespace RedmineClient.ViewModels.Windows
             TextBlocks.Add(new TextBlockItem { Row = 2, Column = 2, Text = "進捗率：" });
             TextBlocks.Add(new TextBlockItem { Row = 3, Column = 2, Text = "予定工数：" });
 
-            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 1, Text = Issue.Status.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 1, Text = Issue.Priority.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 1, Text = Issue.AssignedTo.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 1, Text = Issue.Category.Name });
-            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 3, Text = Issue.StartDate.ToYYYYMMDD() });
-            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 3, Text = Issue.DueDate.ToYYYYMMDD() });
-            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 3, Text = ZString.Format("{0}%", Issue.DoneRatio) });
-            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 3, Text = ZString.Format("{0}時間", Issue.EstimatedHours) });
+            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 1, Text = Issue?.Status?.Name ?? string.Empty });
+            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 1, Text = Issue?.Priority?.Name ?? string.Empty });
+            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 1, Text = Issue?.AssignedTo?.Name ?? string.Empty });
+            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 1, Text = Issue?.Category?.Name ?? string.Empty });
+            TextBlocks.Add(new TextBlockItem { Row = 0, Column = 3, Text = Issue?.StartDate?.ToYYYYMMDD() ?? string.Empty });
+            TextBlocks.Add(new TextBlockItem { Row = 1, Column = 3, Text = Issue?.DueDate?.ToYYYYMMDD() ?? string.Empty });
+            TextBlocks.Add(new TextBlockItem { Row = 2, Column = 3, Text = ZString.Format("{0}%", Issue?.DoneRatio ?? 0) });
+            TextBlocks.Add(new TextBlockItem { Row = 3, Column = 3, Text = ZString.Format("{0}時間", Issue?.EstimatedHours ?? 0) });
 
             // カスタムフィールド
-            for (int i = 0; i < Issue.CustomFields.Count; i++)
+            int count = Issue?.CustomFields?.Count ?? 0;
+            for (int i = 0; i < count; i++)
             {
-                var field = Issue.CustomFields[i];
+                var field = Issue?.CustomFields[i];
 
                 if (i % 2 == 0)
                 {
-                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 0, Text = ZString.Format("{0}：", field.Name) });
-                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 1, Text = field.Value });
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 0, Text = ZString.Format("{0}：", field?.Name) });
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 1, Text = field?.Value ?? string.Empty });
                 }
                 else
                 {
-                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 2, Text = ZString.Format("{0}：", field.Name) });
-                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 3, Text = field.Value });
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 2, Text = ZString.Format("{0}：", field?.Name) });
+                    TextBlocks.Add(new TextBlockItem { Row = i + rows, Column = 3, Text = field?.Value ?? string.Empty });
                 }
             }
         }
