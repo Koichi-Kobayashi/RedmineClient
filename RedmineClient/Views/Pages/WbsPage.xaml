@@ -7,23 +7,21 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="WBS"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DesignHeight="800"
+    d:DesignWidth="1200"
     mc:Ignorable="d">
 
-    <Grid Margin="56,0,56,0">
+    <Grid Margin="5,0,5,0">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  ページタイトル  -->
-        <ui:TextBlock Grid.Row="0" Margin="0,0,0,32" FontTypography="Title" Text="Work Breakdown Structure" />
+        <!--  ページタイトル（削除）  -->
 
         <!--  操作ボタンとフィルター  -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,16" Orientation="Horizontal">
+        <StackPanel Grid.Row="0" Margin="0,8,0,16" Orientation="Horizontal">
             <ui:Button Margin="0,0,8,0" Appearance="Primary" Command="{Binding ViewModel.AddRootItemCommand}" Content="ルートタスク追加" Icon="Add24" />
 
             <ui:Button
@@ -56,7 +54,7 @@
         </StackPanel>
 
         <!--  接続状態とエラー表示  -->
-        <Grid Grid.Row="2" Margin="0,0,0,16">
+        <Grid Grid.Row="1" Margin="0,0,0,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -99,7 +97,7 @@
         </Grid>
 
         <!--  WBSツリービュー  -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*" />
                 <ColumnDefinition Width="Auto" />
@@ -107,11 +105,11 @@
             </Grid.ColumnDefinitions>
 
             <!--  左側：DataGrid  -->
-            <ui:Card Grid.Column="0" Margin="0,0,16,0">
+            <ui:Card Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
                 <DataGrid
-                    x:Name="WbsDataGrid" AutoGenerateColumns="False" Background="Transparent" BorderThickness="0" CanUserAddRows="False"
-                    CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True" GridLinesVisibility="Horizontal"
-                    HeadersVisibility="Column"
+                    x:Name="WbsDataGrid" VerticalAlignment="Top" AutoGenerateColumns="False" Background="Transparent" BorderThickness="0"
+                    CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
+                    GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                     ItemsSource="{Binding ViewModel.WbsItems}"
                     RowHeaderWidth="0"
                     SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
@@ -139,9 +137,9 @@
                                         <!--  階層レベル表示  -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <!--  階層レベルに応じたインデント  -->
-                                                                                         <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="10" Foreground="Gray" Text="{Binding Level, StringFormat='{}{0,2}'}" />
-                                             <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="Gray" Text="└─" />
-                                             <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
+                                            <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="10" Foreground="Gray" Text="{Binding Level, StringFormat='{}{0,2}'}" />
+                                            <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="Gray" Text="└─" />
+                                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
                                         </StackPanel>
                                     </Grid>
                                 </DataTemplate>
@@ -198,60 +196,60 @@
                         <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
                     </DataGrid.Columns>
 
-                                         <DataGrid.RowStyle>
-                         <Style TargetType="DataGridRow">
-                             <Setter Property="Background" Value="Transparent" />
-                             <Setter Property="BorderThickness" Value="0" />
-                             <Setter Property="Padding" Value="4,2" />
-                             <Setter Property="Margin" Value="0,1" />
-                             <Style.Triggers>
-                                 <Trigger Property="IsSelected" Value="True">
-                                     <Setter Property="Background" Value="#E5F3FF" />
-                                 </Trigger>
-                                 <Trigger Property="IsMouseOver" Value="True">
-                                     <Setter Property="Background" Value="#F0F0F0" />
-                                 </Trigger>
-                             </Style.Triggers>
-                         </Style>
-                     </DataGrid.RowStyle>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Padding" Value="4,2" />
+                            <Setter Property="Margin" Value="0,1" />
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#E5F3FF" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#F0F0F0" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                 </DataGrid>
             </ui:Card>
 
-                         <!--  区切り線  -->
-             <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Gray" />
+            <!--  区切り線  -->
+            <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Gray" />
 
             <!--  右側：詳細表示  -->
             <ui:Card Grid.Column="2" Padding="24">
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                                                 <ui:TextBlock Margin="0,0,0,24" FontTypography="Body" FontWeight="SemiBold" Text="タスク詳細" />
+                        <ui:TextBlock Margin="0,0,0,24" FontTypography="Body" FontWeight="SemiBold" Text="タスク詳細" />
 
-                         <ui:TextBlock Margin="0,48,0,0" FontTypography="Body" Text="タスクを選択してください" TextAlignment="Center" Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityInverseConverter.Instance}}" />
+                        <ui:TextBlock Margin="0,48,0,0" FontTypography="Body" Text="タスクを選択してください" TextAlignment="Center" Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityInverseConverter.Instance}}" />
 
-                         <StackPanel Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
-                             <!--  ID  -->
-                             <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ID" />
-                             <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.Id}" />
+                        <StackPanel Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
+                            <!--  ID  -->
+                            <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ID" />
+                            <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.Id}" />
 
-                             <!--  タイトル  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="タイトル" />
-                             <ui:TextBox PlaceholderText="タスクのタイトルを入力" Text="{Binding ViewModel.SelectedItem.Title, UpdateSourceTrigger=PropertyChanged}" />
+                            <!--  タイトル  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="タイトル" />
+                            <ui:TextBox PlaceholderText="タスクのタイトルを入力" Text="{Binding ViewModel.SelectedItem.Title, UpdateSourceTrigger=PropertyChanged}" />
 
-                             <!--  説明  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="説明" />
-                             <ui:TextBox Height="80" AcceptsReturn="True" PlaceholderText="タスクの詳細説明を入力" Text="{Binding ViewModel.SelectedItem.Description, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
+                            <!--  説明  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="説明" />
+                            <ui:TextBox Height="80" AcceptsReturn="True" PlaceholderText="タスクの詳細説明を入力" Text="{Binding ViewModel.SelectedItem.Description, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
 
-                             <!--  開始日  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="開始日" />
-                             <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.StartDate}" />
+                            <!--  開始日  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="開始日" />
+                            <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.StartDate}" />
 
-                             <!--  終了日  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
-                             <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.EndDate}" />
+                            <!--  終了日  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
+                            <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.EndDate}" />
 
-                             <!--  進捗  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="進捗" />
+                            <!--  進捗  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="進捗" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -260,41 +258,41 @@
                                 <Slider
                                     Grid.Column="0" IsSnapToTickEnabled="True" Maximum="100" Minimum="0" TickFrequency="10"
                                     Value="{Binding ViewModel.SelectedItem.Progress}" />
-                                                                 <ui:TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Text="{Binding ViewModel.SelectedItem.Progress, StringFormat='{}{0:F0}%'}" />
-                             </Grid>
+                                <ui:TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Text="{Binding ViewModel.SelectedItem.Progress, StringFormat='{}{0:F0}%'}" />
+                            </Grid>
 
-                             <!--  ステータス  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ステータス" />
-                             <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Status}">
-                                 <ComboBoxItem Content="未着手" Tag="未着手" />
-                                 <ComboBoxItem Content="進行中" Tag="進行中" />
-                                 <ComboBoxItem Content="完了" Tag="完了" />
-                                 <ComboBoxItem Content="保留" Tag="保留" />
-                                 <ComboBoxItem Content="キャンセル" Tag="キャンセル" />
-                             </ComboBox>
+                            <!--  ステータス  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ステータス" />
+                            <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Status}">
+                                <ComboBoxItem Content="未着手" Tag="未着手" />
+                                <ComboBoxItem Content="進行中" Tag="進行中" />
+                                <ComboBoxItem Content="完了" Tag="完了" />
+                                <ComboBoxItem Content="保留" Tag="保留" />
+                                <ComboBoxItem Content="キャンセル" Tag="キャンセル" />
+                            </ComboBox>
 
-                             <!--  優先度  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="優先度" />
-                             <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Priority}">
-                                 <ComboBoxItem Content="低" Tag="低" />
-                                 <ComboBoxItem Content="中" Tag="中" />
-                                 <ComboBoxItem Content="高" Tag="高" />
-                                 <ComboBoxItem Content="緊急" Tag="緊急" />
-                             </ComboBox>
+                            <!--  優先度  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="優先度" />
+                            <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Priority}">
+                                <ComboBoxItem Content="低" Tag="低" />
+                                <ComboBoxItem Content="中" Tag="中" />
+                                <ComboBoxItem Content="高" Tag="高" />
+                                <ComboBoxItem Content="緊急" Tag="緊急" />
+                            </ComboBox>
 
-                             <!--  担当者  -->
-                             <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="担当者" />
-                             <ui:TextBox PlaceholderText="担当者名を入力" Text="{Binding ViewModel.SelectedItem.Assignee, UpdateSourceTrigger=PropertyChanged}" />
+                            <!--  担当者  -->
+                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="担当者" />
+                            <ui:TextBox PlaceholderText="担当者名を入力" Text="{Binding ViewModel.SelectedItem.Assignee, UpdateSourceTrigger=PropertyChanged}" />
 
-                             <!--  Redmine情報  -->
-                             <ui:TextBlock Margin="0,24,0,8" FontTypography="Caption" FontWeight="SemiBold" Text="Redmine情報" />
-                             <StackPanel>
-                                 <ui:TextBlock Margin="0,0,0,4" FontTypography="Caption" Text="チケットID" />
-                                 <ui:TextBox PlaceholderText="Redmineチケット番号" Text="{Binding ViewModel.SelectedItem.RedmineIssueId, UpdateSourceTrigger=PropertyChanged}" />
+                            <!--  Redmine情報  -->
+                            <ui:TextBlock Margin="0,24,0,8" FontTypography="Caption" FontWeight="SemiBold" Text="Redmine情報" />
+                            <StackPanel>
+                                <ui:TextBlock Margin="0,0,0,4" FontTypography="Caption" Text="チケットID" />
+                                <ui:TextBox PlaceholderText="Redmineチケット番号" Text="{Binding ViewModel.SelectedItem.RedmineIssueId, UpdateSourceTrigger=PropertyChanged}" />
 
-                                 <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="URL" />
-                                 <ui:TextBox PlaceholderText="RedmineチケットのURL" Text="{Binding ViewModel.SelectedItem.RedmineUrl, UpdateSourceTrigger=PropertyChanged}" />
-                             </StackPanel>
+                                <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="URL" />
+                                <ui:TextBox PlaceholderText="RedmineチケットのURL" Text="{Binding ViewModel.SelectedItem.RedmineUrl, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

@@ -46,7 +46,9 @@ namespace RedmineClient.ViewModels.Pages
             Password = AppConfig.Password;
             ApiKey = AppConfig.ApiKey;
             
-            CurrentTheme = ApplicationThemeManager.GetAppTheme();
+            // 保存されたテーマ設定を読み込む
+            CurrentTheme = AppConfig.ApplicationTheme;
+            
             AppVersion = $"RedmineClient - {GetAssemblyVersion()}";
 
             return Task.CompletedTask;
@@ -97,6 +99,8 @@ namespace RedmineClient.ViewModels.Pages
 
                     ApplicationThemeManager.Apply(ApplicationTheme.Light);
                     CurrentTheme = ApplicationTheme.Light;
+                    AppConfig.ApplicationTheme = ApplicationTheme.Light;
+                    AppConfig.Save();
 
                     break;
 
@@ -106,6 +110,8 @@ namespace RedmineClient.ViewModels.Pages
 
                     ApplicationThemeManager.Apply(ApplicationTheme.Dark);
                     CurrentTheme = ApplicationTheme.Dark;
+                    AppConfig.ApplicationTheme = ApplicationTheme.Dark;
+                    AppConfig.Save();
 
                     break;
             }

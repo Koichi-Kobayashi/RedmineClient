@@ -26,9 +26,12 @@ namespace RedmineClient.Helpers
             {
                 //viewModel.GridHeight = e.NewSize.Height;
             }
-            if (sender is MainWindow)
+            if (sender is MainWindow mainWindow)
             {
-                var a = ((NavigationViewItem)(((MainWindow)sender).RootNavigation.SelectedItem))?.TargetPageType;
+                // MainWindowのサイズ変更処理（必要に応じて実装）
+                var selectedItem = mainWindow.RootNavigation?.SelectedItem as NavigationViewItem;
+                var targetPageType = selectedItem?.TargetPageType;
+                // 現在は何も処理しない
             }
         }
     }

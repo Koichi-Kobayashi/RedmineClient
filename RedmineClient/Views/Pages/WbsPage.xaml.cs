@@ -1,5 +1,8 @@
 using RedmineClient.ViewModels.Pages;
+using RedmineClient.Models;
 using Wpf.Ui.Abstractions.Controls;
+using Wpf.Ui.Appearance;
+using System.Windows;
 
 namespace RedmineClient.Views.Pages
 {

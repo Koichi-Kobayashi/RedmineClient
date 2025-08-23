@@ -44,8 +44,23 @@ namespace RedmineClient.Views.Windows
 
         public void ShowWindow()
         {
+            // 設定を読み込み
             AppConfig.Load();
+            
             Show();
+        }
+        
+        private void ApplyCurrentTheme()
+        {
+            try
+            {
+                ApplicationThemeManager.Apply(AppConfig.ApplicationTheme);
+            }
+            catch
+            {
+                // デフォルトはライトテーマ
+                ApplicationThemeManager.Apply(ApplicationTheme.Light);
+            }
         }
 
         public void CloseWindow() => Close();
@@ -57,6 +72,11 @@ namespace RedmineClient.Views.Windows
         /// </summary>
         protected override void OnClosed(EventArgs e)
         {
+            // ウィンドウサイズを保存
+            AppConfig.WindowWidth = Width;
+            AppConfig.WindowHeight = Height;
+            AppConfig.Save();
+
             base.OnClosed(e);
 
             // Make sure that closing this window will begin the process of closing the application.

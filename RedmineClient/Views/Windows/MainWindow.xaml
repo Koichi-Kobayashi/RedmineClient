@@ -6,15 +6,16 @@
     xmlns:helper="clr-namespace:RedmineClient.Helpers"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:local="clr-namespace:RedmineClient.Views.Windows"
+    xmlns:models="clr-namespace:RedmineClient.Models"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="{Binding ViewModel.ApplicationTitle, Mode=OneWay}"
-    Width="1100"
-    Height="650"
+    Width="{Binding Source={x:Static models:AppConfig.WindowWidth}}"
+    Height="{Binding Source={x:Static models:AppConfig.WindowHeight}}"
     d:DataContext="{d:DesignInstance local:MainWindow,
                                      IsDesignTimeCreatable=True}"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DesignHeight="650"
+    d:DesignWidth="1100"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica"
     WindowCornerPreference="Round"
@@ -29,6 +30,12 @@
     </i:Interaction.Behaviors>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <ui:TitleBar x:Name="TitleBar" Title="{Binding ViewModel.ApplicationTitle}" Grid.Row="0" CloseWindowByDoubleClickOnIcon="True">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/wpfui-icon-256.png" />
@@ -36,16 +43,13 @@
         </ui:TitleBar>
 
         <ui:NavigationView
-            x:Name="RootNavigation" Padding="10,0,10,0"
+            x:Name="RootNavigation" Grid.Row="1" Padding="10,0,10,0"
             BreadcrumbBar="{Binding ElementName=BreadcrumbBar}"
             FooterMenuItemsSource="{Binding ViewModel.FooterMenuItems, Mode=OneWay}"
-            FrameMargin="0" IsBackButtonVisible="Visible" IsPaneToggleVisible="True"
+            FrameMargin="0" IsBackButtonVisible="Visible" IsPaneOpen="False" IsPaneToggleVisible="True"
             MenuItemsSource="{Binding ViewModel.MenuItems, Mode=OneWay}"
             OpenPaneLength="310" PaneDisplayMode="Left"
             TitleBar="{Binding ElementName=TitleBar, Mode=OneWay}">
-            <ui:NavigationView.Header>
-                <ui:BreadcrumbBar x:Name="BreadcrumbBar" Margin="10,10,10,10" />
-            </ui:NavigationView.Header>
             <ui:NavigationView.AutoSuggestBox>
                 <ui:AutoSuggestBox x:Name="AutoSuggestBox" PlaceholderText="Search">
                     <ui:AutoSuggestBox.Icon>
@@ -61,6 +65,31 @@
                 </Grid>
             </ui:NavigationView.ContentOverlay>
         </ui:NavigationView>
+
+        <!--  フッター  -->
+        <ui:Card Grid.Row="2" Margin="0,8,0,0" Padding="16,12" Background="#F0F0F0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!--  左側：アプリケーション情報  -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Text="RedmineClient" />
+                    <ui:TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Foreground="Gray" Text="v1.0.0" />
+                </StackPanel>
+
+                <!--  右側：ステータス情報  -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" Text="接続状態:" />
+                    <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Text="{Binding ViewModel.ConnectionStatus, FallbackValue='未接続'}" />
+                    <ui:TextBlock Margin="8,0" VerticalAlignment="Center" FontTypography="Caption" Text="|" />
+                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" Text="最終更新:" />
+                    <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Text="{Binding ViewModel.LastUpdateTime, FallbackValue='--'}" />
+                </StackPanel>
+            </Grid>
+        </ui:Card>
 
         <ContentPresenter x:Name="RootContentDialog" Grid.Row="0" />
 

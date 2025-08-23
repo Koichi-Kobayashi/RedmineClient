@@ -66,8 +66,9 @@ namespace RedmineClient.ViewModels.Pages
                 Issues = await manager.GetAsync<Issue>(opotions);
                 Issues = manager.Get<Issue>(opotions);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
+                // エラー処理：必要に応じて実装
             }
         }
 
@@ -107,7 +108,7 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         [RelayCommand]
-        private async Task OnItemClick(Issue issue)
+        private void OnItemClick(Issue issue)
         {
             if (issue == null) return;
             RedmineManagerOptionsBuilder builder = new RedmineManagerOptionsBuilder();
@@ -129,8 +130,9 @@ namespace RedmineClient.ViewModels.Pages
                 var issueWindow = factory.Create<IssueWindow>(viewModel);
                 issueWindow.Show();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
+                // エラー処理：必要に応じて実装
             }
         }
     }

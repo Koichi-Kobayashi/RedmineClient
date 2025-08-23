@@ -9,6 +9,9 @@ namespace RedmineClient.Models
         public static string Login { get; set; }
         public static string Password { get; set; }
         public static string ApiKey { get; set; }
+        public static double WindowWidth { get; set; } = 1100;
+        public static double WindowHeight { get; set; } = 650;
+        public static ApplicationTheme ApplicationTheme { get; set; } = ApplicationTheme.Light;
 
         /// <summary>
         /// 設定情報の保存
@@ -29,7 +32,9 @@ namespace RedmineClient.Models
             SetSettingsItem(config, "Login", Login);
             SetSettingsItem(config, "Password", Password);
             SetSettingsItem(config, "ApiKey", ApiKey);
-            SetSettingsItem(config, "ApplicationTheme", ApplicationThemeManager.GetAppTheme().ToString());
+            SetSettingsItem(config, "WindowWidth", WindowWidth.ToString());
+            SetSettingsItem(config, "WindowHeight", WindowHeight.ToString());
+            SetSettingsItem(config, "ApplicationTheme", ApplicationTheme.ToString());
             config.Save();
         }
 
@@ -79,11 +84,43 @@ namespace RedmineClient.Models
             var password = ConfigurationManager.AppSettings["Password"];
             Password = string.IsNullOrEmpty(password) != true ? password : "";
 
-            var applicationTheme = ConfigurationManager.AppSettings["ApplicationTheme"];
-            applicationTheme = string.IsNullOrEmpty(applicationTheme) != true ? applicationTheme : "";
+            var windowWidth = ConfigurationManager.AppSettings["WindowWidth"];
+            if (double.TryParse(windowWidth, out double width))
+            {
+                WindowWidth = width;
+            }
 
-            var currentTheme = (ApplicationTheme)Enum.Parse(typeof(ApplicationTheme), applicationTheme);
-            ApplicationThemeManager.Apply(currentTheme);
+            var windowHeight = ConfigurationManager.AppSettings["WindowHeight"];
+            if (double.TryParse(windowHeight, out double height))
+            {
+                WindowHeight = height;
+            }
+
+            var applicationTheme = ConfigurationManager.AppSettings["ApplicationTheme"];
+            if (string.IsNullOrEmpty(applicationTheme) != true && Enum.TryParse<ApplicationTheme>(applicationTheme, out var theme))
+            {
+                ApplicationTheme = theme;
+            }
+            else
+            {
+                ApplicationTheme = ApplicationTheme.Light;
+            }
+        }
+
+        /// <summary>
+        /// テーマ設定を適用
+        /// </summary>
+        public static void ApplyTheme()
+        {
+            try
+            {
+                ApplicationThemeManager.Apply(ApplicationTheme);
+            }
+            catch
+            {
+                // デフォルトはライトテーマ
+                ApplicationThemeManager.Apply(ApplicationTheme.Light);
+            }
         }
     }
 }

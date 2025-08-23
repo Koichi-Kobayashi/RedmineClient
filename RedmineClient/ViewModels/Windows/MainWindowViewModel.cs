@@ -1,5 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using Wpf.Ui.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace RedmineClient.ViewModels.Windows
 {
@@ -7,6 +9,12 @@ namespace RedmineClient.ViewModels.Windows
     {
         [ObservableProperty]
         private string _applicationTitle = "WPF UI - RedmineClient";
+
+        [ObservableProperty]
+        private string _connectionStatus = "未接続";
+
+        [ObservableProperty]
+        private string _lastUpdateTime = "--";
 
         [ObservableProperty]
         private ObservableCollection<object> _menuItems = new()

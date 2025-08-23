@@ -1,5 +1,7 @@
 ﻿using RedmineClient.ViewModels.Pages;
+using RedmineClient.Models;
 using Wpf.Ui.Abstractions.Controls;
+using Wpf.Ui.Appearance;
 
 namespace RedmineClient.Views.Pages
 {
@@ -13,6 +15,22 @@ namespace RedmineClient.Views.Pages
             DataContext = this;
 
             InitializeComponent();
+            
+            // テーマ設定を再適用
+            ApplyCurrentTheme();
+        }
+        
+        private void ApplyCurrentTheme()
+        {
+            try
+            {
+                ApplicationThemeManager.Apply(AppConfig.ApplicationTheme);
+            }
+            catch
+            {
+                // デフォルトはライトテーマ
+                ApplicationThemeManager.Apply(ApplicationTheme.Light);
+            }
         }
     }
 }

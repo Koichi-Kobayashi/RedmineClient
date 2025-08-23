@@ -11,6 +11,7 @@ using RedmineClient.Views.Pages;
 using RedmineClient.Views.Windows;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
+using Wpf.Ui.Appearance;
 
 namespace RedmineClient
 {
@@ -80,7 +81,26 @@ namespace RedmineClient
         /// </summary>
         private void OnStartup(object sender, StartupEventArgs e)
         {
+            // アプリケーション起動時に設定を読み込み
+            AppConfig.Load();
+            
+            // テーマ設定を適用
+            AppConfig.ApplyTheme();
+            
             _host.Start();
+        }
+        
+        private void ApplyCurrentTheme()
+        {
+            try
+            {
+                ApplicationThemeManager.Apply(AppConfig.ApplicationTheme);
+            }
+            catch
+            {
+                // デフォルトはライトテーマ
+                ApplicationThemeManager.Apply(ApplicationTheme.Light);
+            }
         }
 
         /// <summary>

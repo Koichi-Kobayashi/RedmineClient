@@ -66,14 +66,6 @@ namespace RedmineClient.ViewModels.Pages
             ImportCommand = new RelayCommand(Import);
             TestConnectionCommand = new RelayCommand(async () => await TestRedmineConnectionAsync());
             ToggleExpansionCommand = new RelayCommand<WbsItem>(ToggleExpansion);
-
-            LoadSampleData();
-            
-            // 最初のアイテムを選択
-            if (WbsItems.Count > 0)
-            {
-                SelectedItem = WbsItems[0];
-            }
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -91,6 +83,18 @@ namespace RedmineClient.ViewModels.Pages
 
         private async Task InitializeViewModelAsync()
         {
+            // 初回のみサンプルデータを読み込み
+            if (WbsItems.Count == 0)
+            {
+                LoadSampleData();
+                
+                // 最初のアイテムを選択
+                if (WbsItems.Count > 0)
+                {
+                    SelectedItem = WbsItems[0];
+                }
+            }
+            
             // Redmine接続状態を確認
             await TestRedmineConnectionAsync();
         }
@@ -113,8 +117,7 @@ namespace RedmineClient.ViewModels.Pages
                 ErrorMessage = string.Empty;
                 ConnectionStatus = "接続確認中...";
 
-                // 設定からRedmine接続情報を取得
-                AppConfig.Load();
+                // 設定からRedmine接続情報を取得（テーマ設定は初期化しない）
                 if (string.IsNullOrEmpty(AppConfig.RedmineHost))
                 {
                     IsRedmineConnected = false;
@@ -395,9 +398,10 @@ namespace RedmineClient.ViewModels.Pages
                 // 実際の実装ではRedmine APIを使用
                 await Task.Delay(1000); // 仮の処理時間
 
-                // サンプルデータを再読み込み
-                WbsItems.Clear();
-                LoadSampleData();
+                // データの更新処理（サンプルデータの場合は再読み込みしない）
+                // 実際のRedmine API実装時は、ここでデータを更新
+                // WbsItems.Clear();
+                // LoadSampleData();
             }
             catch (Exception ex)
             {
