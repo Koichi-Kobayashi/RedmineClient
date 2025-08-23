@@ -107,13 +107,71 @@
             <!--  左側：DataGrid  -->
             <ui:Card Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
                 <DataGrid
-                    x:Name="WbsDataGrid" VerticalAlignment="Top" AutoGenerateColumns="False" Background="Transparent" BorderThickness="0"
+                    x:Name="WbsDataGrid" VerticalAlignment="Top" AutoGenerateColumns="False" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderThickness="0"
                     CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
                     GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                     ItemsSource="{Binding ViewModel.WbsItems}"
                     RowHeaderWidth="0"
                     SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
-                    SelectionMode="Single" SelectionUnit="FullRow">
+                    SelectionMode="Single" SelectionUnit="FullRow"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
+                    RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                            <Setter Property="Padding" Value="8,4" />
+                        </Style>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                            <Setter Property="Padding" Value="8,4" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Style>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,0,1" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                        <Style TargetType="ScrollBar">
+                            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </Style>
+                        <Style TargetType="Thumb">
+                            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                        <Style TargetType="RepeatButton">
+                            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Resources>
 
                     <DataGrid.Columns>
                         <!--  階層表示用の列  -->

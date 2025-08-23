@@ -67,7 +67,7 @@
         </ui:NavigationView>
 
         <!--  フッター  -->
-        <ui:Card Grid.Row="2" Margin="0,8,0,0" Padding="16,12" Background="#F0F0F0">
+        <ui:Card Grid.Row="2" Margin="0,8,0,0" Padding="16,12" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -76,17 +76,17 @@
 
                 <!--  左側：アプリケーション情報  -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Text="RedmineClient" />
-                    <ui:TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Foreground="Gray" Text="v1.0.0" />
+                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="RedmineClient" />
+                    <ui:TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="v1.0.0" />
                 </StackPanel>
 
                 <!--  右側：ステータス情報  -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" Text="接続状態:" />
-                    <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Text="{Binding ViewModel.ConnectionStatus, FallbackValue='未接続'}" />
-                    <ui:TextBlock Margin="8,0" VerticalAlignment="Center" FontTypography="Caption" Text="|" />
-                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" Text="最終更新:" />
-                    <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Text="{Binding ViewModel.LastUpdateTime, FallbackValue='--'}" />
+                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="接続状態:" />
+                    <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.ConnectionStatus, FallbackValue='未接続'}" />
+                    <ui:TextBlock Margin="8,0" VerticalAlignment="Center" FontTypography="Caption" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="|" />
+                    <ui:TextBlock VerticalAlignment="Center" FontTypography="Caption" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="最終更新:" />
+                    <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontTypography="Caption" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.LastUpdateTime, FallbackValue='--'}" />
                 </StackPanel>
             </Grid>
         </ui:Card>
