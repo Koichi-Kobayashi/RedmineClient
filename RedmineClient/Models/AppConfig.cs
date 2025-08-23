@@ -5,12 +5,16 @@ namespace RedmineClient.Models
 {
     public class AppConfig
     {
+        private static bool _isLoaded = false;
+        private static readonly object _lockObject = new object();
+        
         public static string RedmineHost { get; set; }
         public static string Login { get; set; }
         public static string Password { get; set; }
         public static string ApiKey { get; set; }
         public static double WindowWidth { get; set; } = 1100;
         public static double WindowHeight { get; set; } = 650;
+        public static double TaskDetailWidth { get; set; } = 400;
         public static ApplicationTheme ApplicationTheme { get; set; } = ApplicationTheme.Light;
 
         /// <summary>
@@ -34,6 +38,7 @@ namespace RedmineClient.Models
             SetSettingsItem(config, "ApiKey", ApiKey);
             SetSettingsItem(config, "WindowWidth", WindowWidth.ToString());
             SetSettingsItem(config, "WindowHeight", WindowHeight.ToString());
+            SetSettingsItem(config, "TaskDetailWidth", TaskDetailWidth.ToString());
             SetSettingsItem(config, "ApplicationTheme", ApplicationTheme.ToString());
             config.Save();
         }
@@ -61,8 +66,12 @@ namespace RedmineClient.Models
         /// </summary>
         public static void Load()
         {
-            // app.configの読み込み
-            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            lock (_lockObject)
+            {
+                if (_isLoaded) return; // 既に読み込み済みの場合はスキップ
+                
+                // app.configの読み込み
+                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
             // 暗号化するセクションの取得
             var section = config.GetSection("appSettings") as AppSettingsSection;
@@ -96,6 +105,12 @@ namespace RedmineClient.Models
                 WindowHeight = height;
             }
 
+            var taskDetailWidth = ConfigurationManager.AppSettings["TaskDetailWidth"];
+            if (double.TryParse(taskDetailWidth, out double detailWidth))
+            {
+                TaskDetailWidth = detailWidth;
+            }
+
             var applicationTheme = ConfigurationManager.AppSettings["ApplicationTheme"];
             if (string.IsNullOrEmpty(applicationTheme) != true && Enum.TryParse<ApplicationTheme>(applicationTheme, out var theme))
             {
@@ -104,6 +119,9 @@ namespace RedmineClient.Models
             else
             {
                 ApplicationTheme = ApplicationTheme.Light;
+            }
+                
+                _isLoaded = true;
             }
         }
 

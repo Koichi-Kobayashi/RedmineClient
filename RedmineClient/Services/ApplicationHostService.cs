@@ -32,19 +32,19 @@ namespace RedmineClient.Services
         /// <summary>
         /// Creates main window during activation.
         /// </summary>
-        private async Task HandleActivationAsync()
+        private Task HandleActivationAsync()
         {
-            await Task.CompletedTask;
-
             if (!Application.Current.Windows.OfType<MainWindow>().Any())
             {
+                // ウィンドウの作成と表示（UIスレッドで実行）
                 _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
                 _navigationWindow!.ShowWindow();
 
-                _ = _navigationWindow.Navigate(typeof(Views.Pages.DashboardPage));
+                // 初期ページのナビゲーション
+                _navigationWindow.Navigate(typeof(Views.Pages.DashboardPage));
             }
-
-            await Task.CompletedTask;
+            
+            return Task.CompletedTask;
         }
     }
 }

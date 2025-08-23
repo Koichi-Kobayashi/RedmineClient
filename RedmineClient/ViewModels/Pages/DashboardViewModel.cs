@@ -39,6 +39,7 @@ namespace RedmineClient.ViewModels.Pages
 
         public override async void OnNavigatedTo()
         {
+            // データ読み込みを実行
             await Loaded();
         }
 

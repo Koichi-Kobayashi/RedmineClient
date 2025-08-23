@@ -173,6 +173,9 @@ namespace RedmineClient.ViewModels.Pages
 
         private void LoadSampleData()
         {
+            // UI更新を一括で行うため、一時的にコレクションを作成
+            var tempItems = new List<WbsItem>();
+            
             var project = new WbsItem
             {
                 Id = "PROJ-001",
@@ -301,6 +304,7 @@ namespace RedmineClient.ViewModels.Pages
             project.AddChild(testing);
             project.AddChild(deployment);
 
+            // サンプルデータを追加
             WbsItems.Add(project);
         }
 

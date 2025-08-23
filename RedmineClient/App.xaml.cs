@@ -48,14 +48,13 @@ namespace RedmineClient
                 services.AddSingleton<INavigationWindow, MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
 
-                services.AddSingleton<DashboardPage>();
-                services.AddSingleton<DataPage>();
-                services.AddSingleton<DataViewModel>();
-                services.AddSingleton<SettingsPage>();
-                services.AddSingleton<SettingsViewModel>();
+                // ページとViewModelをTransientに変更（メモリ効率向上）
+                services.AddTransient<DashboardPage>();
+                services.AddTransient<SettingsPage>();
+                services.AddTransient<SettingsViewModel>();
+                services.AddTransient<DashboardViewModel>();
 
                 services.AddTransient<IWindowFactory, WindowFactory>();
-                services.AddTransient<DashboardViewModel>();
 
                 // All other pages and view models
                 services.AddTransientFromNamespace("RedmineClient.Views", RedmineClientAssembly.Asssembly);

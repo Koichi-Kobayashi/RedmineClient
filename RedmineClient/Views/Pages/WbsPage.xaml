@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="clr-namespace:RedmineClient.Helpers"
+    xmlns:models="clr-namespace:RedmineClient.Models"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="WBS"
@@ -97,11 +98,11 @@
         </Grid>
 
         <!--  WBSツリービュー  -->
-        <Grid Grid.Row="2">
+        <Grid x:Name="MainContentGrid" Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*" />
+                <ColumnDefinition x:Name="DataGridColumn" Width="*" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="TaskDetailColumn" Width="400" />
             </Grid.ColumnDefinitions>
 
             <!--  左側：DataGrid  -->
@@ -116,7 +117,11 @@
                     SelectionMode="Single" SelectionUnit="FullRow"
                     BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
                     AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
-                    RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                    VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                    VirtualizingPanel.IsContainerVirtualizable="True"
+                    ScrollViewer.CanContentScroll="True">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
@@ -274,7 +279,11 @@
             </ui:Card>
 
             <!--  区切り線  -->
-            <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Gray" />
+            <GridSplitter x:Name="TaskDetailSplitter" Grid.Column="1" Width="5" 
+                         HorizontalAlignment="Center" VerticalAlignment="Stretch" 
+                         Background="Gray" ResizeDirection="Columns"
+                         ResizeBehavior="PreviousAndNext" 
+                         ShowsPreview="False" />
 
             <!--  右側：詳細表示  -->
             <ui:Card Grid.Column="2" Padding="24">
