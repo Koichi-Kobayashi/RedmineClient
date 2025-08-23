@@ -39,8 +39,15 @@ namespace RedmineClient.ViewModels.Pages
 
         private Task InitializeViewModel()
         {
+            // 保存された設定を読み込み
+            AppConfig.Load();
+            RedmineHost = AppConfig.RedmineHost;
+            Login = AppConfig.Login;
+            Password = AppConfig.Password;
+            ApiKey = AppConfig.ApiKey;
+            
             CurrentTheme = ApplicationThemeManager.GetAppTheme();
-            AppVersion = $"UiDesktopApp1 - {GetAssemblyVersion()}";
+            AppVersion = $"RedmineClient - {GetAssemblyVersion()}";
 
             return Task.CompletedTask;
         }
@@ -108,6 +115,8 @@ namespace RedmineClient.ViewModels.Pages
         private void OnSave()
         {
             AppConfig.RedmineHost = RedmineHost;
+            AppConfig.Login = Login;
+            AppConfig.Password = Password;
             AppConfig.ApiKey = ApiKey;
             AppConfig.Save();
 

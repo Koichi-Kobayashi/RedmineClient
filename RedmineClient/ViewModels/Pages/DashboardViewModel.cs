@@ -64,6 +64,7 @@ namespace RedmineClient.ViewModels.Pages
                     }
                 };
                 Issues = await manager.GetAsync<Issue>(opotions);
+                Issues = manager.Get<Issue>(opotions);
             }
             catch (Exception ex)
             {

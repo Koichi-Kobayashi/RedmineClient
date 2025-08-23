@@ -21,7 +21,7 @@
     </Page.Resources>
 
     <StackPanel>
-        <TextBlock FontSize="20" FontWeight="Medium" Text="Redmine" />
+        <ui:TextBlock FontSize="20" FontWeight="Medium" FontTypography="Title" Text="Redmine接続設定" />
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="100" />
@@ -33,31 +33,31 @@
                 <RowDefinition Height="50" />
                 <RowDefinition Height="50" />
             </Grid.RowDefinitions>
-            <ui:TextBlock Margin="0,12,0,0" VerticalAlignment="Center" Text="URL" />
-            <ui:TextBox Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.RedmineHost, Mode=TwoWay}" />
+            <ui:TextBlock Margin="0,12,0,0" VerticalAlignment="Center" Text="ホストURL" />
+            <ui:TextBox Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.RedmineHost, Mode=TwoWay}" PlaceholderText="https://redmine.example.com"/>
             <ui:TextBlock Grid.Row="1" Margin="0,12,0,0" VerticalAlignment="Center" Text="ユーザー名" />
-            <ui:TextBox Grid.Row="1" Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.Login, Mode=TwoWay}" />
+            <ui:TextBox Grid.Row="1" Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.Login, Mode=TwoWay}" PlaceholderText="redmineユーザー名"/>
             <ui:TextBlock Grid.Row="2" Margin="0,12,0,0" VerticalAlignment="Center" Text="パスワード" />
-            <ui:PasswordBox Grid.Row="2" Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.Password, Mode=TwoWay}" />
-            <ui:TextBlock Grid.Row="3" Margin="0,12,0,0" VerticalAlignment="Center" Text="ApiKey" />
-            <ui:TextBox Grid.Row="3" Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.ApiKey, Mode=TwoWay}" />
+            <ui:PasswordBox Grid.Row="2" Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.Password, Mode=TwoWay}" PlaceholderText="redmineパスワード"/>
+            <ui:TextBlock Grid.Row="3" Margin="0,12,0,0" VerticalAlignment="Center" Text="APIキー" />
+            <ui:TextBox Grid.Row="3" Grid.Column="1" Margin="0,12,0,0" Text="{Binding ViewModel.ApiKey, Mode=TwoWay}" PlaceholderText="redmine APIキー"/>
         </Grid>
-        <ui:TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="Personalization" />
-        <ui:TextBlock Margin="0,12,0,0" Text="Theme" />
+        <ui:TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" FontTypography="Title" Text="テーマ設定" />
+        <ui:TextBlock Margin="0,12,0,0" Text="テーマ" />
         <RadioButton
             Margin="0,12,0,0"
             Command="{Binding ViewModel.ChangeThemeCommand, Mode=OneWay}"
-            CommandParameter="theme_light" Content="Light" GroupName="themeSelect"
+            CommandParameter="theme_light" Content="ライト" GroupName="themeSelect"
             IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Light, Mode=OneWay}" />
         <RadioButton
             Margin="0,8,0,0"
             Command="{Binding ViewModel.ChangeThemeCommand, Mode=OneWay}"
-            CommandParameter="theme_dark" Content="Dark" GroupName="themeSelect"
+            CommandParameter="theme_dark" Content="ダーク" GroupName="themeSelect"
             IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Dark, Mode=OneWay}" />
 
-        <ui:Button Margin="0,24,0,0" Command="{Binding ViewModel.SaveCommand, Mode=OneWay}" Content="保存" />
+        <ui:Button Margin="0,24,0,0" Command="{Binding ViewModel.SaveCommand, Mode=OneWay}" Content="設定を保存" />
 
-        <ui:TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" Text="About RedmineClient" />
+        <ui:TextBlock Margin="0,24,0,0" FontSize="20" FontWeight="Medium" FontTypography="Title" Text="アプリケーション情報" />
         <ui:TextBlock Margin="0,12,0,0" Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
     </StackPanel>
 </Page>
