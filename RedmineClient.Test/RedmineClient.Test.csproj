@@ -15,11 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" Version="10.0.0-preview.3.25171.5" />
+    <PackageReference Include="System.Text.Json" Version="9.0.8" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.14.0-preview-25107-01" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.14.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,22 +27,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestAdapter" Version="3.9.0-preview.25167.10" />
+    <PackageReference Update="MSTest.TestAdapter" Version="3.10.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.7.0-preview.25167.10" />
+    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.8.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.Analyzers" Version="3.9.0-preview.25167.10">
+    <PackageReference Update="MSTest.Analyzers" Version="3.10.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestFramework" Version="3.9.0-preview.25167.10" />
+    <PackageReference Update="MSTest.TestFramework" Version="3.10.2" />
   </ItemGroup>
 
 </Project>
