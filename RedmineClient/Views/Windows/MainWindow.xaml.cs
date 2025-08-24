@@ -48,6 +48,21 @@ namespace RedmineClient.Views.Windows
             AppConfig.Load();
             
             Show();
+            
+            // 初期ページとしてWBSページを設定
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    // WBSページにナビゲート
+                    RootNavigation.Navigate(typeof(Views.Pages.WbsPage));
+                    System.Diagnostics.Debug.WriteLine("初期ページとしてWBSページを設定しました");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"初期ページ設定中にエラー: {ex.Message}");
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
         
         private void ApplyCurrentTheme()

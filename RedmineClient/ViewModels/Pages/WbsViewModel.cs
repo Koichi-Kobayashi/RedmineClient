@@ -19,9 +19,9 @@ namespace RedmineClient.ViewModels.Pages
     public partial class WbsViewModel : ObservableObject, INavigationAware
     {
         /// <summary>
-        /// フォーカス設定要求イベント
+        /// フォーカス設定要求イベント（編集モードかどうかを渡す）
         /// </summary>
-        public event Action? RequestFocus;
+        public event Action<bool>? RequestFocus;
 
             [ObservableProperty]
     private ObservableCollection<WbsItem> _wbsItems = new();
@@ -31,6 +31,12 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         [ObservableProperty]
         private ObservableCollection<WbsItem> _flattenedWbsItems = new();
+
+        /// <summary>
+        /// スケジュール表のデータ
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<ScheduleItem> _scheduleItems = new();
 
         [ObservableProperty]
         private WbsItem? _selectedItem;
@@ -49,12 +55,29 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private bool _isEditModeAfterAdd = true;
 
+        /// <summary>
+        /// タスク詳細の表示/非表示
+        /// true: タスク詳細を表示
+        /// false: タスク詳細を非表示
+        /// </summary>
+        [ObservableProperty]
+        private bool _isTaskDetailVisible = false;
+
         partial void OnSelectedItemChanged(WbsItem? value)
         {
             // 選択されたアイテムが変更されたときに、子タスク追加可能かどうかを更新
-            // 親タスクが選択されている場合は子タスク追加可能
-            CanAddChild = value != null;
-            System.Diagnostics.Debug.WriteLine($"SelectedItem changed to: {(value?.Title ?? "null")}, CanAddChild: {CanAddChild}");
+            // 親タスク（子タスクを持てるタスク）が選択されている場合のみ子タスク追加可能
+            if (value != null)
+            {
+                // 選択されたアイテムが親タスクかどうかを判定
+                CanAddChild = value.IsParentTask;
+                System.Diagnostics.Debug.WriteLine($"SelectedItem changed to: {(value?.Title ?? "null")}, IsParentTask: {value?.IsParentTask ?? false}, CanAddChild: {CanAddChild}");
+            }
+            else
+            {
+                CanAddChild = false;
+                System.Diagnostics.Debug.WriteLine($"SelectedItem changed to: null, CanAddChild: {CanAddChild}");
+            }
         }
 
         partial void OnIsEditModeAfterAddChanged(bool value)
@@ -102,6 +125,10 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand UpdateProgressCommand { get; }
         public ICommand LimitHierarchyCommand { get; }
         public ICommand SelectItemCommand { get; }
+        public ICommand MoveUpCommand { get; }
+        public ICommand MoveDownCommand { get; }
+        public ICommand MoveLeftCommand { get; }
+        public ICommand MoveRightCommand { get; }
 
         public WbsViewModel()
         {
@@ -128,6 +155,10 @@ namespace RedmineClient.ViewModels.Pages
             UpdateProgressCommand = new RelayCommand(UpdateParentProgress);
             LimitHierarchyCommand = new RelayCommand(() => LimitHierarchyDepth(5));
             SelectItemCommand = new RelayCommand<WbsItem>(SelectItem);
+            MoveUpCommand = new RelayCommand(MoveUp);
+            MoveDownCommand = new RelayCommand(MoveDown);
+            MoveLeftCommand = new RelayCommand(MoveLeft);
+            MoveRightCommand = new RelayCommand(MoveRight);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -159,6 +190,9 @@ namespace RedmineClient.ViewModels.Pages
             
             // 平坦化リストを初期化
             UpdateFlattenedList();
+            
+            // スケジュール表を初期化
+            InitializeScheduleItems();
             
             // Redmine接続状態を確認
             await TestRedmineConnectionAsync();
@@ -458,20 +492,23 @@ namespace RedmineClient.ViewModels.Pages
         // 平坦化リストを更新
         UpdateFlattenedList();
         
-        // 平坦化リスト更新後に選択状態を再確認・復元
-        if (!IsEditModeAfterAdd && SelectedItem != parent)
+        // 平坦化リスト更新後に選択状態を再確認・復元（遅延実行で確実に復元）
+        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
         {
-            System.Diagnostics.Debug.WriteLine($"連続追加モード: 選択状態を復元 '{parent.Title}'");
-            SelectedItem = parent;
-        }
-        else if (IsEditModeAfterAdd && SelectedItem != newItem)
-        {
-            System.Diagnostics.Debug.WriteLine($"編集モード: 選択状態を復元 '{newItem.Title}'");
-            SelectedItem = newItem;
-        }
+            if (!IsEditModeAfterAdd && SelectedItem != parent)
+            {
+                System.Diagnostics.Debug.WriteLine($"連続追加モード: 遅延実行で選択状態を復元 '{parent.Title}'");
+                SelectedItem = parent;
+            }
+            else if (IsEditModeAfterAdd && SelectedItem != newItem)
+            {
+                System.Diagnostics.Debug.WriteLine($"編集モード: 遅延実行で選択状態を復元 '{newItem.Title}'");
+                SelectedItem = newItem;
+            }
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
         
-        // フォーカスを設定
-        RequestFocus?.Invoke();
+        // フォーカスを設定（編集モードかどうかを渡す）
+        RequestFocus?.Invoke(IsEditModeAfterAdd);
         }
 
         private void DeleteItem(WbsItem? item)
@@ -554,15 +591,18 @@ namespace RedmineClient.ViewModels.Pages
             // 平坦化リストを更新
             UpdateFlattenedList();
             
-            // 平坦化リスト更新後に選択状態を再確認・復元
+                    // 平坦化リスト更新後に選択状態を再確認・復元（遅延実行で確実に復元）
+        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
             if (SelectedItem != parent)
             {
-                System.Diagnostics.Debug.WriteLine($"一括追加: 選択状態を復元 '{parent.Title}'");
+                System.Diagnostics.Debug.WriteLine($"一括追加: 遅延実行で選択状態を復元 '{parent.Title}'");
                 SelectedItem = parent;
             }
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
             
-            // フォーカスを設定
-            RequestFocus?.Invoke();
+            // フォーカスを設定（編集モードかどうかを渡す）
+            RequestFocus?.Invoke(IsEditModeAfterAdd);
         }
 
         /// <summary>
@@ -715,6 +755,9 @@ namespace RedmineClient.ViewModels.Pages
             {
                 AddItemToFlattened(rootItem);
             }
+            
+            // スケジュール表も更新
+            UpdateScheduleItems();
         }
 
         /// <summary>
@@ -769,6 +812,129 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     ClearAllSelections(item.Children);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 上に移動
+        /// </summary>
+        private void MoveUp()
+        {
+            if (SelectedItem == null || FlattenedWbsItems.Count == 0) return;
+
+            var currentIndex = FlattenedWbsItems.IndexOf(SelectedItem);
+            if (currentIndex > 0)
+            {
+                SelectedItem = FlattenedWbsItems[currentIndex - 1];
+            }
+        }
+
+        /// <summary>
+        /// 下に移動
+        /// </summary>
+        private void MoveDown()
+        {
+            if (SelectedItem == null || FlattenedWbsItems.Count == 0) return;
+
+            var currentIndex = FlattenedWbsItems.IndexOf(SelectedItem);
+            if (currentIndex < FlattenedWbsItems.Count - 1)
+            {
+                SelectedItem = FlattenedWbsItems[currentIndex + 1];
+            }
+        }
+
+        /// <summary>
+        /// 左に移動（前の列）
+        /// </summary>
+        private void MoveLeft()
+        {
+            if (SelectedItem == null || FlattenedWbsItems.Count == 0) return;
+
+            var currentIndex = FlattenedWbsItems.IndexOf(SelectedItem);
+            var targetIndex = Math.Max(0, currentIndex - 1);
+            SelectedItem = FlattenedWbsItems[targetIndex];
+        }
+
+        /// <summary>
+        /// 右に移動（次の列）
+        /// </summary>
+        private void MoveRight()
+        {
+            if (SelectedItem == null || FlattenedWbsItems.Count == 0) return;
+
+            var currentIndex = FlattenedWbsItems.IndexOf(SelectedItem);
+            var targetIndex = Math.Min(FlattenedWbsItems.Count - 1, currentIndex + 1);
+            SelectedItem = FlattenedWbsItems[targetIndex];
+        }
+
+        /// <summary>
+        /// スケジュール表を初期化する
+        /// </summary>
+        private void InitializeScheduleItems()
+        {
+            ScheduleItems.Clear();
+            
+            var startDate = DateTime.Today;
+            var endDate = DateTime.Today.AddMonths(2); // 2か月先まで
+            
+            // 週単位でグループ化して表示
+            var currentDate = startDate;
+            while (currentDate <= endDate)
+            {
+                // 週の開始日（月曜日）を取得
+                var weekStart = currentDate;
+                while (weekStart.DayOfWeek != System.DayOfWeek.Monday)
+                {
+                    weekStart = weekStart.AddDays(-1);
+                }
+                
+                // 週の終了日（日曜日）を取得
+                var weekEnd = weekStart.AddDays(6);
+                
+                // 週の各日を追加
+                for (var date = weekStart; date <= weekEnd && date <= endDate; date = date.AddDays(1))
+                {
+                    var scheduleItem = new ScheduleItem
+                    {
+                        Date = date,
+                        TaskTitle = GetTaskTitleForDate(date)
+                    };
+                    
+                    ScheduleItems.Add(scheduleItem);
+                }
+                
+                // 次の週に移動
+                currentDate = weekEnd.AddDays(1);
+            }
+        }
+
+        /// <summary>
+        /// 指定された日付に対応するタスクタイトルを取得する
+        /// </summary>
+        /// <param name="date">日付</param>
+        /// <returns>タスクタイトル</returns>
+        private string GetTaskTitleForDate(DateTime date)
+        {
+            // WBSアイテムから該当する日付のタスクを検索
+            foreach (var item in FlattenedWbsItems)
+            {
+                if (item.StartDate <= date && date <= item.EndDate)
+                {
+                    return item.Title;
+                }
+            }
+            
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// スケジュール表のタスク情報を更新する
+        /// </summary>
+        private void UpdateScheduleItems()
+        {
+            foreach (var scheduleItem in ScheduleItems)
+            {
+                scheduleItem.TaskTitle = GetTaskTitleForDate(scheduleItem.Date);
             }
         }
 

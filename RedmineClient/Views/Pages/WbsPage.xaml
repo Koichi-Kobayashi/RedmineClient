@@ -53,10 +53,17 @@
 
             <Separator Margin="8,0" />
 
-            <!-- タスク追加後の動作モード設定 -->
-            <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" IsChecked="{Binding ViewModel.IsEditModeAfterAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:追加後編集、OFF:連続追加" />
-            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfterAdd, StringFormat='現在のモード: {0}'}" />
+                         <!-- タスク追加後の動作モード設定 -->
+             <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" IsChecked="{Binding ViewModel.IsEditModeAfterAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+             <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:追加後編集、OFF:連続追加" />
+             <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfterAdd, StringFormat='現在のモード: {0}'}" />
+
+             <Separator Margin="8,0" />
+
+             <!-- タスク詳細表示モード設定 -->
+             <ui:ToggleSwitch Margin="0,0,8,0" Content="タスク詳細表示" IsChecked="{Binding ViewModel.IsTaskDetailVisible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+             <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:詳細表示、OFF:詳細非表示" />
+             <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsTaskDetailVisible, StringFormat='詳細表示: {0}'}" />
 
             <Separator Margin="8,0" />
 
@@ -115,13 +122,15 @@
             </Grid>
         </Grid>
 
-        <!--  WBSツリービュー  -->
-        <Grid x:Name="MainContentGrid" Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="DataGridColumn" Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition x:Name="TaskDetailColumn" Width="400" />
-            </Grid.ColumnDefinitions>
+                 <!--  WBSツリービュー  -->
+         <Grid x:Name="MainContentGrid" Grid.Row="2">
+             <Grid.ColumnDefinitions>
+                 <ColumnDefinition x:Name="DataGridColumn" Width="*" />
+                 <ColumnDefinition Width="Auto" />
+                 <ColumnDefinition x:Name="ScheduleColumn" Width="300" />
+                 <ColumnDefinition Width="Auto" />
+                 <ColumnDefinition x:Name="TaskDetailColumn" Width="400" />
+             </Grid.ColumnDefinitions>
 
             <!--  左側：DataGrid  -->
             <ui:Card Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
@@ -297,108 +306,215 @@
                         <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
                     </DataGrid.Columns>
 
-                    <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Padding" Value="4,2" />
-                            <Setter Property="Margin" Value="0,1" />
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#E5F3FF" />
-                                </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#F0F0F0" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.RowStyle>
+                                         <DataGrid.RowStyle>
+                         <Style TargetType="DataGridRow">
+                             <Setter Property="Background" Value="Transparent" />
+                             <Setter Property="BorderThickness" Value="0" />
+                             <Setter Property="Padding" Value="4,2" />
+                             <Setter Property="Margin" Value="0,1" />
+                             <Style.Triggers>
+                                 <Trigger Property="IsSelected" Value="True">
+                                     <Setter Property="Background" Value="#E5F3FF" />
+                                 </Trigger>
+                                 <Trigger Property="IsMouseOver" Value="True">
+                                     <Setter Property="Background" Value="#F0F0F0" />
+                                 </Trigger>
+                             </Style.Triggers>
+                         </Style>
+                     </DataGrid.RowStyle>
+                     
+                     <DataGrid.InputBindings>
+                         <KeyBinding Key="Up" Command="{Binding ViewModel.MoveUpCommand}" />
+                         <KeyBinding Key="Down" Command="{Binding ViewModel.MoveDownCommand}" />
+                         <KeyBinding Key="Left" Command="{Binding ViewModel.MoveLeftCommand}" />
+                         <KeyBinding Key="Right" Command="{Binding ViewModel.MoveRightCommand}" />
+                     </DataGrid.InputBindings>
                 </DataGrid>
             </ui:Card>
 
-            <!--  区切り線  -->
-            <GridSplitter
-                x:Name="TaskDetailSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
-                Background="Gray" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" ShowsPreview="False" />
+                                      <!--  スケジュール表  -->
+             <ui:Card Grid.Column="2" Padding="16" VerticalAlignment="Top">
+                 <StackPanel>
+                     <ui:TextBlock Margin="0,0,0,16" FontTypography="Body" FontWeight="SemiBold" Text="スケジュール表" />
+                     
+                                          <DataGrid x:Name="ScheduleDataGrid" 
+                               AutoGenerateColumns="False" 
+                               CanUserAddRows="False" 
+                               CanUserDeleteRows="False"
+                               CanUserSortColumns="False"
+                               HeadersVisibility="Column"
+                               GridLinesVisibility="All"
+                               Background="White"
+                               BorderBrush="Gray"
+                               BorderThickness="1"
+                               RowHeight="24"
+                               MaxHeight="500"
+                               ItemsSource="{Binding ViewModel.ScheduleItems}">
+                                                     <DataGrid.Columns>
+                               <DataGridTextColumn Header="週" Binding="{Binding WeekNumber}" Width="40" IsReadOnly="True" />
+                               <DataGridTextColumn Header="日付" Binding="{Binding Date, StringFormat=MM/dd}" Width="60" IsReadOnly="True" />
+                               <DataGridTextColumn Header="曜日" Binding="{Binding DayOfWeek}" Width="50" IsReadOnly="True" />
+                               <DataGridTextColumn Header="タスク" Binding="{Binding TaskTitle}" Width="*" IsReadOnly="True" />
+                           </DataGrid.Columns>
+                           <DataGrid.ColumnHeaderStyle>
+                               <Style TargetType="DataGridColumnHeader">
+                                   <Setter Property="Background" Value="LightGray" />
+                                   <Setter Property="Foreground" Value="Black" />
+                                   <Setter Property="FontWeight" Value="SemiBold" />
+                                   <Setter Property="Padding" Value="6,4" />
+                                   <Setter Property="BorderBrush" Value="Gray" />
+                                   <Setter Property="BorderThickness" Value="0,0,1,1" />
+                                   <Setter Property="HorizontalAlignment" Value="Center" />
+                                   <Setter Property="VerticalAlignment" Value="Center" />
+                               </Style>
+                           </DataGrid.ColumnHeaderStyle>
+                                                     <DataGrid.RowStyle>
+                               <Style TargetType="DataGridRow">
+                                   <Setter Property="Background" Value="{Binding BackgroundColor}" />
+                                   <Setter Property="BorderBrush" Value="Gray" />
+                                   <Setter Property="BorderThickness" Value="0,0,0,1" />
+                                   <Setter Property="Margin" Value="0" />
+                                   <Setter Property="Padding" Value="6,4" />
+                                   <Style.Triggers>
+                                       <Trigger Property="IsMouseOver" Value="True">
+                                           <Setter Property="Background" Value="LightYellow" />
+                                       </Trigger>
+                                       <Trigger Property="IsSelected" Value="True">
+                                           <Setter Property="Background" Value="LightBlue" />
+                                       </Trigger>
+                                   </Style.Triggers>
+                               </Style>
+                           </DataGrid.RowStyle>
+                           <DataGrid.CellStyle>
+                               <Style TargetType="DataGridCell">
+                                   <Setter Property="BorderBrush" Value="Gray" />
+                                   <Setter Property="BorderThickness" Value="0,0,1,0" />
+                                   <Setter Property="Padding" Value="6,4" />
+                                   <Setter Property="VerticalAlignment" Value="Center" />
+                                   <Setter Property="HorizontalAlignment" Value="Center" />
+                                   <Setter Property="FontSize" Value="11" />
+                               </Style>
+                           </DataGrid.CellStyle>
+                      </DataGrid>
+                 </StackPanel>
+             </ui:Card>
 
-            <!--  右側：タスク詳細  -->
-            <ui:Card Grid.Column="2" Padding="24" VerticalAlignment="Top">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <ui:TextBlock Margin="0,0,0,24" FontTypography="Body" FontWeight="SemiBold" Text="タスク詳細" />
+                           <!--  区切り線（スケジュール表とタスク詳細の間）  -->
+              <GridSplitter
+                  x:Name="ScheduleSplitter" Grid.Column="3" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                  Background="Gray" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" ShowsPreview="False" 
+                  Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}" />
 
-                        <ui:TextBlock Margin="0,48,0,0" FontTypography="Body" Text="タスクを選択してください" TextAlignment="Center" Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityInverseConverter.Instance}}" />
+              <!--  右側：タスク詳細  -->
+              <ui:Card Grid.Column="4" Padding="24" VerticalAlignment="Top" 
+                       Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                  <ui:Card.RenderTransform>
+                      <TranslateTransform x:Name="TaskDetailTransform" X="400" />
+                  </ui:Card.RenderTransform>
+                  <ui:Card.Triggers>
+                      <EventTrigger RoutedEvent="ui:Card.Loaded">
+                          <BeginStoryboard>
+                              <Storyboard>
+                                  <DoubleAnimation Storyboard.TargetName="TaskDetailTransform" 
+                                                   Storyboard.TargetProperty="X" 
+                                                   To="0" Duration="0:0:0.3" />
+                              </Storyboard>
+                          </BeginStoryboard>
+                      </EventTrigger>
+                  </ui:Card.Triggers>
+                 <ScrollViewer VerticalScrollBarVisibility="Auto">
+                     <StackPanel>
+                         <ui:TextBlock Margin="0,0,0,24" FontTypography="Body" FontWeight="SemiBold" Text="タスク詳細" />
 
-                        <StackPanel Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
-                            <!--  ID  -->
-                            <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ID" />
-                            <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.Id}" />
+                         <ui:TextBlock Margin="0,48,0,0" FontTypography="Body" Text="タスクを選択してください" TextAlignment="Center" Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityInverseConverter.Instance}}" />
 
-                            <!--  タイトル  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="タイトル" />
-                            <ui:TextBox PlaceholderText="タスクのタイトルを入力" Text="{Binding ViewModel.SelectedItem.Title, UpdateSourceTrigger=PropertyChanged}" />
+                                                   <StackPanel Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
+                              <!--  基本情報  -->
+                              <Expander Margin="0,0,0,16" Header="基本情報" IsExpanded="True">
+                                  <StackPanel>
+                                      <!--  ID  -->
+                                      <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ID" />
+                                      <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.Id}" />
 
-                            <!--  説明  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="説明" />
-                            <ui:TextBox Height="80" AcceptsReturn="True" PlaceholderText="タスクの詳細説明を入力" Text="{Binding ViewModel.SelectedItem.Description, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
+                                      <!--  タイトル  -->
+                                      <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="タイトル" />
+                                      <ui:TextBox x:Name="TitleTextBox" PlaceholderText="タスクのタイトルを入力" Text="{Binding ViewModel.SelectedItem.Title, UpdateSourceTrigger=PropertyChanged}" KeyDown="TitleTextBox_KeyDown" />
 
-                            <!--  開始日  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="開始日" />
-                            <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.StartDate}" />
+                                      <!--  説明  -->
+                                      <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="説明" />
+                                      <ui:TextBox x:Name="DescriptionTextBox" Height="80" AcceptsReturn="True" PlaceholderText="タスクの詳細説明を入力" Text="{Binding ViewModel.SelectedItem.Description, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
+                                  </StackPanel>
+                              </Expander>
 
-                            <!--  終了日  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
-                            <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.EndDate}" />
+                              <!--  スケジュール  -->
+                              <Expander Margin="0,0,0,16" Header="スケジュール" IsExpanded="True">
+                                  <StackPanel>
+                                      <!--  開始日  -->
+                                      <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="開始日" />
+                                      <ui:TextBox x:Name="StartDateTextBox" PlaceholderText="yyyy/MM/dd" Text="{Binding ViewModel.SelectedItem.StartDate, StringFormat=yyyy/MM/dd, UpdateSourceTrigger=PropertyChanged}" KeyDown="DateTextBox_KeyDown" KeyUp="DateTextBox_KeyUp" />
 
-                            <!--  進捗  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="進捗" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Slider
-                                    Grid.Column="0" IsSnapToTickEnabled="True" Maximum="100" Minimum="0" TickFrequency="10"
-                                    Value="{Binding ViewModel.SelectedItem.Progress}" />
-                                <ui:TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Text="{Binding ViewModel.SelectedItem.Progress, StringFormat='{}{0:F0}%'}" />
-                            </Grid>
+                                      <!--  終了日  -->
+                                      <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
+                                      <ui:TextBox x:Name="EndDateTextBox" PlaceholderText="yyyy/MM/dd" Text="{Binding ViewModel.SelectedItem.EndDate, StringFormat=yyyy/MM/dd, UpdateSourceTrigger=PropertyChanged}" KeyDown="DateTextBox_KeyDown" KeyUp="DateTextBox_KeyUp" />
+                                  </StackPanel>
+                              </Expander>
 
-                            <!--  ステータス  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ステータス" />
-                            <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Status}">
-                                <ComboBoxItem Content="未着手" Tag="未着手" />
-                                <ComboBoxItem Content="進行中" Tag="進行中" />
-                                <ComboBoxItem Content="完了" Tag="完了" />
-                                <ComboBoxItem Content="保留" Tag="保留" />
-                                <ComboBoxItem Content="キャンセル" Tag="キャンセル" />
-                            </ComboBox>
+                              <!--  進捗・ステータス  -->
+                              <Expander Margin="0,0,0,16" Header="進捗・ステータス" IsExpanded="True">
+                                  <StackPanel>
+                                      <!--  進捗  -->
+                                      <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="進捗" />
+                                      <Grid>
+                                          <Grid.ColumnDefinitions>
+                                              <ColumnDefinition Width="*" />
+                                              <ColumnDefinition Width="Auto" />
+                                          </Grid.ColumnDefinitions>
+                                          <Slider
+                                              x:Name="ProgressSlider" Grid.Column="0" IsSnapToTickEnabled="True" Maximum="100" Minimum="0" TickFrequency="10"
+                                              Value="{Binding ViewModel.SelectedItem.Progress}" />
+                                          <ui:TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Text="{Binding ViewModel.SelectedItem.Progress, StringFormat='{}{0:F0}%'}" />
+                                      </Grid>
 
-                            <!--  優先度  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="優先度" />
-                            <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Priority}">
-                                <ComboBoxItem Content="低" Tag="低" />
-                                <ComboBoxItem Content="中" Tag="中" />
-                                <ComboBoxItem Content="高" Tag="高" />
-                                <ComboBoxItem Content="緊急" Tag="緊急" />
-                            </ComboBox>
+                                      <!--  ステータス  -->
+                                      <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="ステータス" />
+                                      <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Status}">
+                                          <ComboBoxItem Content="未着手" Tag="未着手" />
+                                          <ComboBoxItem Content="進行中" Tag="進行中" />
+                                          <ComboBoxItem Content="完了" Tag="完了" />
+                                          <ComboBoxItem Content="保留" Tag="保留" />
+                                          <ComboBoxItem Content="キャンセル" Tag="キャンセル" />
+                                      </ComboBox>
 
-                            <!--  担当者  -->
-                            <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="担当者" />
-                            <ui:TextBox PlaceholderText="担当者名を入力" Text="{Binding ViewModel.SelectedItem.Assignee, UpdateSourceTrigger=PropertyChanged}" />
+                                      <!--  優先度  -->
+                                      <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="優先度" />
+                                      <ComboBox SelectedValue="{Binding ViewModel.SelectedItem.Priority}">
+                                          <ComboBoxItem Content="低" Tag="低" />
+                                          <ComboBoxItem Content="中" Tag="中" />
+                                          <ComboBoxItem Content="高" Tag="高" />
+                                          <ComboBoxItem Content="緊急" Tag="緊急" />
+                                      </ComboBox>
+                                  </StackPanel>
+                              </Expander>
 
-                            <!--  Redmine情報  -->
-                            <ui:TextBlock Margin="0,24,0,8" FontTypography="Caption" FontWeight="SemiBold" Text="Redmine情報" />
-                            <StackPanel>
-                                <ui:TextBlock Margin="0,0,0,4" FontTypography="Caption" Text="チケットID" />
-                                <ui:TextBox PlaceholderText="Redmineチケット番号" Text="{Binding ViewModel.SelectedItem.RedmineIssueId, UpdateSourceTrigger=PropertyChanged}" />
+                              <!--  担当者・Redmine情報  -->
+                              <Expander Margin="0,0,0,16" Header="担当者・Redmine情報" IsExpanded="False">
+                                  <StackPanel>
+                                      <!--  担当者  -->
+                                      <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="担当者" />
+                                      <ui:TextBox PlaceholderText="担当者名を入力" Text="{Binding ViewModel.SelectedItem.Assignee, UpdateSourceTrigger=PropertyChanged}" />
 
-                                <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="URL" />
-                                <ui:TextBox PlaceholderText="RedmineチケットのURL" Text="{Binding ViewModel.SelectedItem.RedmineUrl, UpdateSourceTrigger=PropertyChanged}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
-            </ui:Card>
-        </Grid>
-    </Grid>
+                                      <!--  Redmine情報  -->
+                                      <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="チケットID" />
+                                      <ui:TextBox PlaceholderText="Redmineチケット番号" Text="{Binding ViewModel.SelectedItem.RedmineIssueId, UpdateSourceTrigger=PropertyChanged}" />
+
+                                      <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="URL" />
+                                      <ui:TextBox PlaceholderText="RedmineチケットのURL" Text="{Binding ViewModel.SelectedItem.RedmineUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                  </StackPanel>
+                              </Expander>
+                          </StackPanel>
+                     </StackPanel>
+                 </ScrollViewer>
+             </ui:Card>
+         </Grid>
+     </Grid>
 </Page>

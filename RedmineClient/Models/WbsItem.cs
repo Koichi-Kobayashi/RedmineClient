@@ -101,6 +101,29 @@ namespace RedmineClient.Models
             set => SetProperty(ref _redmineUrl, value);
         }
 
+        /// <summary>
+        /// このアイテムが親タスク（子タスクを持てるタスク）かどうか
+        /// </summary>
+        public bool IsParentTask
+        {
+            get
+            {
+                // ルートアイテム（親がない）または第2階層のタスクは親タスク
+                if (Parent == null || (Parent != null && Parent.Parent == null))
+                    return true;
+                
+                // 既に子タスクを持っている場合は親タスク
+                if (HasChildren)
+                    return true;
+                
+                // プロジェクト名を含む場合は親タスク
+                if (Title.Contains("プロジェクト") || Title.Contains("開発") || Title.Contains("設計"))
+                    return true;
+                
+                return false;
+            }
+        }
+
         private ObservableCollection<WbsItem> _children = new();
         public ObservableCollection<WbsItem> Children 
         { 

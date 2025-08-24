@@ -8,7 +8,7 @@ namespace RedmineClient.ViewModels.Windows
     public partial class MainWindowViewModel : ObservableObject
     {
         [ObservableProperty]
-        private string _applicationTitle = "WPF UI - RedmineClient";
+        private string _applicationTitle = "RedmineClient - WBS";
 
         [ObservableProperty]
         private string _connectionStatus = "未接続";
