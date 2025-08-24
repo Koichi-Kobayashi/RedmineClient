@@ -6,6 +6,7 @@ namespace RedmineClient.Models
     public class AppConfig
     {
         private static bool _isLoaded = false;
+        private static bool _isInitialized = false;
         private static readonly object _lockObject = new object();
         
         public static string RedmineHost { get; set; }
@@ -17,6 +18,7 @@ namespace RedmineClient.Models
         public static string WindowState { get; set; } = "Normal";
         public static double TaskDetailWidth { get; set; } = 400;
         public static ApplicationTheme ApplicationTheme { get; set; } = ApplicationTheme.Light;
+        private static string _scheduleStartYearMonth = "";
 
         public static string Theme
         {
@@ -26,8 +28,25 @@ namespace RedmineClient.Models
 
         public static string ScheduleStartYearMonth
         {
-            get => GetSetting("ScheduleStartYearMonth", DateTime.Now.ToString("yyyy/MM"));
-            set => SetSetting("ScheduleStartYearMonth", value);
+            get => _scheduleStartYearMonth;
+            set
+            {
+                _scheduleStartYearMonth = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SetSetting("ScheduleStartYearMonth", value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 初期化時にScheduleStartYearMonthの値を取得する（setアクセサーを呼び出さない）
+        /// </summary>
+        /// <returns>ScheduleStartYearMonthの値</returns>
+        public static string GetScheduleStartYearMonthForInitialization()
+        {
+            return _scheduleStartYearMonth;
         }
 
         /// <summary>
@@ -38,10 +57,12 @@ namespace RedmineClient.Models
             try
             {
                 var value = ConfigurationManager.AppSettings[key];
+                System.Diagnostics.Debug.WriteLine($"GetSetting: key='{key}', value='{value}', defaultValue='{defaultValue}'");
                 return string.IsNullOrEmpty(value) ? defaultValue : value;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"GetSetting error for {key}: {ex.Message}");
                 return defaultValue;
             }
         }
@@ -53,9 +74,11 @@ namespace RedmineClient.Models
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"SetSetting: key='{key}', value='{value}'");
                 var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
                 SetSettingsItem(config, key, value);
                 config.Save();
+                System.Diagnostics.Debug.WriteLine($"SetSetting: 保存完了 - key='{key}', value='{value}'");
             }
             catch (Exception ex)
             {
@@ -87,7 +110,7 @@ namespace RedmineClient.Models
             SetSettingsItem(config, "WindowState", WindowState);
             SetSettingsItem(config, "TaskDetailWidth", TaskDetailWidth.ToString());
             SetSettingsItem(config, "ApplicationTheme", ApplicationTheme.ToString());
-            SetSettingsItem(config, "ScheduleStartYearMonth", ScheduleStartYearMonth);
+            SetSettingsItem(config, "ScheduleStartYearMonth", _scheduleStartYearMonth);
             config.Save();
         }
 
@@ -99,13 +122,16 @@ namespace RedmineClient.Models
         /// <param name="value"></param>
         private static void SetSettingsItem(Configuration config, string key, string value)
         {
+            System.Diagnostics.Debug.WriteLine($"SetSettingsItem: key='{key}', value='{value}'");
             if (config.AppSettings.Settings[key] != null)
             {
                 config.AppSettings.Settings[key].Value = value;
+                System.Diagnostics.Debug.WriteLine($"SetSettingsItem: 既存の設定を更新 - key='{key}', value='{value}'");
             }
             else
             {
                 config.AppSettings.Settings.Add(key, value);
+                System.Diagnostics.Debug.WriteLine($"SetSettingsItem: 新しい設定を追加 - key='{key}', value='{value}'");
             }
         }
 
@@ -193,11 +219,11 @@ namespace RedmineClient.Models
                     var scheduleStartYearMonth = ConfigurationManager.AppSettings["ScheduleStartYearMonth"];
                     if (!string.IsNullOrEmpty(scheduleStartYearMonth))
                     {
-                        ScheduleStartYearMonth = scheduleStartYearMonth;
+                        _scheduleStartYearMonth = scheduleStartYearMonth;
                     }
                     else
                     {
-                        ScheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM"); // 無効な値の場合は現在の年月をデフォルトとする
+                        _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM"); // 無効な値の場合は現在の年月をデフォルトとする
                     }
                 }
                 catch (Exception ex)
@@ -208,6 +234,8 @@ namespace RedmineClient.Models
                 }
                 
                 _isLoaded = true;
+                _isInitialized = true;
+                System.Diagnostics.Debug.WriteLine("AppConfig.Load: 初期化完了");
             }
         }
 
@@ -225,7 +253,9 @@ namespace RedmineClient.Models
             WindowState = "Normal";
             TaskDetailWidth = 400;
             ApplicationTheme = ApplicationTheme.Light;
-            ScheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
+            _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
+            _isInitialized = true;
+            System.Diagnostics.Debug.WriteLine("AppConfig.SetDefaultValues: デフォルト値設定完了");
         }
 
         /// <summary>

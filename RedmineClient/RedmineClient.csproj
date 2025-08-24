@@ -54,6 +54,12 @@
   <ItemGroup>
     <Folder Include="Assets\Icon\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\syukujitsu.csv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <Target Name="RemoveTranslationsAfterBuild" AfterTargets="AfterBuild">
     <RemoveDir Directories="@(FluentValidationExcludedCultures->'$(OutputPath)%(Filename)')" />
   </Target>

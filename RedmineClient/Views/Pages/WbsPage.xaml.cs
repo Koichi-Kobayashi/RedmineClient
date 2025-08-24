@@ -28,8 +28,24 @@ namespace RedmineClient.Views.Pages
             // DataGridのLoadedイベントでも日付列の生成を試行
             this.Loaded += WbsPage_DataGridLoaded;
 
-            // 年月の選択肢を初期化
-            InitializeYearMonthOptions();
+            // 祝日データを初期化（非同期で実行）
+            _ = InitializeHolidayDataAsync();
+        }
+
+        /// <summary>
+        /// 祝日データを初期化する
+        /// </summary>
+        private async Task InitializeHolidayDataAsync()
+        {
+            try
+            {
+                await RedmineClient.Services.HolidayService.ForceUpdateAsync();
+                System.Diagnostics.Debug.WriteLine("祝日データの初期化が完了しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"祝日データの初期化に失敗: {ex.Message}");
+            }
         }
 
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
@@ -38,6 +54,9 @@ namespace RedmineClient.Views.Pages
 
             // 保存されたウィンドウサイズを復元
             RestoreWindowSize();
+
+            // 年月の選択肢を初期化
+            InitializeYearMonthOptions();
 
             // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
             System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 日付列の生成を遅延実行");
@@ -64,7 +83,35 @@ namespace RedmineClient.Views.Pages
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
             {
                 System.Diagnostics.Debug.WriteLine("ScheduleStartYearMonthComboBox_SelectionChanged: スケジュール開始年月が変更されました");
+                
+                // 選択された年月をViewModelに設定
+                if (ScheduleStartYearMonthComboBox.SelectedItem is string selectedYearMonth)
+                {
+                    ViewModel.ScheduleStartYearMonth = selectedYearMonth;
+                    System.Diagnostics.Debug.WriteLine($"選択された年月: {selectedYearMonth}");
+                }
+                
+                // 祝日データを再初期化（色設定のため）
+                _ = RefreshHolidayDataAsync();
+                
+                // 日付列を再生成
                 GenerateDateColumns();
+            }
+        }
+
+        /// <summary>
+        /// 祝日データを再初期化する
+        /// </summary>
+        private async Task RefreshHolidayDataAsync()
+        {
+            try
+            {
+                await RedmineClient.Services.HolidayService.ForceUpdateAsync();
+                System.Diagnostics.Debug.WriteLine("祝日データの再初期化が完了しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"祝日データの再初期化に失敗: {ex.Message}");
             }
         }
 
@@ -93,7 +140,29 @@ namespace RedmineClient.Views.Pages
 
         public Task OnNavigatedFromAsync()
         {
+            // ページ離脱時に開始月を保存
+            SaveScheduleStartYearMonth();
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// スケジュール開始年月を保存する
+        /// </summary>
+        private void SaveScheduleStartYearMonth()
+        {
+            try
+            {
+                if (ViewModel.ScheduleStartYearMonth != null)
+                {
+                    AppConfig.ScheduleStartYearMonth = ViewModel.ScheduleStartYearMonth;
+                    AppConfig.Save();
+                    System.Diagnostics.Debug.WriteLine($"スケジュール開始年月を保存しました: {ViewModel.ScheduleStartYearMonth}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"スケジュール開始年月の保存に失敗: {ex.Message}");
+            }
         }
 
         public virtual Task OnNavigatedFrom()
@@ -108,6 +177,10 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
+                // 設定ファイルから値を読み込み
+                AppConfig.Load();
+                System.Diagnostics.Debug.WriteLine("AppConfig.Load()を実行しました");
+
                 var yearMonthOptions = new List<string>();
                 var currentDate = DateTime.Now.AddYears(-2); // 2年前から
                 var endDate = DateTime.Now.AddYears(3); // 3年後まで
@@ -120,14 +193,35 @@ namespace RedmineClient.Views.Pages
 
                 ScheduleStartYearMonthComboBox.ItemsSource = yearMonthOptions;
 
-                // 現在の年月が選択されていることを確認
-                if (ViewModel.ScheduleStartYearMonth != null && yearMonthOptions.Contains(ViewModel.ScheduleStartYearMonth))
+                // 保存された年月がある場合はそれを選択、ない場合は当月を選択
+                var savedYearMonth = AppConfig.ScheduleStartYearMonth;
+                System.Diagnostics.Debug.WriteLine($"AppConfigから読み込んだ年月: '{savedYearMonth}'");
+                System.Diagnostics.Debug.WriteLine($"年月選択肢の数: {yearMonthOptions.Count}");
+                System.Diagnostics.Debug.WriteLine($"選択肢の最初の5件: {string.Join(", ", yearMonthOptions.Take(5))}");
+                
+                if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
                 {
-                    ScheduleStartYearMonthComboBox.SelectedItem = ViewModel.ScheduleStartYearMonth;
+                    ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
+                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                    ViewModel.ScheduleStartYearMonth = savedYearMonth;
+                    System.Diagnostics.Debug.WriteLine($"保存された年月を選択: {savedYearMonth}");
                 }
                 else
                 {
-                    ScheduleStartYearMonthComboBox.SelectedItem = DateTime.Now.ToString("yyyy/MM");
+                    var currentYearMonth = DateTime.Now.ToString("yyyy/MM");
+                    ScheduleStartYearMonthComboBox.SelectedItem = currentYearMonth;
+                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                    ViewModel.ScheduleStartYearMonth = currentYearMonth;
+                    System.Diagnostics.Debug.WriteLine($"当月を選択: {currentYearMonth}");
+                    
+                    if (!string.IsNullOrEmpty(savedYearMonth))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"保存された年月 '{savedYearMonth}' が選択肢に含まれていません");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("保存された年月がありません。当月を選択しました。");
+                    }
                 }
 
                 System.Diagnostics.Debug.WriteLine($"年月選択肢を初期化: {yearMonthOptions.Count}個の選択肢を設定");
@@ -219,12 +313,18 @@ namespace RedmineClient.Views.Pages
         /// <returns>曜日の前景色</returns>
         private System.Windows.Media.Brush GetDayOfWeekForeground(DateTime date)
         {
-            return date.DayOfWeek switch
-            {
-                DayOfWeek.Saturday => System.Windows.Media.Brushes.Blue,      // 土曜日は青色
-                DayOfWeek.Sunday => System.Windows.Media.Brushes.Red,         // 日曜日は赤色
-                _ => System.Windows.Media.Brushes.DarkGray                   // 平日は濃いグレー
-            };
+            // 祝日は赤色（日曜日と同じ）
+            if (RedmineClient.Services.HolidayService.IsHoliday(date))
+                return System.Windows.Media.Brushes.Red;
+            // 土曜日は青色
+            else if (date.DayOfWeek == DayOfWeek.Saturday)
+                return System.Windows.Media.Brushes.Blue;
+            // 日曜日は赤色
+            else if (date.DayOfWeek == DayOfWeek.Sunday)
+                return System.Windows.Media.Brushes.Red;
+            // 平日は濃いグレー
+            else
+                return System.Windows.Media.Brushes.DarkGray;
         }
 
         /// <summary>
@@ -453,6 +553,9 @@ namespace RedmineClient.Views.Pages
         {
             // ウィンドウサイズを保存
             SaveWindowSize();
+            
+            // スケジュール開始年月を保存
+            SaveScheduleStartYearMonth();
         }
 
         /// <summary>

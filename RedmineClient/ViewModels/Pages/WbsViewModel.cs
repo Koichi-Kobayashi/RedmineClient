@@ -146,8 +146,8 @@ namespace RedmineClient.ViewModels.Pages
 
         public WbsViewModel()
         {
-            // 設定からスケジュール開始年月を読み込み
-            ScheduleStartYearMonth = AppConfig.ScheduleStartYearMonth;
+            // 設定からスケジュール開始年月を読み込み（getアクセサーを呼び出さない）
+            _scheduleStartYearMonth = AppConfig.GetScheduleStartYearMonthForInitialization();
             
             AddRootItemCommand = new RelayCommand(AddRootItem);
             AddChildItemCommand = new RelayCommand<WbsItem>(AddChildItem);
