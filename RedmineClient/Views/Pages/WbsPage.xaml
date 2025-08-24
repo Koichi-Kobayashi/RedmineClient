@@ -337,9 +337,8 @@
                          ResizeBehavior="PreviousAndNext" 
                          ShowsPreview="False" />
 
-            <!--  右側：詳細表示  -->
-            <ui:Card Grid.Column="2" Padding="24">
-
+            <!--  右側：タスク詳細  -->
+            <ui:Card Grid.Column="2" Padding="24" VerticalAlignment="Top">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <ui:TextBlock Margin="0,0,0,24" FontTypography="Body" FontWeight="SemiBold" Text="タスク詳細" />
