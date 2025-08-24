@@ -1,13 +1,7 @@
-using RedmineClient.ViewModels.Pages;
-using RedmineClient.Models;
-using Wpf.Ui.Abstractions.Controls;
-using Wpf.Ui.Appearance;
-using System.Windows;
 using System.Windows.Controls;
-using System;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic; // Added for List
+using RedmineClient.Models;
+using RedmineClient.ViewModels.Pages;
+using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.Views.Pages
 {
@@ -24,16 +18,16 @@ namespace RedmineClient.Views.Pages
             DataContext = this;
 
             InitializeComponent();
-            
+
             // ViewModelのフォーカス要求イベントに応答
             ViewModel.RequestFocus += SetFocus;
-            
+
             // 初期化完了後にタスク詳細の幅を設定
             this.Loaded += WbsPage_InitialLoaded;
-            
+
             // DataGridのLoadedイベントでも日付列の生成を試行
             this.Loaded += WbsPage_DataGridLoaded;
-            
+
             // 年月の選択肢を初期化
             InitializeYearMonthOptions();
         }
@@ -41,10 +35,10 @@ namespace RedmineClient.Views.Pages
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 開始");
-            
+
             // 保存されたウィンドウサイズを復元
             RestoreWindowSize();
-            
+
             // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
             System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 日付列の生成を遅延実行");
             Dispatcher.BeginInvoke(new Action(() =>
@@ -52,7 +46,7 @@ namespace RedmineClient.Views.Pages
                 System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 遅延実行で日付列の生成を開始");
                 GenerateDateColumns();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
-            
+
             // このイベントは一度だけ実行
             this.Loaded -= WbsPage_InitialLoaded;
             System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 完了");
@@ -74,17 +68,13 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-
-
-
-
         public Task OnNavigatedToAsync()
         {
             System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 開始");
-            
+
             // ページ表示時にウィンドウサイズを復元
             RestoreWindowSize();
-            
+
             // 日付列の生成も遅延実行で試行
             System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 日付列の生成を遅延実行で試行");
             Dispatcher.BeginInvoke(new Action(() =>
@@ -92,7 +82,7 @@ namespace RedmineClient.Views.Pages
                 System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 遅延実行で日付列の生成を開始");
                 GenerateDateColumns();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
-            
+
             return Task.CompletedTask;
         }
 
@@ -121,15 +111,15 @@ namespace RedmineClient.Views.Pages
                 var yearMonthOptions = new List<string>();
                 var currentDate = DateTime.Now.AddYears(-2); // 2年前から
                 var endDate = DateTime.Now.AddYears(3); // 3年後まで
-                
+
                 while (currentDate <= endDate)
                 {
                     yearMonthOptions.Add(currentDate.ToString("yyyy/MM"));
                     currentDate = currentDate.AddMonths(1);
                 }
-                
+
                 ScheduleStartYearMonthComboBox.ItemsSource = yearMonthOptions;
-                
+
                 // 現在の年月が選択されていることを確認
                 if (ViewModel.ScheduleStartYearMonth != null && yearMonthOptions.Contains(ViewModel.ScheduleStartYearMonth))
                 {
@@ -139,7 +129,7 @@ namespace RedmineClient.Views.Pages
                 {
                     ScheduleStartYearMonthComboBox.SelectedItem = DateTime.Now.ToString("yyyy/MM");
                 }
-                
+
                 System.Diagnostics.Debug.WriteLine($"年月選択肢を初期化: {yearMonthOptions.Count}個の選択肢を設定");
             }
             catch (Exception ex)
@@ -169,177 +159,53 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
-        /// 月ヘッダーの内容を作成する
+        /// 3行ヘッダーを作成する（1行目：月、2行目：日、3行目：曜日）
         /// </summary>
         /// <param name="date">日付</param>
-        /// <returns>月ヘッダーの内容</returns>
-        private object CreateMonthHeader(DateTime date)
+        /// <param name="isMonthStart">月の開始日かどうか</param>
+        /// <returns>3行ヘッダー</returns>
+        private object CreateThreeRowHeader(DateTime date, bool isMonthStart = false)
         {
+            var stackPanel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            // 1行目：月（月の開始日のみ表示、それ以外は空）
             var monthText = new TextBlock
             {
-                Text = $"{date:MM}月",
+                Text = isMonthStart ? $"{date:MM}月" : "",
                 FontSize = 12,
                 FontWeight = FontWeights.Bold,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Foreground = System.Windows.Media.Brushes.DarkBlue,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            return monthText;
-        }
-
-        /// <summary>
-        /// 月ヘッダーと日付ヘッダーを縦に結合したヘッダーを作成する
-        /// </summary>
-        /// <param name="date">日付</param>
-        /// <param name="monthDate">月の開始日（nullの場合は月ヘッダーを表示しない）</param>
-        /// <returns>結合されたヘッダーの内容</returns>
-        private object CreateCombinedHeader(DateTime date, DateTime? monthDate)
-        {
-            var stackPanel = new StackPanel
-            {
-                Orientation = Orientation.Vertical,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            // 月ヘッダーがある場合（月の開始位置）
-            if (monthDate.HasValue)
-            {
-                var monthText = new TextBlock
-                {
-                    Text = $"{monthDate.Value:yyyy年MM月}",
-                    FontSize = 8,
-                    FontWeight = FontWeights.Bold,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Height = 20,
-                    Foreground = System.Windows.Media.Brushes.DarkBlue
-                };
-                stackPanel.Children.Add(monthText);
-            }
-            else
-            {
-                // 月ヘッダーがない場合は空のスペース
-                var emptySpace = new TextBlock
-                {
-                    Height = 20
-                };
-                stackPanel.Children.Add(emptySpace);
-            }
-
-            // 日付ヘッダー
-            var dayText = new TextBlock
-            {
-                Text = $"{date:dd}",
-                FontSize = 10,
-                FontWeight = FontWeights.Normal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Height = 20
-            };
-                stackPanel.Children.Add(dayText);
-
-            // 曜日
-            var dayOfWeekText = new TextBlock
-            {
-                Text = GetDayOfWeek(date),
-                FontSize = 8,
-                FontWeight = FontWeights.Normal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Height = 20
-            };
-            stackPanel.Children.Add(dayOfWeekText);
-
-            return stackPanel;
-        }
-
-        /// <summary>
-        /// 3行ヘッダーを作成する（1行目：月ヘッダー、2行目：日付、3行目：曜日）
-        /// </summary>
-        /// <param name="monthDate">月の開始日</param>
-        /// <param name="spanDays">横に結合する日数</param>
-        /// <returns>3行ヘッダー</returns>
-        private object CreateMonthHeaderWithSpan(DateTime monthDate, int spanDays)
-        {
-            var stackPanel = new StackPanel
-            {
-                Orientation = Orientation.Vertical,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            // 1行目：月ヘッダー（横結合用）- 中央寄せで表示
-            var monthText = new TextBlock
-            {
-                Text = $"{monthDate:yyyy年MM月}",
-                FontSize = 10,
-                FontWeight = FontWeights.Bold,
-                HorizontalAlignment = HorizontalAlignment.Center,
                 Height = 20,
-                Foreground = System.Windows.Media.Brushes.DarkBlue,
-                TextAlignment = TextAlignment.Center
+                Foreground = System.Windows.Media.Brushes.DarkBlue
             };
             stackPanel.Children.Add(monthText);
 
-            // 2行目：空のスペース（日付は各列に表示）
-            var emptyDaySpace = new TextBlock
-            {
-                Height = 20,
-                Text = ""
-            };
-            stackPanel.Children.Add(emptyDaySpace);
-
-            // 3行目：空のスペース（曜日は各列に表示）
-            var emptyWeekSpace = new TextBlock
-            {
-                Height = 20,
-                Text = ""
-            };
-            stackPanel.Children.Add(emptyWeekSpace);
-
-            return stackPanel;
-        }
-
-        /// <summary>
-        /// 3行ヘッダーを作成する（1行目：空のスペース、2行目：日付、3行目：曜日）
-        /// </summary>
-        /// <param name="date">日付</param>
-        /// <returns>3行ヘッダー</returns>
-        private object CreateDateOnlyHeader(DateTime date)
-        {
-            var stackPanel = new StackPanel
-            {
-                Orientation = Orientation.Vertical,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            // 1行目：空のスペース（月ヘッダーなし）
-            var emptyMonthSpace = new TextBlock
-            {
-                Height = 20,
-                Text = ""
-            };
-            stackPanel.Children.Add(emptyMonthSpace);
-
-            // 2行目：日付
+            // 2行目：日
             var dayText = new TextBlock
             {
                 Text = $"{date:dd}",
-                FontSize = 10,
-                FontWeight = FontWeights.Normal,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Height = 20
+                Height = 20,
+                Foreground = System.Windows.Media.Brushes.Black
             };
             stackPanel.Children.Add(dayText);
 
-            // 3行目：曜日
+            // 3行目：曜日（土日祝の色を変更）
             var dayOfWeekText = new TextBlock
             {
                 Text = GetDayOfWeek(date),
-                FontSize = 8,
+                FontSize = 12,
                 FontWeight = FontWeights.Normal,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Height = 20
+                Height = 20,
+                Foreground = GetDayOfWeekForeground(date)
             };
             stackPanel.Children.Add(dayOfWeekText);
 
@@ -347,45 +213,19 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
-        /// 日付ヘッダーの内容を作成する（従来の方法）
+        /// 曜日の前景色を取得する（土日祝の色を変更）
         /// </summary>
         /// <param name="date">日付</param>
-        /// <returns>日付ヘッダーの内容</returns>
-        private object CreateDateHeader(DateTime date)
+        /// <returns>曜日の前景色</returns>
+        private System.Windows.Media.Brush GetDayOfWeekForeground(DateTime date)
         {
-            var stackPanel = new StackPanel
+            return date.DayOfWeek switch
             {
-                Orientation = Orientation.Vertical,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
+                DayOfWeek.Saturday => System.Windows.Media.Brushes.Blue,      // 土曜日は青色
+                DayOfWeek.Sunday => System.Windows.Media.Brushes.Red,         // 日曜日は赤色
+                _ => System.Windows.Media.Brushes.DarkGray                   // 平日は濃いグレー
             };
-
-            // 1行目：日
-            var dayText = new TextBlock
-            {
-                Text = $"{date:dd}",
-                FontSize = 10,
-                FontWeight = FontWeights.Normal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Height = 20
-            };
-            stackPanel.Children.Add(dayText);
-
-            // 2行目：曜日
-            var dayOfWeekText = new TextBlock
-            {
-                Text = GetDayOfWeek(date),
-                FontSize = 8,
-                FontWeight = FontWeights.Normal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Height = 20
-            };
-            stackPanel.Children.Add(dayOfWeekText);
-
-            return stackPanel;
         }
-
-
 
         /// <summary>
         /// 日付ヘッダー用のスタイルを作成する
@@ -394,102 +234,49 @@ namespace RedmineClient.Views.Pages
         private Style CreateDateHeaderStyle()
         {
             var style = new Style(typeof(System.Windows.Controls.Primitives.DataGridColumnHeader));
-            
+
             // 前景色
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.ForegroundProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.ForegroundProperty,
                 new DynamicResourceExtension("TextFillColorPrimaryBrush")));
-            
+
             // 背景色
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BackgroundProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BackgroundProperty,
                 new DynamicResourceExtension("CardBackgroundFillColorSecondaryBrush")));
-            
+
             // ボーダー色
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderBrushProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderBrushProperty,
                 new DynamicResourceExtension("DividerStrokeColorDefaultBrush")));
-            
+
             // ボーダー太さ
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderThicknessProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderThicknessProperty,
                 new Thickness(0, 0, 1, 1)));
-            
+
             // パディング
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.PaddingProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.PaddingProperty,
                 new Thickness(2, 2, 2, 2)));
-            
+
             // フォントウェイト
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontWeightProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontWeightProperty,
                 FontWeights.SemiBold));
-            
+
             // フォントサイズ
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontSizeProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontSizeProperty,
                 8.0));
-            
+
             // 水平配置
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HorizontalContentAlignmentProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HorizontalContentAlignmentProperty,
                 HorizontalAlignment.Center));
-            
+
             // 垂直配置
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.VerticalContentAlignmentProperty, 
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.VerticalContentAlignmentProperty,
                 VerticalAlignment.Center));
-            
-            // 高さ（月ヘッダーと日付・曜日表示のため調整）
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HeightProperty, 
-                60.0));
-            
+
+            // 高さ（3行ヘッダー表示のため調整）
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HeightProperty,
+                70.0));
+
             return style;
         }
-
-        /// <summary>
-        /// 月ヘッダー用のスタイルを作成する（横結合用）
-        /// </summary>
-        /// <returns>月ヘッダー用のスタイル</returns>
-        private Style CreateMonthHeaderStyle()
-        {
-            var style = new Style(typeof(System.Windows.Controls.Primitives.DataGridColumnHeader));
-            
-            // 前景色
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.ForegroundProperty, 
-                new DynamicResourceExtension("TextFillColorPrimaryBrush")));
-            
-            // 背景色
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BackgroundProperty, 
-                new DynamicResourceExtension("CardBackgroundFillColorSecondaryBrush")));
-            
-            // ボーダー色
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderBrushProperty, 
-                new DynamicResourceExtension("DividerStrokeColorDefaultBrush")));
-            
-            // ボーダー太さ
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderThicknessProperty, 
-                new Thickness(0, 0, 1, 1)));
-            
-            // パディング
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.PaddingProperty, 
-                new Thickness(2, 2, 2, 2)));
-            
-            // フォントウェイト
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontWeightProperty, 
-                FontWeights.SemiBold));
-            
-            // フォントサイズ
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontSizeProperty, 
-                8.0));
-            
-            // 水平配置
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HorizontalContentAlignmentProperty, 
-                HorizontalAlignment.Center));
-            
-            // 垂直配置
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.VerticalContentAlignmentProperty, 
-                VerticalAlignment.Center));
-            
-            // 高さ（月ヘッダーと日付・曜日表示のため調整）
-            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HeightProperty, 
-                60.0));
-            
-            return style;
-        }
-
-
 
         /// <summary>
         /// 日付列を生成する
@@ -499,14 +286,14 @@ namespace RedmineClient.Views.Pages
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && WbsDataGrid.IsInitialized)
             {
                 System.Diagnostics.Debug.WriteLine("GenerateDateColumns: 開始");
-                
-                // 既存のスケジュール列を削除（月ヘッダーと日付列）
+
+                // 既存のスケジュール列を削除
                 var existingColumns = WbsDataGrid.Columns.Where(c => c.Header is StackPanel || c.Header is TextBlock).ToList();
                 foreach (var column in existingColumns)
                 {
                     WbsDataGrid.Columns.Remove(column);
                 }
-                
+
                 // 設定された年月の1日から開始
                 DateTime startDate;
                 if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
@@ -518,53 +305,43 @@ namespace RedmineClient.Views.Pages
                     startDate = new DateTime(DateTime.Now.Year, 1, 1); // デフォルトは1月1日
                 }
                 var endDate = startDate.AddMonths(2).AddDays(-1); // 2か月分
-                
+
                 System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 日付範囲 {startDate:yyyy/MM/dd} から {endDate:yyyy/MM/dd}");
-                
+
                 var currentDate = startDate;
                 var columnCount = 0;
                 var lastMonth = -1;
-                var monthStartIndex = 0;
-                var monthInfo = new List<(int startIndex, int endIndex, DateTime monthDate)>();
-                
+
                 // 固定列の数を取得（タスク名、ID、説明、開始日、終了日、進捗、ステータス、優先度、担当者）
                 var fixedColumnCount = 9;
-                
+
                 while (currentDate <= endDate)
                 {
-                    // 月が変わった場合、前の月の情報を記録
-                    if (currentDate.Month != lastMonth && lastMonth != -1)
-                    {
-                        monthInfo.Add((monthStartIndex, columnCount - 1, currentDate.AddDays(-1)));
-                        System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 月情報を記録: {monthStartIndex} から {columnCount - 1}");
-                    }
-                    
-                    // 月が変わった場合、新しい月の開始位置を記録
-                    if (currentDate.Month != lastMonth)
+                    // 月が変わったかどうかをチェック
+                    var isMonthStart = currentDate.Month != lastMonth;
+                    if (isMonthStart)
                     {
                         lastMonth = currentDate.Month;
-                        monthStartIndex = columnCount;
-                        System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 新しい月開始: {currentDate:yyyy年MM月} (列位置: {columnCount})");
                     }
-                    
+
                     var dateColumn = new DataGridTemplateColumn
                     {
-                        Width = 25,
-                        Header = CreateDateHeader(currentDate), // 初期ヘッダー（後で更新される）
+                        Width = 30, // 幅を少し広げて3行表示に対応
+                        Header = CreateThreeRowHeader(currentDate, isMonthStart),
                         IsReadOnly = true,
                         HeaderStyle = CreateDateHeaderStyle()
                     };
-                    
+
                     // 日付列用のセルテンプレート
                     var cellTemplate = new DataTemplate();
                     var factory = new FrameworkElementFactory(typeof(Border));
-                    
-                    factory.SetValue(Border.WidthProperty, 25.0);
+
+                    factory.SetValue(Border.WidthProperty, 30.0);
                     factory.SetValue(Border.HeightProperty, 20.0);
                     factory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Gray);
                     factory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
                     factory.SetValue(Border.CornerRadiusProperty, new CornerRadius(2));
-                    
+
                     // 土曜日は青色、日曜日はピンク色
                     var backgroundBinding = new System.Windows.Data.Binding
                     {
@@ -572,74 +349,23 @@ namespace RedmineClient.Views.Pages
                         Converter = new RedmineClient.Helpers.DateToBackgroundColorConverter()
                     };
                     factory.SetValue(Border.BackgroundProperty, backgroundBinding);
-                    
+
                     cellTemplate.VisualTree = factory;
                     dateColumn.CellTemplate = cellTemplate;
-                    
+
                     // 固定列の後ろに日付列を追加
                     WbsDataGrid.Columns.Insert(fixedColumnCount + columnCount, dateColumn);
                     columnCount++;
                     currentDate = currentDate.AddDays(1);
                 }
-                
-                // 最後の月の情報を記録
-                if (lastMonth != -1)
-                {
-                    monthInfo.Add((monthStartIndex, columnCount - 1, endDate));
-                    System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 最後の月情報を記録: {monthStartIndex} から {columnCount - 1}");
-                }
-                
-                                 // 月ヘッダーを横結合するためのカスタムヘッダーテンプレートを作成
-                 // 各月の開始列に月ヘッダーを設定し、その月の他の列は空のヘッダーにする
-                 for (int i = 0; i < columnCount; i++)
-                 {
-                     var dateColumn = WbsDataGrid.Columns[fixedColumnCount + i] as DataGridTemplateColumn;
-                     if (dateColumn != null)
-                     {
-                         var columnDate = startDate.AddDays(i);
-                         
-                         // 月の開始位置かどうかをチェック
-                         var monthData = monthInfo.FirstOrDefault(m => m.startIndex == i);
-                         if (monthData != default)
-                         {
-                             // 月の開始位置：月ヘッダー付きのヘッダー（横結合用）
-                             var monthDays = monthData.endIndex - monthData.startIndex + 1;
-                             
-                             // 月の日数を計算（より正確な方法）
-                             var monthStart = monthData.Item3;
-                             var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-                             var actualMonthDays = (monthEnd - monthStart).Days + 1;
-                             
-                             dateColumn.Header = CreateMonthHeaderWithSpan(monthData.Item3, actualMonthDays);
-                             
-                             // 月ヘッダー列の幅を月の日数分に設定（横結合用）
-                             dateColumn.Width = monthDays * 25.0;
-                             
-                             // 月ヘッダー用のスタイルを適用
-                             dateColumn.HeaderStyle = CreateMonthHeaderStyle();
-                         }
-                         else
-                         {
-                             // 月の開始位置以外：空のヘッダー（月ヘッダーは表示しない）
-                             dateColumn.Header = CreateDateOnlyHeader(columnDate);
-                             
-                             // 月の開始列以外の列の幅を0にして、月ヘッダーが横結合されて見えるようにする
-                             dateColumn.Width = 0;
-                         }
-                     }
-                 }
-                
-                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 完了。{columnCount}個の日付列と{monthInfo.Count}個の月ヘッダー列を追加しました。現在の総列数: {WbsDataGrid.Columns.Count}");
+
+                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 完了。{columnCount}個の日付列を追加しました。現在の総列数: {WbsDataGrid.Columns.Count}");
             }
             else
             {
                 System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: DataGridが準備できていません。IsLoaded: {WbsDataGrid?.IsLoaded}, IsInitialized: {WbsDataGrid?.IsInitialized}");
             }
         }
-
-
-
-
 
         /// <summary>
         /// ウィンドウサイズを保存する
@@ -708,7 +434,7 @@ namespace RedmineClient.Views.Pages
         protected override void OnInitialized(EventArgs e)
         {
             base.OnInitialized(e);
-            
+
             // ページが初期化された後にウィンドウのClosingイベントを登録
             this.Loaded += WbsPage_Loaded;
         }
@@ -738,13 +464,13 @@ namespace RedmineClient.Views.Pages
             {
                 // プレースメントターゲットからWbsItemのDataContextを取得
                 var wbsItem = target.DataContext;
-                
+
                 // コンテキストメニューの各MenuItemにViewModelとWbsItemの両方を設定
                 foreach (MenuItem menuItem in contextMenu.Items.OfType<MenuItem>())
                 {
                     // MenuItemのDataContextはWbsItemのまま保持
                     menuItem.DataContext = wbsItem;
-                    
+
                     // CommandはViewModelから取得
                     switch (menuItem.Header?.ToString())
                     {
@@ -758,14 +484,12 @@ namespace RedmineClient.Views.Pages
                             menuItem.Command = ViewModel.DeleteItemCommand;
                             break;
                     }
-                    
+
                     // CommandParameterはWbsItemを設定
                     menuItem.CommandParameter = wbsItem;
                 }
             }
         }
-
-
 
         /// <summary>
         /// モードに応じてフォーカスを設定する
@@ -801,7 +525,7 @@ namespace RedmineClient.Views.Pages
                         MoveToNextField(dateTextBox, e.Key == System.Windows.Input.Key.Tab && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == System.Windows.Input.ModifierKeys.Shift);
                         System.Diagnostics.Debug.WriteLine($"DateTextBox: {(e.Key == System.Windows.Input.Key.Tab && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == System.Windows.Input.ModifierKeys.Shift ? "逆方向" : "順方向")}に移動");
                     }
-                    else if (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down || 
+                    else if (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down ||
                              e.Key == System.Windows.Input.Key.Left || e.Key == System.Windows.Input.Key.Right)
                     {
                         // 矢印キーで日付を調整
@@ -922,7 +646,7 @@ namespace RedmineClient.Views.Pages
                     // カーソル位置に基づいて日付の特定の部分を調整
                     var cursorPosition = dateTextBox.CaretIndex;
                     var text = dateTextBox.Text;
-                    
+
                     if (DateTime.TryParse(text, out DateTime currentDate))
                     {
                         DateTime newDate = currentDate;
@@ -1011,8 +735,6 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-
-
         /// <summary>
         /// タイトルフィールドにフォーカスを設定する
         /// </summary>
@@ -1086,10 +808,10 @@ namespace RedmineClient.Views.Pages
                 {
                     // 選択された行を選択状態にする
                     WbsDataGrid.SelectedIndex = selectedIndex;
-                    
+
                     // 選択された行にスクロール
                     WbsDataGrid.ScrollIntoView(WbsDataGrid.Items[selectedIndex]);
-                    
+
                     // 少し待ってから行のコンテナを取得
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
@@ -1130,7 +852,7 @@ namespace RedmineClient.Views.Pages
             {
                 // 行のコンテナを取得
                 var row = WbsDataGrid.ItemContainerGenerator.ContainerFromIndex(rowIndex) as DataGridRow;
-                
+
                 if (row != null)
                 {
                     // 行が見つかった場合、セルにフォーカスを設定
@@ -1183,7 +905,7 @@ namespace RedmineClient.Views.Pages
                         return;
                     }
                 }
-                
+
                 // セルが見つからない場合は行にフォーカス
                 row.Focus();
                 System.Diagnostics.Debug.WriteLine($"編集モード: 行にフォーカス設定成功 '{ViewModel.SelectedItem?.Title ?? "null"}'");
@@ -1191,7 +913,7 @@ namespace RedmineClient.Views.Pages
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"編集モード: セルフォーカス設定中にエラー: {ex.Message}");
-                
+
                 // エラーが発生した場合は行にフォーカス
                 try
                 {
