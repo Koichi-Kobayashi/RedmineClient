@@ -124,13 +124,11 @@
 
                  <!--  WBSツリービュー  -->
          <Grid x:Name="MainContentGrid" Grid.Row="2">
-             <Grid.ColumnDefinitions>
-                 <ColumnDefinition x:Name="DataGridColumn" Width="*" />
-                 <ColumnDefinition Width="Auto" />
-                 <ColumnDefinition x:Name="ScheduleColumn" Width="300" />
-                 <ColumnDefinition Width="Auto" />
-                 <ColumnDefinition x:Name="TaskDetailColumn" Width="400" />
-             </Grid.ColumnDefinitions>
+                               <Grid.ColumnDefinitions>
+                      <ColumnDefinition x:Name="DataGridColumn" Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition x:Name="TaskDetailColumn" Width="400" />
+                  </Grid.ColumnDefinitions>
 
             <!--  左側：DataGrid  -->
             <ui:Card Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
@@ -302,9 +300,40 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <!--  担当者列  -->
-                        <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
-                    </DataGrid.Columns>
+                                                 <!--  担当者列  -->
+                         <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
+
+                         <!--  スケジュール列（2か月分の日付）  -->
+                         <DataGridTemplateColumn Width="600" Header="スケジュール" IsReadOnly="True">
+                             <DataGridTemplateColumn.CellTemplate>
+                                 <DataTemplate>
+                                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden">
+                                         <StackPanel Orientation="Horizontal">
+                                             <ItemsControl ItemsSource="{Binding ScheduleDates}">
+                                                 <ItemsControl.ItemsPanel>
+                                                     <ItemsPanelTemplate>
+                                                         <StackPanel Orientation="Horizontal" />
+                                                     </ItemsPanelTemplate>
+                                                 </ItemsControl.ItemsPanel>
+                                                 <ItemsControl.ItemTemplate>
+                                                     <DataTemplate>
+                                                         <Border Width="20" Height="20" Margin="1" 
+                                                                  Background="{Binding Converter={x:Static helpers:DateToBackgroundColorConverter.Instance}}"
+                                                                  BorderBrush="Gray" BorderThickness="1" CornerRadius="2"
+                                                                  ToolTip="{Binding StringFormat=yyyy/MM/dd}">
+                                                             <TextBlock Text="{Binding Day}" FontSize="8" 
+                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                        Foreground="Black" />
+                                                         </Border>
+                                                     </DataTemplate>
+                                                 </ItemsControl.ItemTemplate>
+                                             </ItemsControl>
+                                         </StackPanel>
+                                     </ScrollViewer>
+                                 </DataTemplate>
+                             </DataGridTemplateColumn.CellTemplate>
+                         </DataGridTemplateColumn>
+                     </DataGrid.Columns>
 
                                          <DataGrid.RowStyle>
                          <Style TargetType="DataGridRow">
@@ -332,82 +361,17 @@
                 </DataGrid>
             </ui:Card>
 
-                                      <!--  スケジュール表  -->
-             <ui:Card Grid.Column="2" Padding="16" VerticalAlignment="Top">
-                 <StackPanel>
-                     <ui:TextBlock Margin="0,0,0,16" FontTypography="Body" FontWeight="SemiBold" Text="スケジュール表" />
-                     
-                                          <DataGrid x:Name="ScheduleDataGrid" 
-                               AutoGenerateColumns="False" 
-                               CanUserAddRows="False" 
-                               CanUserDeleteRows="False"
-                               CanUserSortColumns="False"
-                               HeadersVisibility="Column"
-                               GridLinesVisibility="All"
-                               Background="White"
-                               BorderBrush="Gray"
-                               BorderThickness="1"
-                               RowHeight="24"
-                               MaxHeight="500"
-                               ItemsSource="{Binding ViewModel.ScheduleItems}">
-                                                     <DataGrid.Columns>
-                               <DataGridTextColumn Header="週" Binding="{Binding WeekNumber}" Width="40" IsReadOnly="True" />
-                               <DataGridTextColumn Header="日付" Binding="{Binding Date, StringFormat=MM/dd}" Width="60" IsReadOnly="True" />
-                               <DataGridTextColumn Header="曜日" Binding="{Binding DayOfWeek}" Width="50" IsReadOnly="True" />
-                               <DataGridTextColumn Header="タスク" Binding="{Binding TaskTitle}" Width="*" IsReadOnly="True" />
-                           </DataGrid.Columns>
-                           <DataGrid.ColumnHeaderStyle>
-                               <Style TargetType="DataGridColumnHeader">
-                                   <Setter Property="Background" Value="LightGray" />
-                                   <Setter Property="Foreground" Value="Black" />
-                                   <Setter Property="FontWeight" Value="SemiBold" />
-                                   <Setter Property="Padding" Value="6,4" />
-                                   <Setter Property="BorderBrush" Value="Gray" />
-                                   <Setter Property="BorderThickness" Value="0,0,1,1" />
-                                   <Setter Property="HorizontalAlignment" Value="Center" />
-                                   <Setter Property="VerticalAlignment" Value="Center" />
-                               </Style>
-                           </DataGrid.ColumnHeaderStyle>
-                                                     <DataGrid.RowStyle>
-                               <Style TargetType="DataGridRow">
-                                   <Setter Property="Background" Value="{Binding BackgroundColor}" />
-                                   <Setter Property="BorderBrush" Value="Gray" />
-                                   <Setter Property="BorderThickness" Value="0,0,0,1" />
-                                   <Setter Property="Margin" Value="0" />
-                                   <Setter Property="Padding" Value="6,4" />
-                                   <Style.Triggers>
-                                       <Trigger Property="IsMouseOver" Value="True">
-                                           <Setter Property="Background" Value="LightYellow" />
-                                       </Trigger>
-                                       <Trigger Property="IsSelected" Value="True">
-                                           <Setter Property="Background" Value="LightBlue" />
-                                       </Trigger>
-                                   </Style.Triggers>
-                               </Style>
-                           </DataGrid.RowStyle>
-                           <DataGrid.CellStyle>
-                               <Style TargetType="DataGridCell">
-                                   <Setter Property="BorderBrush" Value="Gray" />
-                                   <Setter Property="BorderThickness" Value="0,0,1,0" />
-                                   <Setter Property="Padding" Value="6,4" />
-                                   <Setter Property="VerticalAlignment" Value="Center" />
-                                   <Setter Property="HorizontalAlignment" Value="Center" />
-                                   <Setter Property="FontSize" Value="11" />
-                               </Style>
-                           </DataGrid.CellStyle>
-                      </DataGrid>
-                 </StackPanel>
-             </ui:Card>
 
-                           <!--  区切り線（スケジュール表とタスク詳細の間）  -->
-              <GridSplitter
-                  x:Name="ScheduleSplitter" Grid.Column="3" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
-                  Background="Gray" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" ShowsPreview="False" 
-                  Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}" />
 
-              <!--  右側：タスク詳細  -->
-              <ui:Card Grid.Column="4" Padding="24" VerticalAlignment="Top" 
-                       Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                       <!--  区切り線（WBS DataGridとタスク詳細の間）  -->
+               <GridSplitter
+                   x:Name="TaskDetailSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                   Background="Gray" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" ShowsPreview="False" 
+                   Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}" />
+
+                             <!--  右側：タスク詳細  -->
+               <ui:Card Grid.Column="2" Padding="24" VerticalAlignment="Top" 
+                        Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
                   <ui:Card.RenderTransform>
                       <TranslateTransform x:Name="TaskDetailTransform" X="400" />
                   </ui:Card.RenderTransform>

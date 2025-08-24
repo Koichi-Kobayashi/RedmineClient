@@ -221,5 +221,32 @@ namespace RedmineClient.Models
                 RedmineUrl = RedmineUrl
             };
         }
+
+        /// <summary>
+        /// スケジュール表示用の日付リスト（2か月分）
+        /// </summary>
+        public List<DateTime> ScheduleDates
+        {
+            get
+            {
+                var dates = new List<DateTime>();
+                var startDate = DateTime.Today;
+                var endDate = DateTime.Today.AddMonths(2);
+                
+                var currentDate = startDate;
+                while (currentDate <= endDate)
+                {
+                    dates.Add(currentDate);
+                    currentDate = currentDate.AddDays(1);
+                }
+                
+                return dates;
+            }
+        }
+
+        /// <summary>
+        /// 開始日の日を取得
+        /// </summary>
+        public int Day => StartDate.Day;
     }
 }

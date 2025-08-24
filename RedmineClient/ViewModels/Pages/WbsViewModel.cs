@@ -928,6 +928,32 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         /// <summary>
+        /// 指定された日付が非稼働日かどうかを判定する
+        /// </summary>
+        /// <param name="date">日付</param>
+        /// <returns>非稼働日の場合はtrue</returns>
+        public bool IsNonWorkingDay(DateTime date)
+        {
+            return date.DayOfWeek == System.DayOfWeek.Saturday || date.DayOfWeek == System.DayOfWeek.Sunday;
+        }
+
+        /// <summary>
+        /// 指定された日付の背景色を取得する
+        /// </summary>
+        /// <param name="date">日付</param>
+        /// <returns>背景色</returns>
+        public System.Windows.Media.Brush GetBackgroundColorForDate(DateTime date)
+        {
+            if (IsNonWorkingDay(date))
+            {
+                return date.DayOfWeek == System.DayOfWeek.Saturday 
+                    ? System.Windows.Media.Brushes.LightBlue 
+                    : System.Windows.Media.Brushes.LightPink;
+            }
+            return System.Windows.Media.Brushes.White;
+        }
+
+        /// <summary>
         /// スケジュール表のタスク情報を更新する
         /// </summary>
         private void UpdateScheduleItems()

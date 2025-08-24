@@ -37,9 +37,9 @@ namespace RedmineClient.Views.Pages
             ApplyTaskDetailWidth();
             
             // GridSplitterのイベントを登録
-            if (ScheduleSplitter != null)
+            if (TaskDetailSplitter != null)
             {
-                ScheduleSplitter.DragCompleted += TaskDetailSplitter_DragCompleted;
+                TaskDetailSplitter.DragCompleted += TaskDetailSplitter_DragCompleted;
             }
             
 

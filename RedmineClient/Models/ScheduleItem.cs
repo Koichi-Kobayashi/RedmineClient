@@ -21,7 +21,7 @@ namespace RedmineClient.Models
         /// <summary>
         /// 曜日
         /// </summary>
-        public string DayOfWeek => Date.ToString("ddd");
+        public string DayOfWeekString => Date.ToString("ddd");
 
         /// <summary>
         /// タスクタイトル
@@ -36,9 +36,9 @@ namespace RedmineClient.Models
             get
             {
                 // 土曜日は青色、日曜日・祝日はピンク
-                if (Date.DayOfWeek == System.DayOfWeek.Saturday)
+                if (Date.DayOfWeek == DayOfWeek.Saturday)
                     return Brushes.LightBlue;
-                else if (Date.DayOfWeek == System.DayOfWeek.Sunday)
+                else if (Date.DayOfWeek == DayOfWeek.Sunday)
                     return Brushes.LightPink;
                 else
                     return Brushes.White;
@@ -53,7 +53,7 @@ namespace RedmineClient.Models
             get
             {
                 // 土曜日・日曜日は黒、平日は黒
-                if (Date.DayOfWeek == System.DayOfWeek.Saturday || Date.DayOfWeek == System.DayOfWeek.Sunday)
+                if (Date.DayOfWeek == DayOfWeek.Saturday || Date.DayOfWeek == DayOfWeek.Sunday)
                     return Brushes.Black;
                 else
                     return Brushes.Black;
@@ -63,7 +63,7 @@ namespace RedmineClient.Models
         /// <summary>
         /// 非稼働日かどうか
         /// </summary>
-        public bool IsNonWorkingDay => Date.DayOfWeek == System.DayOfWeek.Saturday || Date.DayOfWeek == System.DayOfWeek.Sunday;
+        public bool IsNonWorkingDay => Date.DayOfWeek == DayOfWeek.Saturday || Date.DayOfWeek == DayOfWeek.Sunday;
 
         /// <summary>
         /// 週番号を取得する
@@ -73,7 +73,7 @@ namespace RedmineClient.Models
         private static int GetWeekNumber(DateTime date)
         {
             var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
-            return calendar.GetWeekOfYear(date, System.Globalization.CalendarWeekRule.FirstFourDayWeek, System.DayOfWeek.Monday);
+            return calendar.GetWeekOfYear(date, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
         }
     }
 }
