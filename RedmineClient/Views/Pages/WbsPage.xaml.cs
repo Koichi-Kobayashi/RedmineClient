@@ -24,6 +24,9 @@ namespace RedmineClient.Views.Pages
 
             InitializeComponent();
             
+            // ViewModelのフォーカス要求イベントに応答
+            ViewModel.RequestFocus += SetDataGridFocus;
+            
             // 初期化完了後にタスク詳細の幅を設定
             this.Loaded += WbsPage_InitialLoaded;
         }
@@ -190,6 +193,18 @@ namespace RedmineClient.Views.Pages
             {
                 ViewModel.SelectedItem = selectedItem;
             }
+        }
+
+        /// <summary>
+        /// DataGridにフォーカスを設定する
+        /// </summary>
+        public void SetDataGridFocus()
+        {
+            // UIの更新が完了してからフォーカスを設定
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                WbsDataGrid?.Focus();
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
     }
 }

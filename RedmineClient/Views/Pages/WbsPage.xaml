@@ -30,26 +30,33 @@
                 Command="{Binding ViewModel.AddChildItemCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
                 Content="子タスク追加" Icon="Add24"
-                IsEnabled="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToBooleanConverter.Instance}}" />
+                IsEnabled="{Binding ViewModel.CanAddChild}" />
 
             <ui:Button
                 Margin="0,0,8,0"
                 Command="{Binding ViewModel.AddMultipleChildrenCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
                 Content="一括サブタスク追加" Icon="Add24"
-                IsEnabled="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToBooleanConverter.Instance}}" />
+                IsEnabled="{Binding ViewModel.CanAddChild}" />
 
             <ui:Button
                 Margin="0,0,8,0" Appearance="Danger"
                 Command="{Binding ViewModel.DeleteItemCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
                 Content="削除" Icon="Delete24"
-                IsEnabled="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToBooleanConverter.Instance}}" />
+                IsEnabled="{Binding ViewModel.CanAddChild}" />
 
             <Separator Margin="8,0" />
 
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExpandAllCommand}" Content="全展開" Icon="ChevronDown24" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CollapseAllCommand}" Content="全折りたたみ" Icon="ChevronUp24" />
+
+            <Separator Margin="8,0" />
+
+            <!-- タスク追加後の動作モード設定 -->
+            <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" IsChecked="{Binding ViewModel.IsEditModeAfterAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:追加後編集、OFF:連続追加" />
+            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfterAdd, StringFormat='現在のモード: {0}'}" />
 
             <Separator Margin="8,0" />
 

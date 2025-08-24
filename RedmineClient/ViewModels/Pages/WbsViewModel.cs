@@ -18,17 +18,49 @@ namespace RedmineClient.ViewModels.Pages
 {
     public partial class WbsViewModel : ObservableObject, INavigationAware
     {
+        /// <summary>
+        /// フォーカス設定要求イベント
+        /// </summary>
+        public event Action? RequestFocus;
+
             [ObservableProperty]
     private ObservableCollection<WbsItem> _wbsItems = new();
     
-    /// <summary>
-    /// 階層構造を平坦化したアイテムリスト（DataGrid表示用）
-    /// </summary>
-    [ObservableProperty]
-    private ObservableCollection<WbsItem> _flattenedWbsItems = new();
+            /// <summary>
+        /// 階層構造を平坦化したアイテムリスト（DataGrid表示用）
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<WbsItem> _flattenedWbsItems = new();
 
         [ObservableProperty]
         private WbsItem? _selectedItem;
+
+        /// <summary>
+        /// 選択されたアイテムに子タスクを追加可能かどうか
+        /// </summary>
+        [ObservableProperty]
+        private bool _canAddChild = false;
+
+        /// <summary>
+        /// タスク追加後の動作モード
+        /// true: 編集モード（新しく追加されたタスクを選択）
+        /// false: 連続追加モード（親タスクを選択したまま）
+        /// </summary>
+        [ObservableProperty]
+        private bool _isEditModeAfterAdd = true;
+
+        partial void OnSelectedItemChanged(WbsItem? value)
+        {
+            // 選択されたアイテムが変更されたときに、子タスク追加可能かどうかを更新
+            // 親タスクが選択されている場合は子タスク追加可能
+            CanAddChild = value != null;
+            System.Diagnostics.Debug.WriteLine($"SelectedItem changed to: {(value?.Title ?? "null")}, CanAddChild: {CanAddChild}");
+        }
+
+        partial void OnIsEditModeAfterAddChanged(bool value)
+        {
+            System.Diagnostics.Debug.WriteLine($"IsEditModeAfterAdd changed to: {value}");
+        }
 
         [ObservableProperty]
         private bool _isLoading = false;
@@ -403,14 +435,43 @@ namespace RedmineClient.ViewModels.Pages
 
             parent.AddChild(newItem);
             
-            // 新しいタスクを選択状態にする
+            // モードに応じて選択するアイテムを決定
+            if (IsEditModeAfterAdd)
+            {
+                // 編集モード：新しく追加されたサブタスクを選択
+                System.Diagnostics.Debug.WriteLine($"編集モード: 新しく追加されたサブタスク '{newItem.Title}' を選択");
+                SelectedItem = newItem;
+            }
+            else
+            {
+                // 連続追加モード：親タスクを選択したまま
+                System.Diagnostics.Debug.WriteLine($"連続追加モード: 親タスク '{parent.Title}' を選択したまま");
+                SelectedItem = parent;
+                
+                            // 連続追加モードでは、親タスクが確実に選択されていることを確認
+            System.Diagnostics.Debug.WriteLine($"連続追加モード: SelectedItem確認 = {(SelectedItem?.Title ?? "null")}");
+        }
+        
+        // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
+        OnPropertyChanged(nameof(WbsItems));
+        
+        // 平坦化リストを更新
+        UpdateFlattenedList();
+        
+        // 平坦化リスト更新後に選択状態を再確認・復元
+        if (!IsEditModeAfterAdd && SelectedItem != parent)
+        {
+            System.Diagnostics.Debug.WriteLine($"連続追加モード: 選択状態を復元 '{parent.Title}'");
+            SelectedItem = parent;
+        }
+        else if (IsEditModeAfterAdd && SelectedItem != newItem)
+        {
+            System.Diagnostics.Debug.WriteLine($"編集モード: 選択状態を復元 '{newItem.Title}'");
             SelectedItem = newItem;
-            
-            // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
-            OnPropertyChanged(nameof(WbsItems));
-            
-            // 平坦化リストを更新
-            UpdateFlattenedList();
+        }
+        
+        // フォーカスを設定
+        RequestFocus?.Invoke();
         }
 
         private void DeleteItem(WbsItem? item)
@@ -483,11 +544,25 @@ namespace RedmineClient.ViewModels.Pages
                 parent.AddChild(newItem);
             }
             
+            // 一括追加の場合は常に親タスクを選択（連続追加のため）
+            SelectedItem = parent;
+            System.Diagnostics.Debug.WriteLine($"一括追加: 親タスク '{parent.Title}' を選択、SelectedItem確認 = {(SelectedItem?.Title ?? "null")}");
+            
             // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
             OnPropertyChanged(nameof(WbsItems));
             
             // 平坦化リストを更新
             UpdateFlattenedList();
+            
+            // 平坦化リスト更新後に選択状態を再確認・復元
+            if (SelectedItem != parent)
+            {
+                System.Diagnostics.Debug.WriteLine($"一括追加: 選択状態を復元 '{parent.Title}'");
+                SelectedItem = parent;
+            }
+            
+            // フォーカスを設定
+            RequestFocus?.Invoke();
         }
 
         /// <summary>
