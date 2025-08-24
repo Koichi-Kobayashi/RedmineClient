@@ -101,7 +101,12 @@ namespace RedmineClient.Models
             set => SetProperty(ref _redmineUrl, value);
         }
 
-        public ObservableCollection<WbsItem> Children { get; set; } = new();
+        private ObservableCollection<WbsItem> _children = new();
+        public ObservableCollection<WbsItem> Children 
+        { 
+            get => _children;
+            set => SetProperty(ref _children, value);
+        }
         public WbsItem? Parent { get; set; }
 
         public int Level
@@ -158,6 +163,11 @@ namespace RedmineClient.Models
             child.Parent = this;
             Children.Add(child);
             OnPropertyChanged(nameof(HasChildren));
+            OnPropertyChanged(nameof(Children));
+            OnPropertyChanged(nameof(TotalProgress));
+            
+            // 子アイテムが追加された後、親タスクを展開状態にする
+            IsExpanded = true;
         }
 
         public void RemoveChild(WbsItem child)
@@ -166,6 +176,8 @@ namespace RedmineClient.Models
             {
                 child.Parent = null;
                 OnPropertyChanged(nameof(HasChildren));
+                OnPropertyChanged(nameof(Children));
+                OnPropertyChanged(nameof(TotalProgress));
             }
         }
 

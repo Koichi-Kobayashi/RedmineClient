@@ -85,16 +85,17 @@ namespace RedmineClient.Helpers
         {
             if (value is int level)
             {
+                // ダークモードに対応した色設定
                 return level switch
                 {
-                    1 => new SolidColorBrush(Color.FromRgb(0, 120, 215)),      // 青（ルート）
-                    2 => new SolidColorBrush(Color.FromRgb(0, 150, 136)),      // 緑
-                    3 => new SolidColorBrush(Color.FromRgb(255, 152, 0)),      // オレンジ
-                    4 => new SolidColorBrush(Color.FromRgb(156, 39, 176)),     // 紫
-                    _ => new SolidColorBrush(Color.FromRgb(158, 158, 158))     // グレー（5レベル以上）
+                    1 => Application.Current.Resources["SystemAccentColorBrush"] as Brush ?? new SolidColorBrush(Color.FromRgb(0, 120, 215)),      // システムアクセント色（ルート）
+                    2 => new SolidColorBrush(Color.FromRgb(0, 180, 160)),      // 緑（ダークモードでも見やすい）
+                    3 => new SolidColorBrush(Color.FromRgb(255, 170, 0)),      // オレンジ（ダークモードでも見やすい）
+                    4 => new SolidColorBrush(Color.FromRgb(180, 80, 200)),     // 紫（ダークモードでも見やすい）
+                    _ => Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush ?? new SolidColorBrush(Color.FromRgb(180, 180, 180))     // セカンダリテキスト色（5レベル以上）
                 };
             }
-            return new SolidColorBrush(Colors.Gray);
+            return Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush ?? new SolidColorBrush(Colors.Gray);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

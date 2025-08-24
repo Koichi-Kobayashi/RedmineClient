@@ -4,8 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="clr-namespace:RedmineClient.Helpers"
-    xmlns:models="clr-namespace:RedmineClient.Models"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="clr-namespace:RedmineClient.Models"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="WBS"
     d:DesignHeight="800"
@@ -119,20 +119,18 @@
             <!--  左側：DataGrid  -->
             <ui:Card Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
                 <DataGrid
-                    x:Name="WbsDataGrid" VerticalAlignment="Top" AutoGenerateColumns="False" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderThickness="0"
-                    CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
-                    GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                    ItemsSource="{Binding ViewModel.WbsItems}"
-                    RowHeaderWidth="0"
-                    SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
-                    SelectionMode="Single" SelectionUnit="FullRow"
-                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    x:Name="WbsDataGrid" VerticalAlignment="Top"
                     AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
+                    AutoGenerateColumns="False"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
+                    CanUserSortColumns="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                    ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
                     RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                    VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                    VirtualizingPanel.IsContainerVirtualizable="True"
-                    ScrollViewer.CanContentScroll="True">
+                    RowHeaderWidth="0" ScrollViewer.CanContentScroll="True"
+                    SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
+                    SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.IsContainerVirtualizable="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
@@ -201,53 +199,34 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!--  展開/折りたたみボタンとサブタスク数表示  -->
-                                        <StackPanel Grid.Column="0" 
-                                                    Orientation="Horizontal" 
-                                                    Margin="0,0,8,0"
-                                                    Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
+                                        <StackPanel Grid.Column="0" Margin="0,0,8,0" Orientation="Horizontal" Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
                                             <ui:Button
-                                                Appearance="Transparent"
+                                                Appearance="Transparent" Background="Transparent" BorderBrush="Transparent"
                                                 Command="{Binding DataContext.ViewModel.ToggleExpansionCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                 CommandParameter="{Binding}"
+                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                 Icon="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}" />
-                                            <TextBlock
-                                                VerticalAlignment="Center"
-                                                FontSize="10"
-                                                Foreground="Gray"
-                                                Margin="4,0,0,0"
-                                                Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                            <TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
                                         </StackPanel>
 
                                         <!--  階層レベル表示  -->
-                                        <Border Grid.Column="1" 
-                                                Background="{Binding IsSelected, Converter={x:Static helpers:SelectionHighlightConverter.Instance}}"
-                                                BorderBrush="{Binding IsSelected, Converter={x:Static helpers:SelectionBorderConverter.Instance}}"
-                                                BorderThickness="1"
-                                                CornerRadius="3"
-                                                Padding="4,2"
-                                                Cursor="Hand">
+                                        <Border
+                                            Grid.Column="1" Padding="4,2"
+                                            Background="{Binding IsSelected, Converter={x:Static helpers:SelectionHighlightConverter.Instance}}"
+                                            BorderBrush="{Binding IsSelected, Converter={x:Static helpers:SelectionBorderConverter.Instance}}"
+                                            BorderThickness="1" CornerRadius="3" Cursor="Hand">
                                             <Border.InputBindings>
-                                                <MouseBinding MouseAction="LeftClick" 
-                                                              Command="{Binding DataContext.ViewModel.SelectItemCommand, RelativeSource={RelativeSource AncestorType=Page}}" 
-                                                              CommandParameter="{Binding}" />
+                                                <MouseBinding Command="{Binding DataContext.ViewModel.SelectItemCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" MouseAction="LeftClick" />
                                             </Border.InputBindings>
-                                                                                         <StackPanel Orientation="Horizontal" 
-                                                         Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}">
-                                                 <!--  階層インデント表示  -->
-                                                 <TextBlock VerticalAlignment="Center" 
-                                                            FontSize="11" 
-                                                            FontFamily="Consolas, Courier New, monospace"
-                                                            Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" 
-                                                            Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
-                                                 <!--  タスクタイトル  -->
-                                                 <TextBlock VerticalAlignment="Center" 
-                                                            FontWeight="SemiBold" 
-                                                            Margin="4,0,0,0"
-                                                            Text="{Binding Title}" />
-                                             </StackPanel>
+                                            <StackPanel Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}" Orientation="Horizontal">
+                                                <!--  階層インデント表示  -->
+                                                <TextBlock VerticalAlignment="Center" FontFamily="Consolas, Courier New, monospace" FontSize="11" Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
+                                                <!--  タスクタイトル  -->
+                                                <TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
+                                            </StackPanel>
                                         </Border>
 
-                                        <!-- コンテキストメニュー -->
+                                        <!--  コンテキストメニュー  -->
                                         <Grid.ContextMenu>
                                             <ContextMenu Opened="ContextMenu_Opened">
                                                 <MenuItem Header="サブタスク追加" Icon="Add24" />
@@ -278,7 +257,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock MinWidth="40" VerticalAlignment="Center" Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
+                                        <TextBlock MinWidth="40" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
                                         <ui:ProgressRing Width="16" Height="16" Margin="4,0,0,0" Progress="{Binding TotalProgress}" />
                                     </StackPanel>
                                 </DataTemplate>
@@ -331,11 +310,9 @@
             </ui:Card>
 
             <!--  区切り線  -->
-            <GridSplitter x:Name="TaskDetailSplitter" Grid.Column="1" Width="5" 
-                         HorizontalAlignment="Center" VerticalAlignment="Stretch" 
-                         Background="Gray" ResizeDirection="Columns"
-                         ResizeBehavior="PreviousAndNext" 
-                         ShowsPreview="False" />
+            <GridSplitter
+                x:Name="TaskDetailSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                Background="Gray" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" ShowsPreview="False" />
 
             <!--  右側：タスク詳細  -->
             <ui:Card Grid.Column="2" Padding="24" VerticalAlignment="Top">

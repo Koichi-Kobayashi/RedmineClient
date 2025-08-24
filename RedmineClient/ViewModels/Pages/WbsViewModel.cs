@@ -18,8 +18,14 @@ namespace RedmineClient.ViewModels.Pages
 {
     public partial class WbsViewModel : ObservableObject, INavigationAware
     {
-        [ObservableProperty]
-        private ObservableCollection<WbsItem> _wbsItems = new();
+            [ObservableProperty]
+    private ObservableCollection<WbsItem> _wbsItems = new();
+    
+    /// <summary>
+    /// 階層構造を平坦化したアイテムリスト（DataGrid表示用）
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<WbsItem> _flattenedWbsItems = new();
 
         [ObservableProperty]
         private WbsItem? _selectedItem;
@@ -119,6 +125,9 @@ namespace RedmineClient.ViewModels.Pages
                 }
             }
             
+            // 平坦化リストを初期化
+            UpdateFlattenedList();
+            
             // Redmine接続状態を確認
             await TestRedmineConnectionAsync();
         }
@@ -141,7 +150,7 @@ namespace RedmineClient.ViewModels.Pages
                 ErrorMessage = string.Empty;
                 ConnectionStatus = "接続確認中...";
 
-                // 設定からRedmine接続情報を取得（テーマ設定は初期化しない）
+                // 設定からRedmine接続情報を取得
                 if (string.IsNullOrEmpty(AppConfig.RedmineHost))
                 {
                     IsRedmineConnected = false;
@@ -150,18 +159,36 @@ namespace RedmineClient.ViewModels.Pages
                     return;
                 }
 
-                // 簡単な接続テスト（HTTP GETリクエスト）
+                if (string.IsNullOrEmpty(AppConfig.ApiKey))
+                {
+                    IsRedmineConnected = false;
+                    ConnectionStatus = "設定されていません";
+                    ErrorMessage = "RedmineのAPIキーが設定されていません。設定画面でAPIキーを設定してください。";
+                    return;
+                }
+
+                // APIキーを使用した接続テスト
                 using (HttpClient httpClient = new HttpClient())
                 {
                     httpClient.Timeout = TimeSpan.FromSeconds(10);
                     
-                    var response = await httpClient.GetAsync($"{AppConfig.RedmineHost}/");
+                    // APIキーをヘッダーに追加
+                    httpClient.DefaultRequestHeaders.Add("X-Redmine-API-Key", AppConfig.ApiKey);
+                    
+                    // ユーザー情報を取得して認証をテスト
+                    var response = await httpClient.GetAsync($"{AppConfig.RedmineHost}/users/current.json");
                     
                     if (response.IsSuccessStatusCode)
                     {
                         IsRedmineConnected = true;
                         ConnectionStatus = "接続済み";
                         ErrorMessage = string.Empty;
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        IsRedmineConnected = false;
+                        ConnectionStatus = "認証エラー";
+                        ErrorMessage = "APIキーが無効です。正しいAPIキーを設定してください。";
                     }
                     else
                     {
@@ -347,6 +374,15 @@ namespace RedmineClient.ViewModels.Pages
             };
 
             WbsItems.Add(newItem);
+            
+            // 新しいタスクを選択状態にする
+            SelectedItem = newItem;
+            
+            // UIの更新を強制する（新規タスクの表示更新のため）
+            OnPropertyChanged(nameof(WbsItems));
+            
+            // 平坦化リストを更新
+            UpdateFlattenedList();
         }
 
         private void AddChildItem(WbsItem? parent)
@@ -367,11 +403,14 @@ namespace RedmineClient.ViewModels.Pages
 
             parent.AddChild(newItem);
             
-            // 新しいタスクを選択状態にして表示を更新
+            // 新しいタスクを選択状態にする
             SelectedItem = newItem;
             
-            // 親タスクを展開状態にする
-            parent.IsExpanded = true;
+            // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
+            OnPropertyChanged(nameof(WbsItems));
+            
+            // 平坦化リストを更新
+            UpdateFlattenedList();
         }
 
         private void DeleteItem(WbsItem? item)
@@ -423,6 +462,8 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (parent == null) return;
 
+
+
             // デフォルトで3つのサブタスクを追加
             int count = 3;
             for (int i = 0; i < count; i++)
@@ -441,6 +482,12 @@ namespace RedmineClient.ViewModels.Pages
 
                 parent.AddChild(newItem);
             }
+            
+            // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
+            OnPropertyChanged(nameof(WbsItems));
+            
+            // 平坦化リストを更新
+            UpdateFlattenedList();
         }
 
         /// <summary>
@@ -575,37 +622,43 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (item == null) return;
             
+            // 展開状態を切り替え
             item.IsExpanded = !item.IsExpanded;
             
-            // 子アイテムの表示/非表示を制御
-            if (item.IsExpanded)
+            // 平坦化リストを更新
+            UpdateFlattenedList();
+        }
+
+        /// <summary>
+        /// 階層構造を平坦化したリストを更新
+        /// </summary>
+        private void UpdateFlattenedList()
+        {
+            FlattenedWbsItems.Clear();
+            
+            foreach (var rootItem in WbsItems)
             {
-                // 子アイテムを表示
-                foreach (var child in item.Children)
-                {
-                    if (!WbsItems.Contains(child))
-                    {
-                        // 親アイテムの直後に挿入
-                        var parentIndex = WbsItems.IndexOf(item);
-                        WbsItems.Insert(parentIndex + 1, child);
-                    }
-                }
-            }
-            else
-            {
-                // 子アイテムを非表示（再帰的に）
-                HideChildrenRecursively(item);
+                AddItemToFlattened(rootItem);
             }
         }
 
-        private void HideChildrenRecursively(WbsItem parent)
+        /// <summary>
+        /// アイテムと（展開されている場合）その子アイテムを平坦化リストに追加
+        /// </summary>
+        private void AddItemToFlattened(WbsItem item)
         {
-            foreach (var child in parent.Children)
+            FlattenedWbsItems.Add(item);
+            
+            if (item.IsExpanded && item.HasChildren)
             {
-                WbsItems.Remove(child);
-                HideChildrenRecursively(child);
+                foreach (var child in item.Children)
+                {
+                    AddItemToFlattened(child);
+                }
             }
         }
+
+
 
         /// <summary>
         /// タスクを選択する

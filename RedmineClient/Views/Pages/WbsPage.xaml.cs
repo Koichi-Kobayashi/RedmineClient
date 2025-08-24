@@ -180,5 +180,16 @@ namespace RedmineClient.Views.Pages
                 }
             }
         }
+
+        /// <summary>
+        /// TreeViewの選択変更イベントハンドラー
+        /// </summary>
+        private void WbsTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (e.NewValue is WbsItem selectedItem)
+            {
+                ViewModel.SelectedItem = selectedItem;
+            }
+        }
     }
 }

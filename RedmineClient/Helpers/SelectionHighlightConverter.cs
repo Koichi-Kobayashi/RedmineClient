@@ -17,7 +17,8 @@ namespace RedmineClient.Helpers
         {
             if (value is bool isSelected && isSelected)
             {
-                return new SolidColorBrush(Color.FromArgb(255, 229, 243, 255)); // #E5F3FF
+                // ダークモードに対応した選択ハイライト色
+                return Application.Current.Resources["SystemFillColorAttentionBrush"] as Brush ?? new SolidColorBrush(Color.FromArgb(255, 229, 243, 255)); // #E5F3FF
             }
             return Brushes.Transparent;
         }

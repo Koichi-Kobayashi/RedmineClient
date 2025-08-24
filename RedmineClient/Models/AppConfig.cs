@@ -9,8 +9,6 @@ namespace RedmineClient.Models
         private static readonly object _lockObject = new object();
         
         public static string RedmineHost { get; set; }
-        public static string Login { get; set; }
-        public static string Password { get; set; }
         public static string ApiKey { get; set; }
         public static double WindowWidth { get; set; } = 1100;
         public static double WindowHeight { get; set; } = 650;
@@ -33,8 +31,6 @@ namespace RedmineClient.Models
                 section.SectionInformation.ProtectSection("DataProtectionConfigurationProvider");
             }
             SetSettingsItem(config, "RedmineHost", RedmineHost);
-            SetSettingsItem(config, "Login", Login);
-            SetSettingsItem(config, "Password", Password);
             SetSettingsItem(config, "ApiKey", ApiKey);
             SetSettingsItem(config, "WindowWidth", WindowWidth.ToString());
             SetSettingsItem(config, "WindowHeight", WindowHeight.ToString());
@@ -86,12 +82,6 @@ namespace RedmineClient.Models
 
             var apiKey = ConfigurationManager.AppSettings["ApiKey"];
             ApiKey = string.IsNullOrEmpty(apiKey) != true ? apiKey : "";
-
-            var login = ConfigurationManager.AppSettings["Login"];
-            Login = string.IsNullOrEmpty(login) != true ? login : "";
-
-            var password = ConfigurationManager.AppSettings["Password"];
-            Password = string.IsNullOrEmpty(password) != true ? password : "";
 
             var windowWidth = ConfigurationManager.AppSettings["WindowWidth"];
             if (double.TryParse(windowWidth, out double width))

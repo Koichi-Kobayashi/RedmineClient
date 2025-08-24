@@ -11,12 +11,6 @@ namespace RedmineClient.ViewModels.Pages
         private string _redmineHost = String.Empty;
 
         [ObservableProperty]
-        private string _login = String.Empty;
-
-        [ObservableProperty]
-        private string _password = String.Empty;
-
-        [ObservableProperty]
         private string _apiKey = String.Empty;
 
         [ObservableProperty]
@@ -42,8 +36,6 @@ namespace RedmineClient.ViewModels.Pages
             // 保存された設定を読み込み
             AppConfig.Load();
             RedmineHost = AppConfig.RedmineHost;
-            Login = AppConfig.Login;
-            Password = AppConfig.Password;
             ApiKey = AppConfig.ApiKey;
             
             // 保存されたテーマ設定を読み込む
@@ -121,8 +113,6 @@ namespace RedmineClient.ViewModels.Pages
         private void OnSave()
         {
             AppConfig.RedmineHost = RedmineHost;
-            AppConfig.Login = Login;
-            AppConfig.Password = Password;
             AppConfig.ApiKey = ApiKey;
             AppConfig.Save();
 

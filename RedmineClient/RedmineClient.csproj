@@ -50,6 +50,10 @@
       <HintPath>..\..\redmine-net-api\src\redmine-net-api\bin\Debug\net9.0\redmine-net-api.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Assets\Icon\" />
+  </ItemGroup>
   <Target Name="RemoveTranslationsAfterBuild" AfterTargets="AfterBuild">
     <RemoveDir Directories="@(FluentValidationExcludedCultures->'$(OutputPath)%(Filename)')" />
   </Target>
