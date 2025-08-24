@@ -85,6 +85,14 @@ namespace RedmineClient.ViewModels.Pages
             System.Diagnostics.Debug.WriteLine($"IsEditModeAfterAdd changed to: {value}");
         }
 
+        partial void OnScheduleStartYearMonthChanged(string value)
+        {
+            // 設定を保存
+            AppConfig.ScheduleStartYearMonth = value;
+            AppConfig.Save();
+            System.Diagnostics.Debug.WriteLine($"ScheduleStartYearMonth changed to: {value}");
+        }
+
         [ObservableProperty]
         private bool _isLoading = false;
 
@@ -96,6 +104,12 @@ namespace RedmineClient.ViewModels.Pages
 
         [ObservableProperty]
         private bool _showInProgress = true;
+
+        /// <summary>
+        /// スケジュール開始年月
+        /// </summary>
+        [ObservableProperty]
+        private string _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
 
         [ObservableProperty]
         private bool _showNotStarted = true;
@@ -132,6 +146,9 @@ namespace RedmineClient.ViewModels.Pages
 
         public WbsViewModel()
         {
+            // 設定からスケジュール開始年月を読み込み
+            ScheduleStartYearMonth = AppConfig.ScheduleStartYearMonth;
+            
             AddRootItemCommand = new RelayCommand(AddRootItem);
             AddChildItemCommand = new RelayCommand<WbsItem>(AddChildItem);
             DeleteItemCommand = new RelayCommand<WbsItem>(DeleteItem);

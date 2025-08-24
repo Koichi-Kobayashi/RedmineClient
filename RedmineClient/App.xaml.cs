@@ -2,7 +2,6 @@
 using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using RedmineClient.DependencyModel;
 using RedmineClient.Models;
 using RedmineClient.Services;
 using RedmineClient.ViewModels.Pages;
@@ -10,8 +9,8 @@ using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Pages;
 using RedmineClient.Views.Windows;
 using Wpf.Ui;
-using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Appearance;
+using Wpf.Ui.DependencyInjection;
 
 namespace RedmineClient
 {
@@ -27,7 +26,14 @@ namespace RedmineClient
         // https://docs.microsoft.com/dotnet/core/extensions/logging
         private static readonly IHost _host = Host
             .CreateDefaultBuilder()
-            .ConfigureAppConfiguration(c => { c.SetBasePath(Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)); })
+            .ConfigureAppConfiguration(c =>
+            {
+                var entryAssembly = Assembly.GetEntryAssembly();
+                if (entryAssembly?.Location != null)
+                {
+                    c.SetBasePath(Path.GetDirectoryName(entryAssembly.Location));
+                }
+            })
             .ConfigureServices((context, services) =>
             {
                 services.AddNavigationViewPageProvider();
@@ -49,16 +55,18 @@ namespace RedmineClient
                 services.AddSingleton<MainWindowViewModel>();
 
                 // ページとViewModelをTransientに変更（メモリ効率向上）
-                services.AddTransient<DashboardPage>();
                 services.AddTransient<SettingsPage>();
                 services.AddTransient<SettingsViewModel>();
+                services.AddTransient<DashboardPage>();
                 services.AddTransient<DashboardViewModel>();
 
                 services.AddTransient<IWindowFactory, WindowFactory>();
 
                 // All other pages and view models
-                services.AddTransientFromNamespace("RedmineClient.Views", RedmineClientAssembly.Asssembly);
-                services.AddTransientFromNamespace("RedmineClient.ViewModels", RedmineClientAssembly.Asssembly);
+                // AddTransientFromNamespaceは匿名型や内部クラスを誤って登録する可能性があるため、
+                // 明示的に必要なクラスのみを登録
+                services.AddTransient<WbsPage>();
+                services.AddTransient<WbsViewModel>();
 
                 services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }).Build();
@@ -78,17 +86,33 @@ namespace RedmineClient
         /// <summary>
         /// Occurs when the application is loading.
         /// </summary>
-        private void OnStartup(object sender, StartupEventArgs e)
+        protected override void OnStartup(StartupEventArgs e)
         {
-            // アプリケーション起動時に設定を読み込み
-            AppConfig.Load();
-            
-            // テーマ設定を適用
-            AppConfig.ApplyTheme();
-            
-            _host.Start();
+            try
+            {
+                AppConfig.Load();
+                AppConfig.ApplyTheme();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"設定の読み込み中にエラーが発生しました: {ex.Message}");
+                // 設定の読み込みに失敗してもアプリケーションは起動する
+            }
+
+            try
+            {
+                // ホストを開始
+                _host.Start();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ホストの開始中にエラーが発生しました: {ex.Message}");
+                // ホストの開始に失敗した場合は、設定のみで起動を試行
+            }
+
+            base.OnStartup(e);
         }
-        
+
         private void ApplyCurrentTheme()
         {
             try

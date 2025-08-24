@@ -12,8 +12,56 @@ namespace RedmineClient.Models
         public static string ApiKey { get; set; }
         public static double WindowWidth { get; set; } = 1100;
         public static double WindowHeight { get; set; } = 650;
+        public static double WindowLeft { get; set; } = 100;
+        public static double WindowTop { get; set; } = 100;
+        public static string WindowState { get; set; } = "Normal";
         public static double TaskDetailWidth { get; set; } = 400;
         public static ApplicationTheme ApplicationTheme { get; set; } = ApplicationTheme.Light;
+
+        public static string Theme
+        {
+            get => GetSetting("Theme", "Light");
+            set => SetSetting("Theme", value);
+        }
+
+        public static string ScheduleStartYearMonth
+        {
+            get => GetSetting("ScheduleStartYearMonth", DateTime.Now.ToString("yyyy/MM"));
+            set => SetSetting("ScheduleStartYearMonth", value);
+        }
+
+        /// <summary>
+        /// 設定値を取得
+        /// </summary>
+        private static string GetSetting(string key, string defaultValue = "")
+        {
+            try
+            {
+                var value = ConfigurationManager.AppSettings[key];
+                return string.IsNullOrEmpty(value) ? defaultValue : value;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
+        /// <summary>
+        /// 設定値を設定
+        /// </summary>
+        private static void SetSetting(string key, string value)
+        {
+            try
+            {
+                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                SetSettingsItem(config, key, value);
+                config.Save();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SetSetting error for {key}: {ex.Message}");
+            }
+        }
 
         /// <summary>
         /// 設定情報の保存
@@ -34,8 +82,12 @@ namespace RedmineClient.Models
             SetSettingsItem(config, "ApiKey", ApiKey);
             SetSettingsItem(config, "WindowWidth", WindowWidth.ToString());
             SetSettingsItem(config, "WindowHeight", WindowHeight.ToString());
+            SetSettingsItem(config, "WindowLeft", WindowLeft.ToString());
+            SetSettingsItem(config, "WindowTop", WindowTop.ToString());
+            SetSettingsItem(config, "WindowState", WindowState);
             SetSettingsItem(config, "TaskDetailWidth", TaskDetailWidth.ToString());
             SetSettingsItem(config, "ApplicationTheme", ApplicationTheme.ToString());
+            SetSettingsItem(config, "ScheduleStartYearMonth", ScheduleStartYearMonth);
             config.Save();
         }
 
@@ -66,53 +118,114 @@ namespace RedmineClient.Models
             {
                 if (_isLoaded) return; // 既に読み込み済みの場合はスキップ
                 
-                // app.configの読み込み
-                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                try
+                {
+                    // app.configの読み込み
+                    var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                    if (config == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("AppConfig.Load: config is null, using default values");
+                        SetDefaultValues();
+                        _isLoaded = true;
+                        return;
+                    }
 
-            // 暗号化するセクションの取得
-            var section = config.GetSection("appSettings") as AppSettingsSection;
-            if (section != null && section.SectionInformation.IsProtected == true)
-            {
-                // セクションの復号化
-                section.SectionInformation.UnprotectSection();
-            }
+                    // 暗号化するセクションの取得
+                    var section = config.GetSection("appSettings") as AppSettingsSection;
+                    if (section != null && section.SectionInformation.IsProtected == true)
+                    {
+                        // セクションの復号化
+                        section.SectionInformation.UnprotectSection();
+                    }
 
-            var redmineHost = ConfigurationManager.AppSettings["RedmineHost"];
-            RedmineHost = string.IsNullOrEmpty(redmineHost) != true ? redmineHost : "";
+                    var redmineHost = ConfigurationManager.AppSettings["RedmineHost"];
+                    RedmineHost = string.IsNullOrEmpty(redmineHost) != true ? redmineHost : "";
 
-            var apiKey = ConfigurationManager.AppSettings["ApiKey"];
-            ApiKey = string.IsNullOrEmpty(apiKey) != true ? apiKey : "";
+                    var apiKey = ConfigurationManager.AppSettings["ApiKey"];
+                    ApiKey = string.IsNullOrEmpty(apiKey) != true ? apiKey : "";
 
-            var windowWidth = ConfigurationManager.AppSettings["WindowWidth"];
-            if (double.TryParse(windowWidth, out double width))
-            {
-                WindowWidth = width;
-            }
+                    var windowWidth = ConfigurationManager.AppSettings["WindowWidth"];
+                    if (double.TryParse(windowWidth, out double width))
+                    {
+                        WindowWidth = width;
+                    }
 
-            var windowHeight = ConfigurationManager.AppSettings["WindowHeight"];
-            if (double.TryParse(windowHeight, out double height))
-            {
-                WindowHeight = height;
-            }
+                    var windowHeight = ConfigurationManager.AppSettings["WindowHeight"];
+                    if (double.TryParse(windowHeight, out double height))
+                    {
+                        WindowHeight = height;
+                    }
 
-            var taskDetailWidth = ConfigurationManager.AppSettings["TaskDetailWidth"];
-            if (double.TryParse(taskDetailWidth, out double detailWidth))
-            {
-                TaskDetailWidth = detailWidth;
-            }
+                    var windowLeft = ConfigurationManager.AppSettings["WindowLeft"];
+                    if (double.TryParse(windowLeft, out double left))
+                    {
+                        WindowLeft = left;
+                    }
 
-            var applicationTheme = ConfigurationManager.AppSettings["ApplicationTheme"];
-            if (string.IsNullOrEmpty(applicationTheme) != true && Enum.TryParse<ApplicationTheme>(applicationTheme, out var theme))
-            {
-                ApplicationTheme = theme;
-            }
-            else
-            {
-                ApplicationTheme = ApplicationTheme.Light;
-            }
+                    var windowTop = ConfigurationManager.AppSettings["WindowTop"];
+                    if (double.TryParse(windowTop, out double top))
+                    {
+                        WindowTop = top;
+                    }
+
+                    var windowState = ConfigurationManager.AppSettings["WindowState"];
+                    if (!string.IsNullOrEmpty(windowState))
+                    {
+                        WindowState = windowState;
+                    }
+
+                    var taskDetailWidth = ConfigurationManager.AppSettings["TaskDetailWidth"];
+                    if (double.TryParse(taskDetailWidth, out double detailWidth))
+                    {
+                        TaskDetailWidth = detailWidth;
+                    }
+
+                    var applicationTheme = ConfigurationManager.AppSettings["ApplicationTheme"];
+                    if (string.IsNullOrEmpty(applicationTheme) != true && Enum.TryParse<ApplicationTheme>(applicationTheme, out var theme))
+                    {
+                        ApplicationTheme = theme;
+                    }
+                    else
+                    {
+                        ApplicationTheme = ApplicationTheme.Light;
+                    }
+
+                    var scheduleStartYearMonth = ConfigurationManager.AppSettings["ScheduleStartYearMonth"];
+                    if (!string.IsNullOrEmpty(scheduleStartYearMonth))
+                    {
+                        ScheduleStartYearMonth = scheduleStartYearMonth;
+                    }
+                    else
+                    {
+                        ScheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM"); // 無効な値の場合は現在の年月をデフォルトとする
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"AppConfig.Load error: {ex}");
+                    // エラーが発生した場合はデフォルト値を使用
+                    SetDefaultValues();
+                }
                 
                 _isLoaded = true;
             }
+        }
+
+        /// <summary>
+        /// デフォルト値を設定する
+        /// </summary>
+        private static void SetDefaultValues()
+        {
+            RedmineHost = "";
+            ApiKey = "";
+            WindowWidth = 1100;
+            WindowHeight = 650;
+            WindowLeft = 100;
+            WindowTop = 100;
+            WindowState = "Normal";
+            TaskDetailWidth = 400;
+            ApplicationTheme = ApplicationTheme.Light;
+            ScheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
         }
 
         /// <summary>
