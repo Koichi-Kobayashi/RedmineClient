@@ -143,6 +143,8 @@
                     ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
                     RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     RowHeaderWidth="0" ScrollViewer.CanContentScroll="True"
+                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                     SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
                     SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.IsContainerVirtualizable="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
 
@@ -198,6 +200,20 @@
                                     <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
                                 </Trigger>
                             </Style.Triggers>
+                        </Style>
+                        
+                        <!-- 日付ヘッダー用のスタイル -->
+                        <Style x:Key="DateHeaderStyle" TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                            <Setter Property="Padding" Value="2,2" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="FontSize" Value="8" />
+                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                            <Setter Property="Height" Value="40" />
                         </Style>
                     </DataGrid.Resources>
 
@@ -303,36 +319,7 @@
                                                  <!--  担当者列  -->
                          <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
 
-                         <!--  スケジュール列（2か月分の日付）  -->
-                         <DataGridTemplateColumn Width="600" Header="スケジュール" IsReadOnly="True">
-                             <DataGridTemplateColumn.CellTemplate>
-                                 <DataTemplate>
-                                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Hidden">
-                                         <StackPanel Orientation="Horizontal">
-                                             <ItemsControl ItemsSource="{Binding ScheduleDates}">
-                                                 <ItemsControl.ItemsPanel>
-                                                     <ItemsPanelTemplate>
-                                                         <StackPanel Orientation="Horizontal" />
-                                                     </ItemsPanelTemplate>
-                                                 </ItemsControl.ItemsPanel>
-                                                 <ItemsControl.ItemTemplate>
-                                                     <DataTemplate>
-                                                         <Border Width="20" Height="20" Margin="1" 
-                                                                  Background="{Binding Converter={x:Static helpers:DateToBackgroundColorConverter.Instance}}"
-                                                                  BorderBrush="Gray" BorderThickness="1" CornerRadius="2"
-                                                                  ToolTip="{Binding StringFormat=yyyy/MM/dd}">
-                                                             <TextBlock Text="{Binding Day}" FontSize="8" 
-                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                        Foreground="Black" />
-                                                         </Border>
-                                                     </DataTemplate>
-                                                 </ItemsControl.ItemTemplate>
-                                             </ItemsControl>
-                                         </StackPanel>
-                                     </ScrollViewer>
-                                 </DataTemplate>
-                             </DataGridTemplateColumn.CellTemplate>
-                         </DataGridTemplateColumn>
+                                                   <!--  日付列はコードビハインドで動的に生成  -->
                      </DataGrid.Columns>
 
                                          <DataGrid.RowStyle>

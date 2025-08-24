@@ -29,10 +29,15 @@ namespace RedmineClient.Views.Pages
             
             // 初期化完了後にタスク詳細の幅を設定
             this.Loaded += WbsPage_InitialLoaded;
+            
+            // DataGridのLoadedイベントでも日付列の生成を試行
+            this.Loaded += WbsPage_DataGridLoaded;
         }
 
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 開始");
+            
             // 保存された幅を適用
             ApplyTaskDetailWidth();
             
@@ -40,12 +45,49 @@ namespace RedmineClient.Views.Pages
             if (TaskDetailSplitter != null)
             {
                 TaskDetailSplitter.DragCompleted += TaskDetailSplitter_DragCompleted;
+                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: GridSplitterイベントを登録");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: GridSplitterが見つかりません");
             }
             
-
+            // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
+            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 日付列の生成を遅延実行");
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 遅延実行で日付列の生成を開始");
+                GenerateDateColumns();
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
             
             // このイベントは一度だけ実行
             this.Loaded -= WbsPage_InitialLoaded;
+            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 完了");
+        }
+
+        private void WbsPage_DataGridLoaded(object sender, RoutedEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("WbsPage_DataGridLoaded: 開始");
+            
+            if (WbsDataGrid != null)
+            {
+                System.Diagnostics.Debug.WriteLine("WbsPage_DataGridLoaded: WbsDataGridが見つかりました");
+                
+                // DataGridのLoadedイベントでも日付列の生成を試行
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    System.Diagnostics.Debug.WriteLine("WbsPage_DataGridLoaded: 遅延実行で日付列の生成を開始");
+                    GenerateDateColumns();
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("WbsPage_DataGridLoaded: WbsDataGridが見つかりません");
+            }
+            
+            // このイベントは一度だけ実行
+            this.Loaded -= WbsPage_DataGridLoaded;
+            System.Diagnostics.Debug.WriteLine("WbsPage_DataGridLoaded: 完了");
         }
 
         private void TaskDetailSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
@@ -56,8 +98,19 @@ namespace RedmineClient.Views.Pages
 
         public Task OnNavigatedToAsync()
         {
+            System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 開始");
+            
             // ページ表示時にタスク詳細の幅を適用
             ApplyTaskDetailWidth();
+            
+            // 日付列の生成も遅延実行で試行
+            System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 日付列の生成を遅延実行で試行");
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 遅延実行で日付列の生成を開始");
+                GenerateDateColumns();
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+            
             return Task.CompletedTask;
         }
 
@@ -78,6 +131,174 @@ namespace RedmineClient.Views.Pages
             return OnNavigatedFromAsync();
         }
 
+        /// <summary>
+        /// 曜日を日本語で取得する
+        /// </summary>
+        /// <param name="date">日付</param>
+        /// <returns>曜日の日本語表記</returns>
+        private string GetDayOfWeek(DateTime date)
+        {
+            return date.DayOfWeek switch
+            {
+                DayOfWeek.Monday => "月",
+                DayOfWeek.Tuesday => "火",
+                DayOfWeek.Wednesday => "水",
+                DayOfWeek.Thursday => "木",
+                DayOfWeek.Friday => "金",
+                DayOfWeek.Saturday => "土",
+                DayOfWeek.Sunday => "日",
+                _ => ""
+            };
+        }
+
+        /// <summary>
+        /// 日付ヘッダー用のスタイルを作成する
+        /// </summary>
+        /// <returns>日付ヘッダー用のスタイル</returns>
+        private Style CreateDateHeaderStyle()
+        {
+            var style = new Style(typeof(System.Windows.Controls.Primitives.DataGridColumnHeader));
+            
+            // 前景色
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.ForegroundProperty, 
+                new DynamicResourceExtension("TextFillColorPrimaryBrush")));
+            
+            // 背景色
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BackgroundProperty, 
+                new DynamicResourceExtension("CardBackgroundFillColorSecondaryBrush")));
+            
+            // ボーダー色
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderBrushProperty, 
+                new DynamicResourceExtension("DividerStrokeColorDefaultBrush")));
+            
+            // ボーダー太さ
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.BorderThicknessProperty, 
+                new Thickness(0, 0, 1, 1)));
+            
+            // パディング
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.PaddingProperty, 
+                new Thickness(2, 2, 2, 2)));
+            
+            // フォントウェイト
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontWeightProperty, 
+                FontWeights.SemiBold));
+            
+            // フォントサイズ
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.FontSizeProperty, 
+                8.0));
+            
+            // 水平配置
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HorizontalContentAlignmentProperty, 
+                HorizontalAlignment.Center));
+            
+            // 垂直配置
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.VerticalContentAlignmentProperty, 
+                VerticalAlignment.Center));
+            
+            // 高さ
+            style.Setters.Add(new Setter(System.Windows.Controls.Primitives.DataGridColumnHeader.HeightProperty, 
+                40.0));
+            
+            return style;
+        }
+
+        /// <summary>
+        /// 日付列を生成する
+        /// </summary>
+        private void GenerateDateColumns()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("GenerateDateColumns: 開始");
+                
+                if (WbsDataGrid != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: WbsDataGridが見つかりました。現在の列数: {WbsDataGrid.Columns.Count}");
+                    System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: WbsDataGrid.IsLoaded: {WbsDataGrid.IsLoaded}");
+                    System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: WbsDataGrid.IsInitialized: {WbsDataGrid.IsInitialized}");
+                    
+                    // 既存の日付列を削除
+                    var existingColumns = WbsDataGrid.Columns.Where(c => c.Header is string header && header.Contains("/")).ToList();
+                    System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 既存の日付列数: {existingColumns.Count}");
+                    
+                    foreach (var column in existingColumns)
+                    {
+                        WbsDataGrid.Columns.Remove(column);
+                        System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 既存の日付列を削除: {column.Header}");
+                    }
+
+                    // 2か月分の日付列を生成
+                    var startDate = DateTime.Today;
+                    var endDate = DateTime.Today.AddMonths(2);
+                    
+                    System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 日付範囲 {startDate:yyyy/MM/dd} から {endDate:yyyy/MM/dd}");
+                    
+                    var currentDate = startDate;
+                    var columnCount = 0;
+                    
+                    while (currentDate <= endDate)
+                    {
+                        var dateColumn = new DataGridTemplateColumn
+                        {
+                            Width = 25,
+                            Header = $"{currentDate:MM/dd}\n{GetDayOfWeek(currentDate)}",
+                            IsReadOnly = true,
+                            HeaderStyle = CreateDateHeaderStyle()
+                        };
+
+                        // セルテンプレートを設定
+                        var cellTemplate = new DataTemplate();
+                        var factory = new FrameworkElementFactory(typeof(Border));
+                        
+                        factory.SetValue(Border.WidthProperty, 25.0);
+                        factory.SetValue(Border.HeightProperty, 20.0);
+                        factory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Gray);
+                        factory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+                        factory.SetValue(Border.CornerRadiusProperty, new CornerRadius(2));
+                        
+                        // 背景色を設定（固定の日付に対して）
+                        var backgroundBinding = new System.Windows.Data.Binding()
+                        {
+                            Converter = new RedmineClient.Helpers.DateToBackgroundColorConverter(),
+                            Source = currentDate
+                        };
+                        factory.SetBinding(Border.BackgroundProperty, backgroundBinding);
+                        
+                        // 日付テキストを設定（固定の日付）
+                        var textBlock = new FrameworkElementFactory(typeof(TextBlock));
+                        textBlock.SetValue(TextBlock.TextProperty, currentDate.Day.ToString());
+                        textBlock.SetValue(TextBlock.FontSizeProperty, 8.0);
+                        textBlock.SetValue(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+                        textBlock.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+                        textBlock.SetValue(TextBlock.ForegroundProperty, System.Windows.Media.Brushes.Black);
+                        
+                        factory.AppendChild(textBlock);
+                        cellTemplate.VisualTree = factory;
+                        
+                        dateColumn.CellTemplate = cellTemplate;
+                        
+                        WbsDataGrid.Columns.Add(dateColumn);
+                        columnCount++;
+                        
+                        System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 日付列を追加: {currentDate:MM/dd} ({GetDayOfWeek(currentDate)})");
+                        
+                        currentDate = currentDate.AddDays(1);
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 完了。{columnCount}個の日付列を追加しました。現在の総列数: {WbsDataGrid.Columns.Count}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("GenerateDateColumns: WbsDataGridが見つかりません");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"日付列の生成中にエラーが発生しました: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"スタックトレース: {ex.StackTrace}");
+            }
+        }
+
         private void ApplyTaskDetailWidth()
         {
             try
@@ -86,6 +307,8 @@ namespace RedmineClient.Views.Pages
                 {
                     var detailWidth = AppConfig.TaskDetailWidth;
                     
+                    // 最小幅と最大幅を確保
+                    if (detailWidth < 300) detailWidth = 300;
                     // 最小幅と最大幅を確保
                     if (detailWidth < 300) detailWidth = 300;
                     if (detailWidth > 800) detailWidth = 800;
