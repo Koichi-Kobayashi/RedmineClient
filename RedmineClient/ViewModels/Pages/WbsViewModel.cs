@@ -8,6 +8,11 @@ using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Controls;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Linq;
+using System.Collections;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -46,6 +51,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand AddRootItemCommand { get; }
         public ICommand AddChildItemCommand { get; }
         public ICommand DeleteItemCommand { get; }
+        public ICommand EditItemCommand { get; }
         public ICommand ExpandAllCommand { get; }
         public ICommand CollapseAllCommand { get; }
         public ICommand RefreshCommand { get; }
@@ -53,12 +59,18 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand ImportCommand { get; }
         public ICommand TestConnectionCommand { get; }
         public ICommand ToggleExpansionCommand { get; }
+        public ICommand MoveItemCommand { get; }
+        public ICommand AddMultipleChildrenCommand { get; }
+        public ICommand UpdateProgressCommand { get; }
+        public ICommand LimitHierarchyCommand { get; }
+        public ICommand SelectItemCommand { get; }
 
         public WbsViewModel()
         {
             AddRootItemCommand = new RelayCommand(AddRootItem);
             AddChildItemCommand = new RelayCommand<WbsItem>(AddChildItem);
             DeleteItemCommand = new RelayCommand<WbsItem>(DeleteItem);
+            EditItemCommand = new RelayCommand<WbsItem>(EditItem);
             ExpandAllCommand = new RelayCommand(ExpandAll);
             CollapseAllCommand = new RelayCommand(CollapseAll);
             RefreshCommand = new RelayCommand(async () => await RefreshAsync());
@@ -66,6 +78,18 @@ namespace RedmineClient.ViewModels.Pages
             ImportCommand = new RelayCommand(Import);
             TestConnectionCommand = new RelayCommand(async () => await TestRedmineConnectionAsync());
             ToggleExpansionCommand = new RelayCommand<WbsItem>(ToggleExpansion);
+            MoveItemCommand = new RelayCommand<WbsItem>(item => 
+            {
+                if (item?.Title != null)
+                {
+                    // TODO: ドラッグ&ドロップの実装
+                    System.Windows.MessageBox.Show($"タスク '{item.Title}' の移動機能は今後実装予定です。", "移動", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+            });
+            AddMultipleChildrenCommand = new RelayCommand<WbsItem>(AddMultipleChildren);
+            UpdateProgressCommand = new RelayCommand(UpdateParentProgress);
+            LimitHierarchyCommand = new RelayCommand(() => LimitHierarchyDepth(5));
+            SelectItemCommand = new RelayCommand<WbsItem>(SelectItem);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -342,19 +366,137 @@ namespace RedmineClient.ViewModels.Pages
             };
 
             parent.AddChild(newItem);
+            
+            // 新しいタスクを選択状態にして表示を更新
+            SelectedItem = newItem;
+            
+            // 親タスクを展開状態にする
+            parent.IsExpanded = true;
         }
 
         private void DeleteItem(WbsItem? item)
         {
             if (item == null) return;
 
-            if (item.Parent != null)
+            // 確認ダイアログを表示
+            var message = item.HasChildren 
+                ? $"タスク '{item.Title}' とその子タスク {item.Children.Count} 個を削除しますか？" 
+                : $"タスク '{item.Title}' を削除しますか？";
+            
+            var result = System.Windows.MessageBox.Show(message, "削除確認", 
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            
+            if (result == System.Windows.MessageBoxResult.Yes)
             {
-                item.Parent.RemoveChild(item);
+                if (item.Parent != null)
+                {
+                    item.Parent.RemoveChild(item);
+                }
+                else
+                {
+                    WbsItems.Remove(item);
+                }
+                
+                // 選択されたアイテムが削除された場合、選択をクリア
+                if (SelectedItem == item)
+                {
+                    SelectedItem = null;
+                }
             }
-            else
+        }
+
+        private void EditItem(WbsItem? item)
+        {
+            if (item == null) return;
+
+            // 簡易的な編集機能（実際の実装ではダイアログを表示）
+            // 現在は選択されたアイテムを編集可能にするだけ
+            // TODO: 編集ダイアログの実装
+            System.Windows.MessageBox.Show($"タスク '{item.Title}' の編集機能は今後実装予定です。", "編集", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// サブタスクを一括で追加
+        /// </summary>
+        /// <param name="parent">親タスク</param>
+        public void AddMultipleChildren(WbsItem? parent)
+        {
+            if (parent == null) return;
+
+            // デフォルトで3つのサブタスクを追加
+            int count = 3;
+            for (int i = 0; i < count; i++)
             {
-                WbsItems.Remove(item);
+                var newItem = new WbsItem
+                {
+                    Id = $"TASK-{DateTime.Now:yyyyMMdd-HHmmss}-{i + 1}",
+                    Title = $"サブタスク {i + 1}",
+                    Description = $"サブタスク {i + 1} の説明",
+                    StartDate = parent.StartDate,
+                    EndDate = parent.EndDate,
+                    Status = "未着手",
+                    Priority = "中",
+                    Assignee = "未割り当て"
+                };
+
+                parent.AddChild(newItem);
+            }
+        }
+
+        /// <summary>
+        /// 階層の深さを制限する（デフォルトで5階層まで）
+        /// </summary>
+        /// <param name="maxDepth">最大階層数</param>
+        public void LimitHierarchyDepth(int maxDepth = 5)
+        {
+            foreach (var item in WbsItems)
+            {
+                LimitItemDepth(item, 0, maxDepth);
+            }
+        }
+
+        private void LimitItemDepth(WbsItem item, int currentDepth, int maxDepth)
+        {
+            if (currentDepth >= maxDepth)
+            {
+                // 最大階層に達した場合、子アイテムを削除
+                item.Children.Clear();
+                return;
+            }
+
+            foreach (var child in item.Children.ToList())
+            {
+                LimitItemDepth(child, currentDepth + 1, maxDepth);
+            }
+        }
+
+        /// <summary>
+        /// サブタスクの進捗を親タスクに反映
+        /// </summary>
+        public void UpdateParentProgress()
+        {
+            foreach (var item in WbsItems)
+            {
+                UpdateItemProgress(item);
+            }
+        }
+
+        private void UpdateItemProgress(WbsItem item)
+        {
+            if (item.HasChildren)
+            {
+                // 子アイテムの進捗を再帰的に更新
+                foreach (var child in item.Children)
+                {
+                    UpdateItemProgress(child);
+                }
+
+                // 親タスクの進捗を子タスクの平均で更新
+                if (item.Children.Count > 0)
+                {
+                    double totalProgress = item.Children.Sum(child => child.Progress);
+                    item.Progress = totalProgress / item.Children.Count;
+                }
             }
         }
 
@@ -462,6 +604,43 @@ namespace RedmineClient.ViewModels.Pages
             {
                 WbsItems.Remove(child);
                 HideChildrenRecursively(child);
+            }
+        }
+
+        /// <summary>
+        /// タスクを選択する
+        /// </summary>
+        /// <param name="item">選択するタスク</param>
+        public void SelectItem(WbsItem? item)
+        {
+            // 全てのアイテムの選択状態をクリア
+            ClearAllSelections(WbsItems);
+            
+            // 新しいアイテムを選択
+            if (item != null)
+            {
+                item.IsSelected = true;
+                SelectedItem = item;
+            }
+            else
+            {
+                SelectedItem = null;
+            }
+        }
+
+        /// <summary>
+        /// 全てのアイテムの選択状態をクリアする
+        /// </summary>
+        /// <param name="items">アイテムコレクション</param>
+        private void ClearAllSelections(ObservableCollection<WbsItem> items)
+        {
+            foreach (var item in items)
+            {
+                item.IsSelected = false;
+                if (item.Children.Count > 0)
+                {
+                    ClearAllSelections(item.Children);
+                }
             }
         }
 

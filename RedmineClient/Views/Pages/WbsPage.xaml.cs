@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace RedmineClient.Views.Pages
 {
@@ -37,6 +38,8 @@ namespace RedmineClient.Views.Pages
             {
                 TaskDetailSplitter.DragCompleted += TaskDetailSplitter_DragCompleted;
             }
+            
+
             
             // このイベントは一度だけ実行
             this.Loaded -= WbsPage_InitialLoaded;
@@ -140,6 +143,42 @@ namespace RedmineClient.Views.Pages
         {
             // ウィンドウが閉じられる際にタスク詳細の幅を保存
             SaveTaskDetailWidth();
+        }
+
+        /// <summary>
+        /// コンテキストメニューが開かれた際のイベントハンドラー
+        /// </summary>
+        private void ContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is FrameworkElement target)
+            {
+                // プレースメントターゲットからWbsItemのDataContextを取得
+                var wbsItem = target.DataContext;
+                
+                // コンテキストメニューの各MenuItemにViewModelとWbsItemの両方を設定
+                foreach (MenuItem menuItem in contextMenu.Items.OfType<MenuItem>())
+                {
+                    // MenuItemのDataContextはWbsItemのまま保持
+                    menuItem.DataContext = wbsItem;
+                    
+                    // CommandはViewModelから取得
+                    switch (menuItem.Header?.ToString())
+                    {
+                        case "サブタスク追加":
+                            menuItem.Command = ViewModel.AddChildItemCommand;
+                            break;
+                        case "編集":
+                            menuItem.Command = ViewModel.EditItemCommand;
+                            break;
+                        case "削除":
+                            menuItem.Command = ViewModel.DeleteItemCommand;
+                            break;
+                    }
+                    
+                    // CommandParameterはWbsItemを設定
+                    menuItem.CommandParameter = wbsItem;
+                }
+            }
         }
     }
 }

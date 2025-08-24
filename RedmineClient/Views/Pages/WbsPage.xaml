@@ -33,6 +33,13 @@
                 IsEnabled="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToBooleanConverter.Instance}}" />
 
             <ui:Button
+                Margin="0,0,8,0"
+                Command="{Binding ViewModel.AddMultipleChildrenCommand}"
+                CommandParameter="{Binding ViewModel.SelectedItem}"
+                Content="一括サブタスク追加" Icon="Add24"
+                IsEnabled="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToBooleanConverter.Instance}}" />
+
+            <ui:Button
                 Margin="0,0,8,0" Appearance="Danger"
                 Command="{Binding ViewModel.DeleteItemCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
@@ -42,8 +49,12 @@
             <Separator Margin="8,0" />
 
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExpandAllCommand}" Content="全展開" Icon="ChevronDown24" />
-
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CollapseAllCommand}" Content="全折りたたみ" Icon="ChevronUp24" />
+
+            <Separator Margin="8,0" />
+
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.UpdateProgressCommand}" Content="進捗更新" Icon="Refresh24" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LimitHierarchyCommand}" Content="階層制限" Icon="Settings24" />
 
             <Separator Margin="8,0" />
 
@@ -179,8 +190,8 @@
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
-                        <!--  階層表示用の列  -->
-                        <DataGridTemplateColumn Width="Auto" Header="" IsReadOnly="True">
+                        <!--  タスク名列  -->
+                        <DataGridTemplateColumn Width="300" Header="タスク名">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -189,21 +200,62 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
-                                        <!--  展開/折りたたみボタン  -->
-                                        <ui:Button
-                                            Grid.Column="0" Width="24" Height="24" Margin="0,0,4,0" Appearance="Transparent"
-                                            Command="{Binding ViewModel.ToggleExpansionCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                            CommandParameter="{Binding}"
-                                            Icon="ChevronRight16"
-                                            Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}" />
+                                        <!--  展開/折りたたみボタンとサブタスク数表示  -->
+                                        <StackPanel Grid.Column="0" 
+                                                    Orientation="Horizontal" 
+                                                    Margin="0,0,8,0"
+                                                    Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
+                                            <ui:Button
+                                                Appearance="Transparent"
+                                                Command="{Binding DataContext.ViewModel.ToggleExpansionCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                CommandParameter="{Binding}"
+                                                Icon="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="10"
+                                                Foreground="Gray"
+                                                Margin="4,0,0,0"
+                                                Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                        </StackPanel>
 
                                         <!--  階層レベル表示  -->
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                            <!--  階層レベルに応じたインデント  -->
-                                            <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="10" Foreground="Gray" Text="{Binding Level, StringFormat='{}{0,2}'}" />
-                                            <TextBlock VerticalAlignment="Center" FontSize="12" Foreground="Gray" Text="└─" />
-                                            <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
-                                        </StackPanel>
+                                        <Border Grid.Column="1" 
+                                                Background="{Binding IsSelected, Converter={x:Static helpers:SelectionHighlightConverter.Instance}}"
+                                                BorderBrush="{Binding IsSelected, Converter={x:Static helpers:SelectionBorderConverter.Instance}}"
+                                                BorderThickness="1"
+                                                CornerRadius="3"
+                                                Padding="4,2"
+                                                Cursor="Hand">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" 
+                                                              Command="{Binding DataContext.ViewModel.SelectItemCommand, RelativeSource={RelativeSource AncestorType=Page}}" 
+                                                              CommandParameter="{Binding}" />
+                                            </Border.InputBindings>
+                                                                                         <StackPanel Orientation="Horizontal" 
+                                                         Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}">
+                                                 <!--  階層インデント表示  -->
+                                                 <TextBlock VerticalAlignment="Center" 
+                                                            FontSize="11" 
+                                                            FontFamily="Consolas, Courier New, monospace"
+                                                            Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" 
+                                                            Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
+                                                 <!--  タスクタイトル  -->
+                                                 <TextBlock VerticalAlignment="Center" 
+                                                            FontWeight="SemiBold" 
+                                                            Margin="4,0,0,0"
+                                                            Text="{Binding Title}" />
+                                             </StackPanel>
+                                        </Border>
+
+                                        <!-- コンテキストメニュー -->
+                                        <Grid.ContextMenu>
+                                            <ContextMenu Opened="ContextMenu_Opened">
+                                                <MenuItem Header="サブタスク追加" Icon="Add24" />
+                                                <MenuItem Header="編集" Icon="Edit24" />
+                                                <Separator />
+                                                <MenuItem Header="削除" Icon="Delete24" />
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
                                     </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
