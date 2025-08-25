@@ -59,7 +59,7 @@ namespace RedmineClient.Models
                 var value = ConfigurationManager.AppSettings[key];
                 return string.IsNullOrEmpty(value) ? defaultValue : value;
             }
-            catch (Exception ex)
+            catch
             {
                 return defaultValue;
             }
@@ -76,7 +76,7 @@ namespace RedmineClient.Models
                 SetSettingsItem(config, key, value);
                 config.Save();
             }
-            catch (Exception ex)
+            catch
             {
                 // エラー処理は必要に応じて実装
             }
@@ -139,10 +139,13 @@ namespace RedmineClient.Models
                 
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("AppConfig: 設定読み込み開始");
+                    
                     // app.configの読み込み
                     var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
                     if (config == null)
                     {
+                        System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイルがnull、デフォルト値を使用");
                         SetDefaultValues();
                         _isLoaded = true;
                         return;
@@ -158,9 +161,11 @@ namespace RedmineClient.Models
 
                     var redmineHost = ConfigurationManager.AppSettings["RedmineHost"];
                     RedmineHost = string.IsNullOrEmpty(redmineHost) != true ? redmineHost : "";
+                    System.Diagnostics.Debug.WriteLine($"AppConfig: RedmineHost読み込み - 値: '{RedmineHost}'");
 
                     var apiKey = ConfigurationManager.AppSettings["ApiKey"];
                     ApiKey = string.IsNullOrEmpty(apiKey) != true ? apiKey : "";
+                    System.Diagnostics.Debug.WriteLine($"AppConfig: ApiKey読み込み - 値: '{ApiKey}' (長さ: {ApiKey.Length})");
 
                     var windowWidth = ConfigurationManager.AppSettings["WindowWidth"];
                     if (double.TryParse(windowWidth, out double width))
@@ -220,10 +225,12 @@ namespace RedmineClient.Models
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定読み込み中にエラー - {ex.GetType().Name}: {ex.Message}");
                     // エラーが発生した場合はデフォルト値を使用
                     SetDefaultValues();
                 }
                 
+                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定読み込み完了 - RedmineHost: '{RedmineHost}', ApiKey長: {ApiKey.Length}");
                 _isLoaded = true;
                 _isInitialized = true;
             }

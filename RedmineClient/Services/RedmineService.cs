@@ -16,10 +16,14 @@ namespace RedmineClient.Services
             if (string.IsNullOrEmpty(apiKey))
                 throw new ArgumentException("apiKey cannot be null or empty", nameof(apiKey));
 
+            System.Diagnostics.Debug.WriteLine($"RedmineService: 接続設定 - Host: {baseUrl}, API Key: {apiKey.Substring(0, Math.Min(8, apiKey.Length))}...");
+
             var builder = new RedmineManagerOptionsBuilder();
             builder.WithHost(baseUrl.TrimEnd('/'));
             builder.WithApiKeyAuthentication(apiKey);
             _redmineManager = new RedmineManager(builder);
+
+            System.Diagnostics.Debug.WriteLine($"RedmineService: RedmineManager初期化完了");
         }
 
         /// <summary>
@@ -32,12 +36,12 @@ namespace RedmineClient.Services
                 var projects = _redmineManager.Get<Project>(new RequestOptions());
                 return projects.Select(p => new RedmineProject
                 {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Identifier = p.Identifier,
-                    Description = p.Description,
-                    CreatedOn = p.CreatedOn,
-                    UpdatedOn = p.UpdatedOn
+                    Id          = p.Id,
+                    Name        = p.Name        ?? string.Empty,
+                    Identifier  = p.Identifier  ?? string.Empty,
+                    Description = p.Description ?? string.Empty,
+                    CreatedOn   = p.CreatedOn,
+                    UpdatedOn   = p.UpdatedOn
                 }).ToList();
             }
             catch (Exception ex)
@@ -63,24 +67,23 @@ namespace RedmineClient.Services
                 return issues.Where(i => i.Project?.Id == projectId)
                            .Select(i => new RedmineIssue
                            {
-                               Id = i.Id,
-                               Subject = i.Subject,
-                               Description = i.Description,
-                               Status = i.Status?.Name,
-                               Priority = i.Priority?.Name,
-                               Author = i.Author?.Name,
-                               AssignedTo = i.AssignedTo?.Name,
-                               ProjectId = i.Project?.Id ?? 0,
-                               ProjectName = i.Project?.Name,
-                               Tracker = i.Tracker?.Name,
-
-                               StartDate = i.StartDate,
-                               DueDate = i.DueDate,
-                               DoneRatio = i.DoneRatio ?? 0,
+                               Id             = i.Id,
+                               Subject        = i.Subject          ?? string.Empty,
+                               Description    = i.Description      ?? string.Empty,
+                               Status         = i.Status?.Name     ?? string.Empty,
+                               Priority       = i.Priority?.Name   ?? string.Empty,
+                               Author         = i.Author?.Name     ?? string.Empty,
+                               AssignedTo     = i.AssignedTo?.Name ?? string.Empty,
+                               ProjectId      = i.Project?.Id      ?? 0,
+                               ProjectName    = i.Project?.Name    ?? string.Empty,
+                               Tracker        = i.Tracker?.Name    ?? string.Empty,
+                               StartDate      = i.StartDate,
+                               DueDate        = i.DueDate,
+                               DoneRatio      = i.DoneRatio        ?? 0,
                                EstimatedHours = i.EstimatedHours,
-                               ParentId = null, // TODO: 階層構造の取得方法を調査
-                               CreatedOn = i.CreatedOn,
-                               UpdatedOn = i.UpdatedOn
+                               ParentId       = null, // TODO: 階層構造の取得方法を調査
+                               CreatedOn      = i.CreatedOn,
+                               UpdatedOn      = i.UpdatedOn
                            }).ToList();
             }
             catch (Exception ex)
@@ -108,23 +111,23 @@ namespace RedmineClient.Services
 
                 return new RedmineIssue
                 {
-                    Id = issue.Id,
-                    Subject = issue.Subject,
-                    Description = issue.Description,
-                    Status = issue.Status?.Name,
-                    Priority = issue.Priority?.Name,
-                    Author = issue.Author?.Name,
-                    AssignedTo = issue.AssignedTo?.Name,
-                    ProjectId = issue.Project?.Id ?? 0,
-                    ProjectName = issue.Project?.Name,
-                    Tracker = issue.Tracker?.Name,
-                    StartDate = issue.StartDate,
-                    DueDate = issue.DueDate,
-                    DoneRatio = issue.DoneRatio ?? 0,
+                    Id             = issue.Id,
+                    Subject        = issue.Subject          ?? string.Empty,
+                    Description    = issue.Description      ?? string.Empty,
+                    Status         = issue.Status?.Name     ?? string.Empty,
+                    Priority       = issue.Priority?.Name   ?? string.Empty,
+                    Author         = issue.Author?.Name     ?? string.Empty,
+                    AssignedTo     = issue.AssignedTo?.Name ?? string.Empty,
+                    ProjectId      = issue.Project?.Id      ?? 0,
+                    ProjectName    = issue.Project?.Name    ?? string.Empty,
+                    Tracker        = issue.Tracker?.Name    ?? string.Empty,
+                    StartDate      = issue.StartDate,
+                    DueDate        = issue.DueDate,
+                    DoneRatio      = issue.DoneRatio        ?? 0,
                     EstimatedHours = issue.EstimatedHours,
-                    ParentId = null, // TODO: 階層構造の取得方法を調査
-                    CreatedOn = issue.CreatedOn,
-                    UpdatedOn = issue.UpdatedOn
+                    ParentId       = null, // TODO: 階層構造の取得方法を調査
+                    CreatedOn      = issue.CreatedOn,
+                    UpdatedOn      = issue.UpdatedOn
                 };
             }
             catch (Exception ex)
@@ -140,22 +143,29 @@ namespace RedmineClient.Services
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("RedmineService: 現在のユーザー情報取得開始");
                 var user = _redmineManager.Get<User>(RedmineKeys.CURRENT_USER);
-                if (user == null) return null;
+                if (user == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("RedmineService: ユーザー情報がnull");
+                    return null;
+                }
 
+                System.Diagnostics.Debug.WriteLine($"RedmineService: ユーザー情報取得成功 - ID: {user.Id}, Login: {user.Login}");
                 return new RedmineUser
                 {
-                    Id = user.Id,
-                    Login = user.Login,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    CreatedOn = user.CreatedOn,
+                    Id          = user.Id,
+                    Login       = user.Login     ?? string.Empty,
+                    FirstName   = user.FirstName ?? string.Empty,
+                    LastName    = user.LastName  ?? string.Empty,
+                    Email       = user.Email     ?? string.Empty,
+                    CreatedOn   = user.CreatedOn,
                     LastLoginOn = user.LastLoginOn
                 };
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"RedmineService: ユーザー情報取得失敗 - エラー: {ex.GetType().Name}: {ex.Message}");
                 throw new RedmineApiException($"ユーザー情報の取得に失敗しました: {ex.Message}", ex);
             }
         }
@@ -208,11 +218,15 @@ namespace RedmineClient.Services
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("RedmineService: 接続テスト開始");
                 var user = GetCurrentUser();
-                return user != null;
+                var result = user != null;
+                System.Diagnostics.Debug.WriteLine($"RedmineService: 接続テスト結果 - 成功: {result}");
+                return result;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"RedmineService: 接続テスト失敗 - エラー: {ex.GetType().Name}: {ex.Message}");
                 return false;
             }
         }

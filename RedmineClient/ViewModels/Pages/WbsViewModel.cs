@@ -165,10 +165,10 @@ namespace RedmineClient.ViewModels.Pages
             EditItemCommand = new RelayCommand<WbsItem>(EditItem);
             ExpandAllCommand = new RelayCommand(ExpandAll);
             CollapseAllCommand = new RelayCommand(CollapseAll);
-            RefreshCommand = new RelayCommand(async () => await RefreshAsync());
+            RefreshCommand = new RelayCommand(() => Refresh());
             ExportCommand = new RelayCommand(Export);
             ImportCommand = new RelayCommand(Import);
-            TestConnectionCommand = new RelayCommand(async () => await TestRedmineConnectionAsync());
+            TestConnectionCommand = new RelayCommand(() => TestRedmineConnection());
             ToggleExpansionCommand = new RelayCommand<WbsItem>(ToggleExpansion);
             MoveItemCommand = new RelayCommand<WbsItem>(item => 
             {
@@ -186,8 +186,8 @@ namespace RedmineClient.ViewModels.Pages
             MoveDownCommand = new RelayCommand(MoveDown);
             MoveLeftCommand = new RelayCommand(MoveLeft);
             MoveRightCommand = new RelayCommand(MoveRight);
-            LoadRedmineDataCommand = new RelayCommand(async () => await LoadRedmineDataAsync());
-            RefreshRedmineDataCommand = new RelayCommand(async () => await RefreshRedmineDataAsync());
+            LoadRedmineDataCommand = new RelayCommand(() => LoadRedmineData());
+            RefreshRedmineDataCommand = new RelayCommand(() => RefreshRedmineData());
             SettingsCommand = new RelayCommand(OpenSettings);
         }
 
@@ -199,12 +199,12 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        public virtual async void OnNavigatedTo()
+        public virtual void OnNavigatedTo()
         {
-            await InitializeViewModelAsync();
+            InitializeViewModel();
         }
 
-        private async Task InitializeViewModelAsync()
+        private void InitializeViewModel()
         {
             // 初回のみサンプルデータを読み込み
             if (WbsItems.Count == 0)
@@ -225,7 +225,7 @@ namespace RedmineClient.ViewModels.Pages
             InitializeScheduleItems();
             
             // Redmine接続状態を確認
-            await TestRedmineConnectionAsync();
+                            TestRedmineConnection();
         }
 
         public virtual async Task OnNavigatedFromAsync()
@@ -238,7 +238,7 @@ namespace RedmineClient.ViewModels.Pages
 
         public void OnNavigatedFrom() { }
 
-        private async Task TestRedmineConnectionAsync()
+        private void TestRedmineConnection()
         {
             try
             {
@@ -247,8 +247,11 @@ namespace RedmineClient.ViewModels.Pages
                 ConnectionStatus = "接続確認中...";
 
                 // 設定からRedmine接続情報を取得
+                System.Diagnostics.Debug.WriteLine($"WbsViewModel: 接続テスト開始 - RedmineHost: '{AppConfig.RedmineHost}', ApiKey長: {AppConfig.ApiKey?.Length ?? 0}");
+                
                 if (string.IsNullOrEmpty(AppConfig.RedmineHost))
                 {
+                    System.Diagnostics.Debug.WriteLine("WbsViewModel: RedmineHostが設定されていません");
                     IsRedmineConnected = false;
                     ConnectionStatus = "設定されていません";
                     ErrorMessage = "Redmineのホストが設定されていません。設定画面でRedmine接続情報を設定してください。";
@@ -257,6 +260,7 @@ namespace RedmineClient.ViewModels.Pages
 
                 if (string.IsNullOrEmpty(AppConfig.ApiKey))
                 {
+                    System.Diagnostics.Debug.WriteLine("WbsViewModel: ApiKeyが設定されていません");
                     IsRedmineConnected = false;
                     ConnectionStatus = "設定されていません";
                     ErrorMessage = "RedmineのAPIキーが設定されていません。設定画面でAPIキーを設定してください。";
@@ -275,7 +279,7 @@ namespace RedmineClient.ViewModels.Pages
                         ErrorMessage = string.Empty;
                         
                         // プロジェクト一覧を取得
-                        await LoadProjectsAsync(redmineService);
+                        LoadProjects(redmineService);
                     }
                     else
                     {
@@ -703,7 +707,7 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        private async Task RefreshAsync()
+        private void Refresh()
         {
             if (!IsRedmineConnected)
             {
@@ -719,7 +723,7 @@ namespace RedmineClient.ViewModels.Pages
                 // Redmineからのデータ更新処理
                 if (SelectedProject != null)
                 {
-                    await LoadRedmineIssuesAsync(SelectedProject.Id);
+                    LoadRedmineIssues(SelectedProject.Id);
                 }
                 else
                 {
@@ -982,7 +986,7 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// プロジェクト一覧を読み込む
         /// </summary>
-        private async Task LoadProjectsAsync(RedmineService redmineService)
+        private void LoadProjects(RedmineService redmineService)
         {
             try
             {
@@ -1004,7 +1008,7 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// Redmineデータを読み込む
         /// </summary>
-        public async Task LoadRedmineDataAsync()
+        public void LoadRedmineData()
         {
             if (!IsRedmineConnected)
             {
@@ -1025,7 +1029,7 @@ namespace RedmineClient.ViewModels.Pages
 
                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                 {
-                    await LoadRedmineIssuesAsync(SelectedProject.Id);
+                    LoadRedmineIssues(SelectedProject.Id);
                 }
             }
             catch (Exception ex)
@@ -1041,15 +1045,15 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// Redmineデータを更新する
         /// </summary>
-        private async Task RefreshRedmineDataAsync()
+        private void RefreshRedmineData()
         {
-            await LoadRedmineDataAsync();
+            LoadRedmineData();
         }
 
         /// <summary>
         /// 指定されたプロジェクトのチケットを読み込む
         /// </summary>
-        private async Task LoadRedmineIssuesAsync(int projectId)
+        private void LoadRedmineIssues(int projectId)
         {
             try
             {

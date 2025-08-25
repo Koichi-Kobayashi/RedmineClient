@@ -73,7 +73,7 @@ namespace RedmineClient.Services
                 
                 // 祝日データの更新完了
             }
-            catch (Exception ex)
+            catch
             {
                 // 祝日データの更新に失敗
             }
@@ -151,7 +151,7 @@ namespace RedmineClient.Services
 
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
                 return false;
             }

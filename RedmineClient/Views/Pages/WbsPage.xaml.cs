@@ -45,7 +45,7 @@ namespace RedmineClient.Views.Pages
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
             }
-            catch (Exception ex)
+            catch
             {
                 // 祝日データの初期化に失敗
             }
@@ -107,7 +107,7 @@ namespace RedmineClient.Views.Pages
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
             }
-            catch (Exception ex)
+            catch
             {
                 // 祝日データの再初期化に失敗
             }
@@ -203,7 +203,7 @@ namespace RedmineClient.Views.Pages
                     ViewModel.ScheduleStartYearMonth = currentYearMonth;
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 // エラー処理は必要に応じて実装
             }
@@ -940,14 +940,14 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// ViewModelのプロパティ変更時のイベントハンドラー
         /// </summary>
-        private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ViewModel.SelectedProject))
             {
                 // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                 if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
                 {
-                    await ViewModel.LoadRedmineDataAsync();
+                    ViewModel.LoadRedmineData();
                 }
             }
         }
@@ -955,14 +955,14 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// プロジェクト選択変更時のイベントハンドラー
         /// </summary>
-        private async void ProjectComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ProjectComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (e.AddedItems.Count > 0 && e.AddedItems[0] is RedmineProject selectedProject)
             {
                 // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                 if (ViewModel.IsRedmineConnected)
                 {
-                    await ViewModel.LoadRedmineDataAsync();
+                    ViewModel.LoadRedmineData();
                 }
             }
         }
