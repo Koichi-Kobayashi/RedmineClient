@@ -266,7 +266,7 @@ namespace RedmineClient.ViewModels.Pages
                 // RedmineServiceを使用した接続テスト
                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                 {
-                    var isConnected = await redmineService.TestConnectionAsync();
+                    var isConnected = redmineService.TestConnection();
                     
                     if (isConnected)
                     {
@@ -986,7 +986,7 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
-                var projects = await redmineService.GetProjectsAsync();
+                var projects = redmineService.GetProjects();
                 AvailableProjects = projects;
                 
                 // 最初のプロジェクトを選択
@@ -1055,7 +1055,7 @@ namespace RedmineClient.ViewModels.Pages
             {
                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                 {
-                    var issues = await redmineService.GetIssuesWithHierarchyAsync(projectId);
+                    var issues = redmineService.GetIssuesWithHierarchy(projectId);
                     
                     // WBSアイテムに変換
                     WbsItems.Clear();
@@ -1088,19 +1088,19 @@ namespace RedmineClient.ViewModels.Pages
                 Id = issue.Id.ToString(),
                 Title = issue.Subject,
                 Description = issue.Description,
-                StartDate = issue.StartDate,
-                EndDate = issue.DueDate ?? issue.StartDate.AddDays(1),
+                StartDate = issue.StartDate ?? DateTime.Today,
+                EndDate = issue.DueDate ?? (issue.StartDate?.AddDays(1) ?? DateTime.Today.AddDays(1)),
                 Progress = issue.DoneRatio,
-                Status = issue.Status?.Name ?? "未着手",
-                Priority = issue.Priority?.Name ?? "中",
-                Assignee = issue.AssignedTo?.Name ?? "未割り当て",
+                Status = issue.Status ?? "未着手",
+                Priority = issue.Priority ?? "中",
+                Assignee = issue.AssignedTo ?? "未割り当て",
                 RedmineIssueId = issue.Id,
-                RedmineProjectId = issue.Project?.Id ?? 0,
-                RedmineProjectName = issue.Project?.Name ?? string.Empty,
-                RedmineTracker = issue.Tracker?.Name ?? string.Empty,
-                RedmineAuthor = issue.Author?.Name ?? string.Empty,
-                RedmineCreatedOn = issue.CreatedOn,
-                RedmineUpdatedOn = issue.UpdatedOn,
+                RedmineProjectId = issue.ProjectId,
+                RedmineProjectName = issue.ProjectName,
+                RedmineTracker = issue.Tracker ?? string.Empty,
+                RedmineAuthor = issue.Author ?? string.Empty,
+                RedmineCreatedOn = issue.CreatedOn ?? DateTime.Today,
+                RedmineUpdatedOn = issue.UpdatedOn ?? DateTime.Today,
                 RedmineUrl = $"{AppConfig.RedmineHost}/issues/{issue.Id}"
             };
 
