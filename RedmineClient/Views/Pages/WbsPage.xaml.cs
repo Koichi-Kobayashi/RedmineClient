@@ -40,7 +40,6 @@ namespace RedmineClient.Views.Pages
             try
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
-                System.Diagnostics.Debug.WriteLine("祝日データの初期化が完了しました");
             }
             catch (Exception ex)
             {
@@ -88,7 +87,6 @@ namespace RedmineClient.Views.Pages
                 if (ScheduleStartYearMonthComboBox.SelectedItem is string selectedYearMonth)
                 {
                     ViewModel.ScheduleStartYearMonth = selectedYearMonth;
-                    System.Diagnostics.Debug.WriteLine($"選択された年月: {selectedYearMonth}");
                 }
                 
                 // 祝日データを再初期化（色設定のため）
@@ -107,7 +105,6 @@ namespace RedmineClient.Views.Pages
             try
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
-                System.Diagnostics.Debug.WriteLine("祝日データの再初期化が完了しました");
             }
             catch (Exception ex)
             {
@@ -156,7 +153,6 @@ namespace RedmineClient.Views.Pages
                 {
                     AppConfig.ScheduleStartYearMonth = ViewModel.ScheduleStartYearMonth;
                     AppConfig.Save();
-                    System.Diagnostics.Debug.WriteLine($"スケジュール開始年月を保存しました: {ViewModel.ScheduleStartYearMonth}");
                 }
             }
             catch (Exception ex)
@@ -179,7 +175,6 @@ namespace RedmineClient.Views.Pages
             {
                 // 設定ファイルから値を読み込み
                 AppConfig.Load();
-                System.Diagnostics.Debug.WriteLine("AppConfig.Load()を実行しました");
 
                 var yearMonthOptions = new List<string>();
                 var currentDate = DateTime.Now.AddYears(-2); // 2年前から
@@ -195,16 +190,12 @@ namespace RedmineClient.Views.Pages
 
                 // 保存された年月がある場合はそれを選択、ない場合は当月を選択
                 var savedYearMonth = AppConfig.ScheduleStartYearMonth;
-                System.Diagnostics.Debug.WriteLine($"AppConfigから読み込んだ年月: '{savedYearMonth}'");
-                System.Diagnostics.Debug.WriteLine($"年月選択肢の数: {yearMonthOptions.Count}");
-                System.Diagnostics.Debug.WriteLine($"選択肢の最初の5件: {string.Join(", ", yearMonthOptions.Take(5))}");
                 
                 if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
                 {
                     ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
                     // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
                     ViewModel.ScheduleStartYearMonth = savedYearMonth;
-                    System.Diagnostics.Debug.WriteLine($"保存された年月を選択: {savedYearMonth}");
                 }
                 else
                 {
@@ -212,23 +203,11 @@ namespace RedmineClient.Views.Pages
                     ScheduleStartYearMonthComboBox.SelectedItem = currentYearMonth;
                     // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
                     ViewModel.ScheduleStartYearMonth = currentYearMonth;
-                    System.Diagnostics.Debug.WriteLine($"当月を選択: {currentYearMonth}");
-                    
-                    if (!string.IsNullOrEmpty(savedYearMonth))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"保存された年月 '{savedYearMonth}' が選択肢に含まれていません");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("保存された年月がありません。当月を選択しました。");
-                    }
                 }
-
-                System.Diagnostics.Debug.WriteLine($"年月選択肢を初期化: {yearMonthOptions.Count}個の選択肢を設定");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"年月選択肢の初期化に失敗: {ex.Message}");
+                // エラー処理は必要に応じて実装
             }
         }
 
@@ -483,7 +462,6 @@ namespace RedmineClient.Views.Pages
                     AppConfig.WindowTop = window.Top;
                     AppConfig.WindowState = window.WindowState.ToString();
                     AppConfig.Save();
-                    System.Diagnostics.Debug.WriteLine($"ウィンドウサイズを保存: {window.Width}x{window.Height}, 位置: ({window.Left}, {window.Top}), 状態: {window.WindowState}");
                 }
             }
             catch (Exception ex)
@@ -521,8 +499,6 @@ namespace RedmineClient.Views.Pages
                     {
                         window.WindowState = windowState;
                     }
-
-                    System.Diagnostics.Debug.WriteLine($"ウィンドウサイズを復元: {window.Width}x{window.Height}, 位置: ({window.Left}, {window.Top}), 状態: {window.WindowState}");
                 }
             }
             catch (Exception ex)
@@ -626,7 +602,6 @@ namespace RedmineClient.Views.Pages
                         // エンターキーまたはタブキーで次の項目に移動
                         e.Handled = true;
                         MoveToNextField(dateTextBox, e.Key == System.Windows.Input.Key.Tab && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == System.Windows.Input.ModifierKeys.Shift);
-                        System.Diagnostics.Debug.WriteLine($"DateTextBox: {(e.Key == System.Windows.Input.Key.Tab && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == System.Windows.Input.ModifierKeys.Shift ? "逆方向" : "順方向")}に移動");
                     }
                     else if (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down ||
                              e.Key == System.Windows.Input.Key.Left || e.Key == System.Windows.Input.Key.Right)
@@ -634,7 +609,6 @@ namespace RedmineClient.Views.Pages
                         // 矢印キーで日付を調整
                         e.Handled = true;
                         AdjustDate(dateTextBox, e.Key);
-                        System.Diagnostics.Debug.WriteLine($"DateTextBox: 矢印キーで日付調整");
                     }
                 }
             }
@@ -721,14 +695,12 @@ namespace RedmineClient.Views.Pages
 
                     // 新しい日付をテキストボックスに設定
                     dateTextBox.Text = newDate.ToString("yyyy/MM/dd");
-                    System.Diagnostics.Debug.WriteLine($"DateTextBox: 日付を {currentDate:yyyy/MM/dd} から {newDate:yyyy/MM/dd} に変更");
                 }
                 else
                 {
                     // 日付が解析できない場合は今日の日付を設定
                     var today = DateTime.Today;
                     dateTextBox.Text = today.ToString("yyyy/MM/dd");
-                    System.Diagnostics.Debug.WriteLine($"DateTextBox: 無効な日付のため今日の日付 {today:yyyy/MM/dd} を設定");
                 }
             }
             catch (Exception ex)
@@ -822,14 +794,12 @@ namespace RedmineClient.Views.Pages
                     // エンターキーで説明欄に移動
                     e.Handled = true;
                     DescriptionTextBox?.Focus();
-                    System.Diagnostics.Debug.WriteLine("タイトルフィールド: エンターキーで説明欄に移動");
                 }
                 else if (e.Key == System.Windows.Input.Key.Tab)
                 {
                     // タブキーで説明欄に移動
                     e.Handled = true;
                     DescriptionTextBox?.Focus();
-                    System.Diagnostics.Debug.WriteLine("タイトルフィールド: タブキーで説明欄に移動");
                 }
             }
             catch (Exception ex)
@@ -852,7 +822,6 @@ namespace RedmineClient.Views.Pages
                     {
                         TitleTextBox.Focus();
                         TitleTextBox.SelectAll(); // テキストを全選択
-                        System.Diagnostics.Debug.WriteLine($"追加後編集モード: タイトルフィールドにフォーカス設定 '{ViewModel.SelectedItem?.Title ?? "null"}'");
                     }
                     else
                     {

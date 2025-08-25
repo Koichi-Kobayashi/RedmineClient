@@ -57,12 +57,10 @@ namespace RedmineClient.Models
             try
             {
                 var value = ConfigurationManager.AppSettings[key];
-                System.Diagnostics.Debug.WriteLine($"GetSetting: key='{key}', value='{value}', defaultValue='{defaultValue}'");
                 return string.IsNullOrEmpty(value) ? defaultValue : value;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSetting error for {key}: {ex.Message}");
                 return defaultValue;
             }
         }
@@ -74,15 +72,13 @@ namespace RedmineClient.Models
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"SetSetting: key='{key}', value='{value}'");
                 var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
                 SetSettingsItem(config, key, value);
                 config.Save();
-                System.Diagnostics.Debug.WriteLine($"SetSetting: 保存完了 - key='{key}', value='{value}'");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SetSetting error for {key}: {ex.Message}");
+                // エラー処理は必要に応じて実装
             }
         }
 
@@ -122,16 +118,13 @@ namespace RedmineClient.Models
         /// <param name="value"></param>
         private static void SetSettingsItem(Configuration config, string key, string value)
         {
-            System.Diagnostics.Debug.WriteLine($"SetSettingsItem: key='{key}', value='{value}'");
             if (config.AppSettings.Settings[key] != null)
             {
                 config.AppSettings.Settings[key].Value = value;
-                System.Diagnostics.Debug.WriteLine($"SetSettingsItem: 既存の設定を更新 - key='{key}', value='{value}'");
             }
             else
             {
                 config.AppSettings.Settings.Add(key, value);
-                System.Diagnostics.Debug.WriteLine($"SetSettingsItem: 新しい設定を追加 - key='{key}', value='{value}'");
             }
         }
 
@@ -150,7 +143,6 @@ namespace RedmineClient.Models
                     var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
                     if (config == null)
                     {
-                        System.Diagnostics.Debug.WriteLine("AppConfig.Load: config is null, using default values");
                         SetDefaultValues();
                         _isLoaded = true;
                         return;
@@ -228,14 +220,12 @@ namespace RedmineClient.Models
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"AppConfig.Load error: {ex}");
                     // エラーが発生した場合はデフォルト値を使用
                     SetDefaultValues();
                 }
                 
                 _isLoaded = true;
                 _isInitialized = true;
-                System.Diagnostics.Debug.WriteLine("AppConfig.Load: 初期化完了");
             }
         }
 
@@ -255,7 +245,6 @@ namespace RedmineClient.Models
             ApplicationTheme = ApplicationTheme.Light;
             _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
             _isInitialized = true;
-            System.Diagnostics.Debug.WriteLine("AppConfig.SetDefaultValues: デフォルト値設定完了");
         }
 
         /// <summary>

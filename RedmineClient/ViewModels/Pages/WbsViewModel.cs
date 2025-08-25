@@ -71,18 +71,16 @@ namespace RedmineClient.ViewModels.Pages
             {
                 // 選択されたアイテムが親タスクかどうかを判定
                 CanAddChild = value.IsParentTask;
-                System.Diagnostics.Debug.WriteLine($"SelectedItem changed to: {(value?.Title ?? "null")}, IsParentTask: {value?.IsParentTask ?? false}, CanAddChild: {CanAddChild}");
             }
             else
             {
                 CanAddChild = false;
-                System.Diagnostics.Debug.WriteLine($"SelectedItem changed to: null, CanAddChild: {CanAddChild}");
             }
         }
 
         partial void OnIsEditModeAfterAddChanged(bool value)
         {
-            System.Diagnostics.Debug.WriteLine($"IsEditModeAfterAdd changed to: {value}");
+            // 編集モード変更時の処理
         }
 
         partial void OnScheduleStartYearMonthChanged(string value)
@@ -90,7 +88,6 @@ namespace RedmineClient.ViewModels.Pages
             // 設定を保存
             AppConfig.ScheduleStartYearMonth = value;
             AppConfig.Save();
-            System.Diagnostics.Debug.WriteLine($"ScheduleStartYearMonth changed to: {value}");
         }
 
         [ObservableProperty]
@@ -490,18 +487,15 @@ namespace RedmineClient.ViewModels.Pages
             if (IsEditModeAfterAdd)
             {
                 // 編集モード：新しく追加されたサブタスクを選択
-                System.Diagnostics.Debug.WriteLine($"編集モード: 新しく追加されたサブタスク '{newItem.Title}' を選択");
                 SelectedItem = newItem;
             }
             else
             {
                 // 連続追加モード：親タスクを選択したまま
-                System.Diagnostics.Debug.WriteLine($"連続追加モード: 親タスク '{parent.Title}' を選択したまま");
                 SelectedItem = parent;
                 
                             // 連続追加モードでは、親タスクが確実に選択されていることを確認
-            System.Diagnostics.Debug.WriteLine($"連続追加モード: SelectedItem確認 = {(SelectedItem?.Title ?? "null")}");
-        }
+            }
         
         // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
         OnPropertyChanged(nameof(WbsItems));
@@ -514,12 +508,10 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (!IsEditModeAfterAdd && SelectedItem != parent)
             {
-                System.Diagnostics.Debug.WriteLine($"連続追加モード: 遅延実行で選択状態を復元 '{parent.Title}'");
                 SelectedItem = parent;
             }
             else if (IsEditModeAfterAdd && SelectedItem != newItem)
             {
-                System.Diagnostics.Debug.WriteLine($"編集モード: 遅延実行で選択状態を復元 '{newItem.Title}'");
                 SelectedItem = newItem;
             }
         }), System.Windows.Threading.DispatcherPriority.Loaded);
@@ -600,7 +592,6 @@ namespace RedmineClient.ViewModels.Pages
             
             // 一括追加の場合は常に親タスクを選択（連続追加のため）
             SelectedItem = parent;
-            System.Diagnostics.Debug.WriteLine($"一括追加: 親タスク '{parent.Title}' を選択、SelectedItem確認 = {(SelectedItem?.Title ?? "null")}");
             
             // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
             OnPropertyChanged(nameof(WbsItems));
@@ -613,7 +604,6 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (SelectedItem != parent)
             {
-                System.Diagnostics.Debug.WriteLine($"一括追加: 遅延実行で選択状態を復元 '{parent.Title}'");
                 SelectedItem = parent;
             }
         }), System.Windows.Threading.DispatcherPriority.Loaded);
