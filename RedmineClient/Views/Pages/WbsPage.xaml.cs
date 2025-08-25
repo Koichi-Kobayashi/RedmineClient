@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
+using RedmineClient.Services;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.Views.Pages
@@ -30,6 +31,9 @@ namespace RedmineClient.Views.Pages
 
             // 祝日データを初期化（非同期で実行）
             _ = InitializeHolidayDataAsync();
+
+            // プロジェクト選択変更時のイベントを登録
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
         /// <summary>
@@ -43,16 +47,13 @@ namespace RedmineClient.Views.Pages
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"祝日データの初期化に失敗: {ex.Message}");
+                // 祝日データの初期化に失敗
             }
         }
 
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 開始");
-
-            // 保存されたウィンドウサイズを復元
-            RestoreWindowSize();
 
             // 年月の選択肢を初期化
             InitializeYearMonthOptions();
@@ -108,16 +109,13 @@ namespace RedmineClient.Views.Pages
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"祝日データの再初期化に失敗: {ex.Message}");
+                // 祝日データの再初期化に失敗
             }
         }
 
         public Task OnNavigatedToAsync()
         {
             System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 開始");
-
-            // ページ表示時にウィンドウサイズを復元
-            RestoreWindowSize();
 
             // 日付列の生成も遅延実行で試行
             System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 日付列の生成を遅延実行で試行");
@@ -446,66 +444,7 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        /// <summary>
-        /// ウィンドウサイズを保存する
-        /// </summary>
-        private void SaveWindowSize()
-        {
-            try
-            {
-                var window = Window.GetWindow(this);
-                if (window != null)
-                {
-                    AppConfig.WindowWidth = window.Width;
-                    AppConfig.WindowHeight = window.Height;
-                    AppConfig.WindowLeft = window.Left;
-                    AppConfig.WindowTop = window.Top;
-                    AppConfig.WindowState = window.WindowState.ToString();
-                    AppConfig.Save();
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"ウィンドウサイズの保存に失敗: {ex.Message}");
-            }
-        }
 
-        /// <summary>
-        /// ウィンドウサイズを復元する
-        /// </summary>
-        private void RestoreWindowSize()
-        {
-            try
-            {
-                var window = Window.GetWindow(this);
-                if (window != null)
-                {
-                    // ウィンドウサイズを復元
-                    if (AppConfig.WindowWidth > 0 && AppConfig.WindowHeight > 0)
-                    {
-                        window.Width = AppConfig.WindowWidth;
-                        window.Height = AppConfig.WindowHeight;
-                    }
-
-                    // ウィンドウ位置を復元
-                    if (AppConfig.WindowLeft >= 0 && AppConfig.WindowTop >= 0)
-                    {
-                        window.Left = AppConfig.WindowLeft;
-                        window.Top = AppConfig.WindowTop;
-                    }
-
-                    // ウィンドウ状態を復元
-                    if (Enum.TryParse<WindowState>(AppConfig.WindowState, out var windowState))
-                    {
-                        window.WindowState = windowState;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"ウィンドウサイズの復元に失敗: {ex.Message}");
-            }
-        }
 
         protected override void OnInitialized(EventArgs e)
         {
@@ -527,9 +466,6 @@ namespace RedmineClient.Views.Pages
 
         private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            // ウィンドウサイズを保存
-            SaveWindowSize();
-            
             // スケジュール開始年月を保存
             SaveScheduleStartYearMonth();
         }
@@ -997,6 +933,36 @@ namespace RedmineClient.Views.Pages
                     // 最終手段としてDataGrid全体にフォーカス
                     WbsDataGrid.Focus();
                     System.Diagnostics.Debug.WriteLine($"編集モード: 最終手段としてDataGrid全体にフォーカス設定");
+                }
+            }
+        }
+
+        /// <summary>
+        /// ViewModelのプロパティ変更時のイベントハンドラー
+        /// </summary>
+        private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ViewModel.SelectedProject))
+            {
+                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
+                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+                {
+                    await ViewModel.LoadRedmineDataAsync();
+                }
+            }
+        }
+
+        /// <summary>
+        /// プロジェクト選択変更時のイベントハンドラー
+        /// </summary>
+        private async void ProjectComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.AddedItems.Count > 0 && e.AddedItems[0] is RedmineProject selectedProject)
+            {
+                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
+                if (ViewModel.IsRedmineConnected)
+                {
+                    await ViewModel.LoadRedmineDataAsync();
                 }
             }
         }

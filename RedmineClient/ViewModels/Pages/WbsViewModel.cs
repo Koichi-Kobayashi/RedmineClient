@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
 using System.Collections;
+using RedmineClient.Services;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -120,6 +121,15 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private string _errorMessage = string.Empty;
 
+        [ObservableProperty]
+        private List<RedmineProject> _availableProjects = new();
+
+        [ObservableProperty]
+        private RedmineProject? _selectedProject;
+
+        [ObservableProperty]
+        private bool _isRedmineDataLoaded = false;
+
         public ICommand AddRootItemCommand { get; }
         public ICommand AddChildItemCommand { get; }
         public ICommand DeleteItemCommand { get; }
@@ -140,6 +150,9 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand MoveDownCommand { get; }
         public ICommand MoveLeftCommand { get; }
         public ICommand MoveRightCommand { get; }
+        public ICommand LoadRedmineDataCommand { get; }
+        public ICommand RefreshRedmineDataCommand { get; }
+        public ICommand SettingsCommand { get; }
 
         public WbsViewModel()
         {
@@ -173,6 +186,9 @@ namespace RedmineClient.ViewModels.Pages
             MoveDownCommand = new RelayCommand(MoveDown);
             MoveLeftCommand = new RelayCommand(MoveLeft);
             MoveRightCommand = new RelayCommand(MoveRight);
+            LoadRedmineDataCommand = new RelayCommand(async () => await LoadRedmineDataAsync());
+            RefreshRedmineDataCommand = new RelayCommand(async () => await RefreshRedmineDataAsync());
+            SettingsCommand = new RelayCommand(OpenSettings);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -247,34 +263,25 @@ namespace RedmineClient.ViewModels.Pages
                     return;
                 }
 
-                // APIキーを使用した接続テスト
-                using (HttpClient httpClient = new HttpClient())
+                // RedmineServiceを使用した接続テスト
+                using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                 {
-                    httpClient.Timeout = TimeSpan.FromSeconds(10);
+                    var isConnected = await redmineService.TestConnectionAsync();
                     
-                    // APIキーをヘッダーに追加
-                    httpClient.DefaultRequestHeaders.Add("X-Redmine-API-Key", AppConfig.ApiKey);
-                    
-                    // ユーザー情報を取得して認証をテスト
-                    var response = await httpClient.GetAsync($"{AppConfig.RedmineHost}/users/current.json");
-                    
-                    if (response.IsSuccessStatusCode)
+                    if (isConnected)
                     {
                         IsRedmineConnected = true;
                         ConnectionStatus = "接続済み";
                         ErrorMessage = string.Empty;
-                    }
-                    else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        IsRedmineConnected = false;
-                        ConnectionStatus = "認証エラー";
-                        ErrorMessage = "APIキーが無効です。正しいAPIキーを設定してください。";
+                        
+                        // プロジェクト一覧を取得
+                        await LoadProjectsAsync(redmineService);
                     }
                     else
                     {
                         IsRedmineConnected = false;
-                        ConnectionStatus = "接続エラー";
-                        ErrorMessage = $"Redmineサーバーに接続できません。HTTPステータス: {response.StatusCode}";
+                        ConnectionStatus = "認証エラー";
+                        ErrorMessage = "APIキーが無効です。正しいAPIキーを設定してください。";
                     }
                 }
             }
@@ -710,13 +717,14 @@ namespace RedmineClient.ViewModels.Pages
                 ErrorMessage = string.Empty;
 
                 // Redmineからのデータ更新処理
-                // 実際の実装ではRedmine APIを使用
-                await Task.Delay(1000); // 仮の処理時間
-
-                // データの更新処理（サンプルデータの場合は再読み込みしない）
-                // 実際のRedmine API実装時は、ここでデータを更新
-                // WbsItems.Clear();
-                // LoadSampleData();
+                if (SelectedProject != null)
+                {
+                    await LoadRedmineIssuesAsync(SelectedProject.Id);
+                }
+                else
+                {
+                    ErrorMessage = "プロジェクトが選択されていません。";
+                }
             }
             catch (Exception ex)
             {
@@ -972,6 +980,141 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         /// <summary>
+        /// プロジェクト一覧を読み込む
+        /// </summary>
+        private async Task LoadProjectsAsync(RedmineService redmineService)
+        {
+            try
+            {
+                var projects = await redmineService.GetProjectsAsync();
+                AvailableProjects = projects;
+                
+                // 最初のプロジェクトを選択
+                if (projects.Count > 0)
+                {
+                    SelectedProject = projects[0];
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"プロジェクト一覧の取得に失敗しました: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Redmineデータを読み込む
+        /// </summary>
+        public async Task LoadRedmineDataAsync()
+        {
+            if (!IsRedmineConnected)
+            {
+                ErrorMessage = "Redmineに接続されていません。接続を確認してください。";
+                return;
+            }
+
+            if (SelectedProject == null)
+            {
+                ErrorMessage = "プロジェクトが選択されていません。";
+                return;
+            }
+
+            try
+            {
+                IsLoading = true;
+                ErrorMessage = string.Empty;
+
+                using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                {
+                    await LoadRedmineIssuesAsync(SelectedProject.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Redmineデータの読み込みに失敗しました: {ex.Message}";
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Redmineデータを更新する
+        /// </summary>
+        private async Task RefreshRedmineDataAsync()
+        {
+            await LoadRedmineDataAsync();
+        }
+
+        /// <summary>
+        /// 指定されたプロジェクトのチケットを読み込む
+        /// </summary>
+        private async Task LoadRedmineIssuesAsync(int projectId)
+        {
+            try
+            {
+                using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                {
+                    var issues = await redmineService.GetIssuesWithHierarchyAsync(projectId);
+                    
+                    // WBSアイテムに変換
+                    WbsItems.Clear();
+                    foreach (var issue in issues)
+                    {
+                        var wbsItem = ConvertRedmineIssueToWbsItem(issue);
+                        WbsItems.Add(wbsItem);
+                    }
+                    
+                    // 平坦化リストを更新
+                    UpdateFlattenedList();
+                    
+                    IsRedmineDataLoaded = true;
+                    ErrorMessage = string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"チケットの読み込みに失敗しました: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// RedmineチケットをWBSアイテムに変換
+        /// </summary>
+        private WbsItem ConvertRedmineIssueToWbsItem(RedmineIssue issue)
+        {
+            var wbsItem = new WbsItem
+            {
+                Id = issue.Id.ToString(),
+                Title = issue.Subject,
+                Description = issue.Description,
+                StartDate = issue.StartDate,
+                EndDate = issue.DueDate ?? issue.StartDate.AddDays(1),
+                Progress = issue.DoneRatio,
+                Status = issue.Status?.Name ?? "未着手",
+                Priority = issue.Priority?.Name ?? "中",
+                Assignee = issue.AssignedTo?.Name ?? "未割り当て",
+                RedmineIssueId = issue.Id,
+                RedmineProjectId = issue.Project?.Id ?? 0,
+                RedmineProjectName = issue.Project?.Name ?? string.Empty,
+                RedmineTracker = issue.Tracker?.Name ?? string.Empty,
+                RedmineAuthor = issue.Author?.Name ?? string.Empty,
+                RedmineCreatedOn = issue.CreatedOn,
+                RedmineUpdatedOn = issue.UpdatedOn,
+                RedmineUrl = $"{AppConfig.RedmineHost}/issues/{issue.Id}"
+            };
+
+            // 子チケットを再帰的に変換
+            foreach (var childIssue in issue.Children)
+            {
+                var childWbsItem = ConvertRedmineIssueToWbsItem(childIssue);
+                wbsItem.AddChild(childWbsItem);
+            }
+
+            return wbsItem;
+        }
+
+        /// <summary>
         /// Dispatches the specified action on the UI thread.
         /// </summary>
         /// <param name="action">The action to be dispatched.</param>
@@ -985,6 +1128,15 @@ namespace RedmineClient.ViewModels.Pages
             }
 
             await Application.Current.Dispatcher.InvokeAsync(action);
+        }
+
+        /// <summary>
+        /// 設定画面を開く
+        /// </summary>
+        private void OpenSettings()
+        {
+            // TODO: 設定画面の実装
+            System.Windows.MessageBox.Show("設定画面は今後実装予定です。", "設定", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
         }
     }
 }

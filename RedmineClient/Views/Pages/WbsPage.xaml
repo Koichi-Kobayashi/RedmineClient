@@ -16,6 +16,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -83,15 +84,18 @@
 
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshCommand}" Content="更新" Icon="ArrowClockwise24" />
 
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LoadRedmineDataCommand}" Content="Redmine読み込み" Icon="ArrowImportDown24" IsEnabled="{Binding ViewModel.IsRedmineConnected}" />
+
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshRedmineDataCommand}" Content="Redmine更新" Icon="ArrowClockwise24" IsEnabled="{Binding ViewModel.IsRedmineDataLoaded}" />
+
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExportCommand}" Content="エクスポート" Icon="ArrowExportUp24" />
 
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ImportCommand}" Content="インポート" Icon="ArrowImportDown24" />
         </StackPanel>
 
         <!--  接続状態とエラー表示  -->
-        <Grid Grid.Row="1" Margin="0,0,0,16">
+        <Grid Grid.Row="1" Margin="0,0,0,8">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
@@ -112,8 +116,30 @@
                 <ui:TextBlock FontTypography="Caption" Text="{Binding ViewModel.ErrorMessage}" TextWrapping="Wrap" />
             </ui:Card>
 
+        <!--  プロジェクト選択  -->
+        <Grid Grid.Row="2" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Margin="0,8,8,0" VerticalAlignment="Center" Text="プロジェクト:" />
+
+                <ComboBox x:Name="ProjectComboBox" Grid.Column="1" Margin="0,8,16,0" 
+                          ItemsSource="{Binding ViewModel.AvailableProjects}"
+                          SelectedItem="{Binding ViewModel.SelectedProject, Mode=TwoWay}"
+                          DisplayMemberPath="Name"
+                          IsEnabled="{Binding ViewModel.IsRedmineConnected}"
+                          SelectionChanged="ProjectComboBox_SelectionChanged" />
+
+                <ui:TextBlock Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center" 
+                              Text="{Binding ViewModel.SelectedProject.Name, StringFormat='選択中: {0}'}"
+                              Visibility="{Binding ViewModel.SelectedProject, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}" />
+            </Grid>
+
             <!--  フィルターと検索  -->
-            <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid Grid.Row="1" Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -132,7 +158,7 @@
         </Grid>
 
         <!--  WBSツリービュー  -->
-        <Grid x:Name="MainContentGrid" Grid.Row="2">
+        <Grid x:Name="MainContentGrid" Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="DataGridColumn" Width="*" />
                 <ColumnDefinition x:Name="TaskDetailColumn" Width="16" />
@@ -457,10 +483,25 @@
 
                                     <!--  Redmine情報  -->
                                     <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="チケットID" />
-                                    <ui:TextBox PlaceholderText="Redmineチケット番号" Text="{Binding ViewModel.SelectedItem.RedmineIssueId, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.RedmineIssueId}" />
+
+                                    <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="プロジェクト" />
+                                    <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.RedmineProjectName}" />
+
+                                    <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="トラッカー" />
+                                    <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.RedmineTracker}" />
+
+                                    <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="作成者" />
+                                    <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.RedmineAuthor}" />
+
+                                    <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="作成日" />
+                                    <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.RedmineCreatedOn, StringFormat=yyyy/MM/dd HH:mm}" />
+
+                                    <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="更新日" />
+                                    <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.RedmineUpdatedOn, StringFormat=yyyy/MM/dd HH:mm}" />
 
                                     <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" Text="URL" />
-                                    <ui:TextBox PlaceholderText="RedmineチケットのURL" Text="{Binding ViewModel.SelectedItem.RedmineUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ui:TextBox IsReadOnly="True" Text="{Binding ViewModel.SelectedItem.RedmineUrl}" />
                                 </StackPanel>
                             </Expander>
                         </StackPanel>

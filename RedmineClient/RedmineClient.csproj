@@ -45,11 +45,7 @@
     </FluentValidationExcludedCultures>
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="redmine-net-api">
-      <HintPath>..\..\redmine-net-api\src\redmine-net-api\bin\Debug\net9.0\redmine-net-api.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+
 
   <ItemGroup>
     <Folder Include="Assets\Icon\" />

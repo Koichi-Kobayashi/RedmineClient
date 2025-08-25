@@ -22,6 +22,12 @@ namespace RedmineClient.Models
         private bool _isSelected = false;
         private int _redmineIssueId = 0;
         private string _redmineUrl = string.Empty;
+        private int _redmineProjectId = 0;
+        private string _redmineProjectName = string.Empty;
+        private string _redmineTracker = string.Empty;
+        private string _redmineAuthor = string.Empty;
+        private DateTime _redmineCreatedOn = DateTime.MinValue;
+        private DateTime _redmineUpdatedOn = DateTime.MinValue;
 
         public string Id
         {
@@ -99,6 +105,42 @@ namespace RedmineClient.Models
         {
             get => _redmineUrl;
             set => SetProperty(ref _redmineUrl, value);
+        }
+
+        public int RedmineProjectId
+        {
+            get => _redmineProjectId;
+            set => SetProperty(ref _redmineProjectId, value);
+        }
+
+        public string RedmineProjectName
+        {
+            get => _redmineProjectName;
+            set => SetProperty(ref _redmineProjectName, value);
+        }
+
+        public string RedmineTracker
+        {
+            get => _redmineTracker;
+            set => SetProperty(ref _redmineTracker, value);
+        }
+
+        public string RedmineAuthor
+        {
+            get => _redmineAuthor;
+            set => SetProperty(ref _redmineAuthor, value);
+        }
+
+        public DateTime RedmineCreatedOn
+        {
+            get => _redmineCreatedOn;
+            set => SetProperty(ref _redmineCreatedOn, value);
+        }
+
+        public DateTime RedmineUpdatedOn
+        {
+            get => _redmineUpdatedOn;
+            set => SetProperty(ref _redmineUpdatedOn, value);
         }
 
         /// <summary>
@@ -218,7 +260,13 @@ namespace RedmineClient.Models
                 Priority = Priority,
                 Assignee = Assignee,
                 RedmineIssueId = RedmineIssueId,
-                RedmineUrl = RedmineUrl
+                RedmineUrl = RedmineUrl,
+                RedmineProjectId = RedmineProjectId,
+                RedmineProjectName = RedmineProjectName,
+                RedmineTracker = RedmineTracker,
+                RedmineAuthor = RedmineAuthor,
+                RedmineCreatedOn = RedmineCreatedOn,
+                RedmineUpdatedOn = RedmineUpdatedOn
             };
         }
 

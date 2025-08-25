@@ -46,9 +46,12 @@ namespace RedmineClient.Views.Windows
         {
             // 設定を読み込み
             AppConfig.Load();
-            
+
+            // ウィンドウサイズと位置を復元
+            RestoreWindowSize();
+
             Show();
-            
+
             // 初期ページとしてWBSページを設定
             Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -64,7 +67,7 @@ namespace RedmineClient.Views.Windows
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
-        
+
         private void ApplyCurrentTheme()
         {
             try
@@ -80,6 +83,39 @@ namespace RedmineClient.Views.Windows
 
         public void CloseWindow() => Close();
 
+        /// <summary>
+        /// ウィンドウサイズと位置を復元する
+        /// </summary>
+        private void RestoreWindowSize()
+        {
+            try
+            {
+                // ウィンドウサイズを復元
+                if (AppConfig.WindowWidth > 0 && AppConfig.WindowHeight > 0)
+                {
+                    Width = AppConfig.WindowWidth;
+                    Height = AppConfig.WindowHeight;
+                }
+
+                // ウィンドウ位置を復元
+                if (AppConfig.WindowLeft >= 0 && AppConfig.WindowTop >= 0)
+                {
+                    Left = AppConfig.WindowLeft;
+                    Top = AppConfig.WindowTop;
+                }
+
+                // ウィンドウ状態を復元
+                if (Enum.TryParse<WindowState>(AppConfig.WindowState, out var windowState))
+                {
+                    WindowState = windowState;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ウィンドウサイズの復元に失敗: {ex.Message}");
+            }
+        }
+
         #endregion INavigationWindow methods
 
         /// <summary>
@@ -87,9 +123,12 @@ namespace RedmineClient.Views.Windows
         /// </summary>
         protected override void OnClosed(EventArgs e)
         {
-            // ウィンドウサイズを保存
+            // ウィンドウサイズ、位置、状態を保存
             AppConfig.WindowWidth = Width;
             AppConfig.WindowHeight = Height;
+            AppConfig.WindowLeft = Left;
+            AppConfig.WindowTop = Top;
+            AppConfig.WindowState = WindowState.ToString();
             AppConfig.Save();
 
             base.OnClosed(e);

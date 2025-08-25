@@ -71,18 +71,11 @@ namespace RedmineClient.Services
             {
                 var success = await LoadHolidayDataFromAssetsAsync();
                 
-                if (success)
-                {
-                    System.Diagnostics.Debug.WriteLine("祝日データの更新が完了しました。");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("祝日データの更新に失敗しました。");
-                }
+                // 祝日データの更新完了
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"祝日データの更新に失敗: {ex.Message}");
+                // 祝日データの更新に失敗
             }
         }
 
@@ -107,18 +100,14 @@ namespace RedmineClient.Services
 
                 if (!File.Exists(assetsPath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"祝日データファイルが見つかりません: {assetsPath}");
                     return false;
                 }
-
-                System.Diagnostics.Debug.WriteLine($"祝日データファイルを読み込み中: {assetsPath}");
 
                 // UTF-8（BOMなし）でファイルを読み込み
                 var csvContent = await File.ReadAllTextAsync(assetsPath, Encoding.UTF8);
                 
                 if (string.IsNullOrWhiteSpace(csvContent))
                 {
-                    System.Diagnostics.Debug.WriteLine("祝日データファイルが空です");
                     return false;
                 }
 
@@ -126,7 +115,6 @@ namespace RedmineClient.Services
                 var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                 if (lines.Length <= 1) // ヘッダー行のみの場合
                 {
-                    System.Diagnostics.Debug.WriteLine("祝日データが不足しています（ヘッダー行のみ）");
                     return false;
                 }
 
@@ -159,14 +147,12 @@ namespace RedmineClient.Services
                     }
 
                     _lastUpdate = DateTime.Now;
-                    System.Diagnostics.Debug.WriteLine($"祝日データの読み込みが完了しました。{_holidayCache.Values.Sum(x => x.Count)}件の祝日を読み込みました。");
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"祝日データの読み込みに失敗: {ex.Message}");
                 return false;
             }
         }
