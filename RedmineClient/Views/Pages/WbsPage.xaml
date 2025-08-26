@@ -21,8 +21,6 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  ページタイトル（削除）  -->
-
         <!--  プロジェクト選択  -->
         <Grid Grid.Row="0" Margin="0,8,0,16">
             <Grid.ColumnDefinitions>
@@ -34,93 +32,76 @@
             <ui:TextBlock Grid.Column="0" Margin="0,8,8,0" VerticalAlignment="Center" Text="プロジェクト:" />
 
             <ComboBox
-                x:Name="ProjectComboBox" Grid.Column="1" Margin="0,8,16,0" DisplayMemberPath="Name" 
+                x:Name="ProjectComboBox" Grid.Column="1" Margin="0,8,16,0" DisplayMemberPath="Name"
                 IsEnabled="{Binding ViewModel.IsProjectSelectionReadOnly, Converter={x:Static helpers:BooleanInverseConverter.Instance}}"
                 ItemsSource="{Binding ViewModel.AvailableProjects}"
                 SelectedItem="{Binding ViewModel.SelectedProject, Mode=TwoWay}" />
 
-            <ui:TextBlock Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center" 
-                         Text="{Binding ViewModel.ProjectSelectionDescription}" 
-                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-
-
+            <ui:TextBlock Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.ProjectSelectionDescription}" />
         </Grid>
 
         <!--  操作ボタンとフィルター  -->
         <StackPanel Grid.Row="1" Margin="0,8,0,16" Orientation="Horizontal">
+            <!--  タスク管理ボタン  -->
             <ui:Button Margin="0,0,8,0" Appearance="Primary" Command="{Binding ViewModel.AddRootItemCommand}" Content="ルートタスク追加" Icon="Add" />
-
             <ui:Button
                 Margin="0,0,8,0"
                 Command="{Binding ViewModel.AddChildItemCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
                 Content="子タスク追加" Icon="Add"
                 IsEnabled="{Binding ViewModel.CanAddChild}" />
-
             <ui:Button
                 Margin="0,0,8,0"
                 Command="{Binding ViewModel.AddMultipleChildrenCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
                 Content="一括サブタスク追加" Icon="Add"
                 IsEnabled="{Binding ViewModel.CanAddChild}" />
-
             <ui:Button
-                Margin="0,0,8,0" Appearance="Danger"
+                Margin="0,0,16,0" Appearance="Danger"
                 Command="{Binding ViewModel.DeleteItemCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
                 Content="削除" Icon="Delete"
                 IsEnabled="{Binding ViewModel.CanAddChild}" />
 
-            <Separator Margin="8,0" />
-
+            <!--  表示制御ボタン  -->
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExpandAllCommand}" Content="全展開" Icon="ChevronDown" />
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CollapseAllCommand}" Content="全折りたたみ" Icon="ChevronUp" />
+            <ui:Button Margin="0,0,16,0" Command="{Binding ViewModel.CollapseAllCommand}" Content="全折りたたみ" Icon="ChevronUp" />
 
-            <Separator Margin="8,0" />
+            <!--  設定オプション  -->
+            <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
+                <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" IsChecked="{Binding ViewModel.IsEditModeAfterAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:追加後編集、OFF:連続追加" />
+                <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfterAdd, StringFormat='現在のモード: {0}'}" />
+            </StackPanel>
 
-            <!--  タスク追加後の動作モード設定  -->
-            <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" IsChecked="{Binding ViewModel.IsEditModeAfterAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:追加後編集、OFF:連続追加" />
-            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfterAdd, StringFormat='現在のモード: {0}'}" />
+            <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
+                <ui:ToggleSwitch Margin="0,0,8,0" Content="タスク詳細表示" IsChecked="{Binding ViewModel.IsTaskDetailVisible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:詳細表示、OFF:詳細非表示" />
+                <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsTaskDetailVisible, StringFormat='詳細表示: {0}'}" />
+            </StackPanel>
 
-            <Separator Margin="8,0" />
-
-            <!--  タスク詳細表示モード設定  -->
-            <ui:ToggleSwitch Margin="0,0,8,0" Content="タスク詳細表示" IsChecked="{Binding ViewModel.IsTaskDetailVisible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:詳細表示、OFF:詳細非表示" />
-            <ui:TextBlock Margin="4,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsTaskDetailVisible, StringFormat='詳細表示: {0}'}" />
-
-            <Separator Margin="8,0" />
-
-            <!--  スケジュール表設定  -->
-            <StackPanel Margin="0,0,8,0" Orientation="Horizontal">
+            <!--  スケジュール設定  -->
+            <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
                 <ui:TextBlock Margin="0,0,5,0" VerticalAlignment="Center" Text="スケジュール開始年月:" />
                 <ComboBox x:Name="ScheduleStartYearMonthComboBox" Width="100" VerticalAlignment="Center" SelectedItem="{Binding ViewModel.ScheduleStartYearMonth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ScheduleStartYearMonthComboBox_SelectionChanged" />
             </StackPanel>
 
-            <Separator Margin="8,0" />
-
+            <!--  管理機能ボタン  -->
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.UpdateProgressCommand}" Content="進捗更新" Icon="Refresh" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LimitHierarchyCommand}" Content="階層制限" Icon="Settings" />
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.SettingsCommand}" Content="設定" Icon="Settings" />
+            <ui:Button Margin="0,0,16,0" Command="{Binding ViewModel.SettingsCommand}" Content="設定" Icon="Settings" />
 
-            <Separator Margin="8,0" />
-
+            <!--  データ操作ボタン  -->
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshCommand}" Content="更新" Icon="ArrowClockwise" />
-
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CreateNewIssueCommand}" Content="チケット登録" Icon="Add" IsEnabled="{Binding ViewModel.IsRedmineConnected}" />
-
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LoadRedmineDataCommand}" Content="Redmine読み込み" Icon="ArrowImportDown" IsEnabled="{Binding ViewModel.IsRedmineConnected}" />
-
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshRedmineDataCommand}" Content="Redmine更新" Icon="ArrowClockwise" IsEnabled="{Binding ViewModel.IsRedmineDataLoaded}" />
-
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CreateNewIssueCommand}" Content="チケット登録" Icon="Add" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LoadRedmineDataCommand}" Content="Redmine読み込み" Icon="ArrowImportDown" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshRedmineDataCommand}" Content="Redmine更新" Icon="ArrowClockwise" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExportCommand}" Content="エクスポート" Icon="ArrowExportUp" />
-
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ImportCommand}" Content="インポート" Icon="ArrowImportDown" />
+            <ui:Button Margin="0,0,0,0" Command="{Binding ViewModel.ImportCommand}" Content="インポート" Icon="ArrowImportDown" />
         </StackPanel>
 
         <!--  接続状態とエラー表示  -->
-        <Grid Grid.Row="2" Margin="0,0,0,8">
+        <Grid Grid.Row="2" Margin="0,0,0,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -128,8 +109,6 @@
 
             <!--  接続状態  -->
             <StackPanel Grid.Row="0" Margin="0,0,0,8" Orientation="Horizontal">
-                <ui:Button Margin="0,0,8,0" Appearance="Secondary" Command="{Binding ViewModel.TestConnectionCommand}" Content="接続テスト" Icon="Wifi" />
-
                 <Border Margin="0,0,8,0" Padding="8,4" Background="{Binding ViewModel.IsRedmineConnected, Converter={x:Static helpers:BooleanToBrushConverter.Instance}}" CornerRadius="4">
                     <ui:TextBlock HorizontalAlignment="Center" FontTypography="Caption" Foreground="White" Text="{Binding ViewModel.ConnectionStatus}" />
                 </Border>
@@ -141,24 +120,24 @@
             <ui:Card Grid.Row="1" Padding="12" BorderThickness="1" Visibility="{Binding ViewModel.ErrorMessage, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
                 <ui:TextBlock FontTypography="Caption" Text="{Binding ViewModel.ErrorMessage}" TextWrapping="Wrap" />
             </ui:Card>
+        </Grid>
 
-            <!--  フィルターと検索  -->
-            <Grid Grid.Row="2" Margin="0,0,0,16">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <!--  フィルターと検索  -->
+        <Grid Grid.Row="3" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                <ui:TextBox Grid.Column="0" Margin="0,8,0,0" Icon="Search" PlaceholderText="タスクを検索..." Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <ui:TextBox Grid.Column="0" Margin="0,8,0,0" Icon="Search" PlaceholderText="タスクを検索..." Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-                <ui:ToggleSwitch Grid.Column="1" Margin="16,8,0,0" Content="完了" IsChecked="{Binding ViewModel.ShowCompleted}" />
+            <ui:ToggleSwitch Grid.Column="1" Margin="16,8,0,0" Content="完了" IsChecked="{Binding ViewModel.ShowCompleted}" />
 
-                <ui:ToggleSwitch Grid.Column="2" Margin="16,8,0,0" Content="進行中" IsChecked="{Binding ViewModel.ShowInProgress}" />
+            <ui:ToggleSwitch Grid.Column="2" Margin="16,8,0,0" Content="進行中" IsChecked="{Binding ViewModel.ShowInProgress}" />
 
-                <ui:ToggleSwitch Grid.Column="3" Margin="16,8,0,0" Content="未着手" IsChecked="{Binding ViewModel.ShowNotStarted}" />
-            </Grid>
+            <ui:ToggleSwitch Grid.Column="3" Margin="16,8,0,0" Content="未着手" IsChecked="{Binding ViewModel.ShowNotStarted}" />
         </Grid>
 
         <!--  WBSツリービュー  -->
@@ -169,7 +148,7 @@
             </Grid.ColumnDefinitions>
 
             <!--  左側：DataGrid  -->
-            <ui:Card Grid.Column="0" Margin="0,0,0,0" VerticalAlignment="Top">
+            <ui:Card Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Top">
                 <DataGrid
                     x:Name="WbsDataGrid" VerticalAlignment="Top"
                     AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
@@ -396,9 +375,10 @@
                     </DataGrid.InputBindings>
                 </DataGrid>
             </ui:Card>
+
             <!--  右側：タスク詳細（エクスパンダー）  -->
             <ui:Card
-                Grid.Column="0" Width="400" Padding="24" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Grid.Column="1" Width="400" Padding="20" HorizontalAlignment="Right" VerticalAlignment="Top"
                 Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
                 <ui:Card.RenderTransform>
                     <TranslateTransform x:Name="TaskDetailTransform" X="400" />
@@ -414,9 +394,9 @@
                 </ui:Card.Triggers>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <ui:TextBlock Margin="0,0,0,24" FontTypography="Body" FontWeight="SemiBold" Text="タスク詳細" />
+                        <ui:TextBlock Margin="0,0,0,20" FontTypography="Body" FontWeight="SemiBold" Text="タスク詳細" />
 
-                        <ui:TextBlock Margin="0,48,0,0" FontTypography="Body" Text="タスクを選択してください" TextAlignment="Center" Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityInverseConverter.Instance}}" />
+                        <ui:TextBlock Margin="0,40,0,0" FontTypography="Body" Text="タスクを選択してください" TextAlignment="Center" Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}" />
 
                         <StackPanel Visibility="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
                             <!--  基本情報  -->

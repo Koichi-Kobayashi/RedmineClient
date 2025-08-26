@@ -374,8 +374,10 @@ namespace RedmineClient.Services
                     estimatedHoursProperty.SetValue(newIssue, (float?)issue.EstimatedHours);
                 }
 
-                // チケットを作成（Redmine.Net.Apiの正しいメソッドを使用）
-                var createdIssue = _redmineManager.CreateObject(newIssue);
+                // チケットを作成（Redmine.Net.Apiの新しいメソッドを使用）
+#pragma warning disable CS0618 // 旧形式のAPIを使用（互換性のため）
+                var createdIssue = _redmineManager.CreateObject<Issue>(newIssue);
+#pragma warning restore CS0618
                 return createdIssue.Id;
             }
             catch (Exception ex)
@@ -416,7 +418,9 @@ namespace RedmineClient.Services
                     doneRatioProperty.SetValue(existingIssue, (float?)issue.DoneRatio);
                 }
 
-                _redmineManager.UpdateObject(existingIssue.Id.ToString(), existingIssue);
+#pragma warning disable CS0618 // 旧形式のAPIを使用（互換性のため）
+                _redmineManager.UpdateObject<Issue>(existingIssue.Id.ToString(), existingIssue);
+#pragma warning restore CS0618
             }
             catch (Exception ex)
             {
@@ -431,7 +435,9 @@ namespace RedmineClient.Services
         {
             try
             {
+#pragma warning disable CS0618 // 旧形式のAPIを使用（互換性のため）
                 _redmineManager.DeleteObject<Issue>(issueId.ToString());
+#pragma warning restore CS0618
             }
             catch (Exception ex)
             {

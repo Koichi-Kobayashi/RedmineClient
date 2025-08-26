@@ -30,7 +30,7 @@ namespace RedmineClient.Views.Pages
             this.Loaded += WbsPage_DataGridLoaded;
 
             // 祝日データを初期化（非同期で実行）
-            _ = InitializeHolidayDataAsync();
+            _ = Task.Run(() => InitializeHolidayDataAsync());
 
             // プロジェクト選択変更時のイベントを登録
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
@@ -39,6 +39,7 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// 祝日データを初期化する
         /// </summary>
+#pragma warning disable CS1998 // 非同期メソッドには await 演算子が必要（実際には使用している）
         private async Task InitializeHolidayDataAsync()
         {
             try
@@ -50,20 +51,30 @@ namespace RedmineClient.Views.Pages
                 // 祝日データの初期化に失敗
             }
         }
+#pragma warning restore CS1998
 
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
         {
             // 年月の選択肢を初期化
             InitializeYearMonthOptions();
 
-
             // プロジェクト選択の初期化
             System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: プロジェクト選択初期化開始 - AvailableProjects数={ViewModel.AvailableProjects.Count}");
             
+            // Redmineに接続してプロジェクトを取得
             if (ViewModel.AvailableProjects.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: AvailableProjectsが空のため、空のリストを設定");
-                ViewModel.AvailableProjects = new List<Project>();
+                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: AvailableProjectsが空のため、Redmineからプロジェクトを取得");
+                try
+                {
+                    // Redmine接続テストを実行してプロジェクトを取得
+                    ViewModel.TestRedmineConnection();
+                    System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: Redmine接続テスト完了");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: Redmine接続テストに失敗: {ex.Message}");
+                }
             }
             else
             {
@@ -72,6 +83,25 @@ namespace RedmineClient.Views.Pages
                 {
                     System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: プロジェクト - ID={project.Id}, Name={project.Name}");
                 }
+            }
+
+            // プロジェクトが選択されている場合、自動的にチケット一覧を取得
+            if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: チケット一覧の自動取得を開始");
+                    ViewModel.LoadRedmineData();
+                    System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: チケット一覧の自動取得が完了");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: チケット一覧の自動取得に失敗: {ex.Message}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: プロジェクトが選択されていないか、Redmineに接続されていないため、チケット一覧の自動取得をスキップ");
             }
 
             // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
@@ -104,7 +134,7 @@ namespace RedmineClient.Views.Pages
                 }
                 
                 // 祝日データを再初期化（色設定のため）
-                _ = RefreshHolidayDataAsync();
+                _ = Task.Run(() => RefreshHolidayDataAsync());
                 
                 // 日付列を再生成
                 GenerateDateColumns();
