@@ -54,6 +54,9 @@ namespace RedmineClient.Services
             {
                 var options = new RequestOptions();
                 
+                // QueryStringプロパティを明示的に初期化
+                options.QueryString = new NameValueCollection();
+                
                 // プロジェクトIDをクエリパラメータに追加
                 options.QueryString.Add("project_id", projectId.ToString());
                 

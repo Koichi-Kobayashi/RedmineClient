@@ -65,6 +65,18 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private bool _isTaskDetailVisible = false;
 
+        /// <summary>
+        /// プロジェクトが1つの場合、コンボボックスを読み取り専用にする
+        /// </summary>
+        [ObservableProperty]
+        private bool _isProjectSelectionReadOnly = false;
+
+        /// <summary>
+        /// プロジェクト選択の説明テキスト
+        /// </summary>
+        [ObservableProperty]
+        private string _projectSelectionDescription = string.Empty;
+
         partial void OnSelectedItemChanged(WbsItem? value)
         {
             // 選択されたアイテムが変更されたときに、子タスク追加可能かどうかを更新
@@ -290,6 +302,7 @@ namespace RedmineClient.ViewModels.Pages
                     
                     // 接続情報が設定されていない場合でも、プロジェクト選択を有効にする
                     AvailableProjects = new List<Project>();
+                    LoadSampleProjects();
                     return;
                 }
 
@@ -339,6 +352,7 @@ namespace RedmineClient.ViewModels.Pages
                         
                         // 認証エラーの場合でも、プロジェクト選択を有効にする
                         AvailableProjects = new List<Project>();
+                        LoadSampleProjects();
                     }
                 }
             }
@@ -492,6 +506,79 @@ namespace RedmineClient.ViewModels.Pages
 
             // サンプルデータを追加
             WbsItems.Add(project);
+        }
+
+        /// <summary>
+        /// サンプルプロジェクトを読み込む（Redmineに接続できない場合用）
+        /// </summary>
+        private void LoadSampleProjects()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("LoadSampleProjects: サンプルプロジェクトの読み込みを開始");
+                
+                var sampleProjects = new List<Project>
+                {
+                    new Project { Identifier = "1", Name = "サンプルプロジェクト1", Description = "Redmineに接続できない場合のサンプルプロジェクトです。" },
+                    new Project { Identifier = "2", Name = "サンプルプロジェクト2", Description = "設定画面でRedmine接続情報を設定してください。" },
+                    new Project { Identifier = "3", Name = "サンプルプロジェクト3", Description = "接続後、実際のプロジェクトが表示されます。" }
+                };
+                
+                // ProjectInfoをProjectに変換（読み取り専用プロパティは設定できないため、名前のみ設定）
+                var projects = new List<Project>();
+                foreach (var sample in sampleProjects)
+                {
+                    var project = new Project();
+                    // プロパティが設定可能な場合は設定を試行
+                    try
+                    {
+                        // リフレクションを使用してプロパティを設定（可能な場合のみ）
+                        var nameProperty = typeof(Project).GetProperty("Name");
+                        if (nameProperty?.CanWrite == true)
+                        {
+                            nameProperty.SetValue(project, sample.Name);
+                        }
+                    }
+                    catch
+                    {
+                        // プロパティの設定に失敗した場合は無視
+                    }
+                    projects.Add(project);
+                }
+                
+                AvailableProjects = projects;
+                System.Diagnostics.Debug.WriteLine($"LoadSampleProjects: サンプルプロジェクト {projects.Count} 件を設定");
+                
+                // プロジェクトが1つの場合は自動選択
+                if (projects.Count == 1)
+                {
+                    var singleProject = projects[0];
+                    SelectedProject = singleProject;
+                    IsProjectSelectionReadOnly = true;
+                    ProjectSelectionDescription = $"サンプルプロジェクトが1つのため自動選択: {singleProject.Name ?? "名前なし"}";
+                    System.Diagnostics.Debug.WriteLine($"LoadSampleProjects: サンプルプロジェクトが1つのため自動選択 - {singleProject.Name ?? "名前なし"}");
+                }
+                // プロジェクトが複数ある場合は最初のプロジェクトを選択
+                else if (projects.Count > 1)
+                {
+                    SelectedProject = projects[0];
+                    IsProjectSelectionReadOnly = false;
+                    ProjectSelectionDescription = $"サンプルプロジェクトから選択: {projects[0].Name ?? "名前なし"}";
+                    System.Diagnostics.Debug.WriteLine($"LoadSampleProjects: 複数サンプルプロジェクトのため最初のプロジェクトを選択 - {projects[0].Name ?? "名前なし"}");
+                }
+                else
+                {
+                    IsProjectSelectionReadOnly = false;
+                    ProjectSelectionDescription = "サンプルプロジェクトが0件のため選択なし";
+                    System.Diagnostics.Debug.WriteLine("LoadSampleProjects: サンプルプロジェクトが0件のため選択なし");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadSampleProjects: 例外発生 - {ex.Message}");
+                // エラーが発生した場合は空のリストを設定
+                AvailableProjects = new List<Project>();
+            }
         }
 
         private void AddRootItem()
@@ -1061,10 +1148,37 @@ namespace RedmineClient.ViewModels.Pages
                     }
                 }
                 
-                // 復元できない場合は最初のプロジェクトを選択
-                if (projects.Count > 0)
+                // プロジェクトが1つの場合は自動選択
+                if (projects.Count == 1)
+                {
+                    var singleProject = projects[0];
+                    SelectedProject = singleProject;
+                    IsProjectSelectionReadOnly = true;
+                    ProjectSelectionDescription = $"プロジェクトが1つのため自動選択: {singleProject.Name}";
+                    
+                    // 自動選択されたプロジェクトのデータを読み込む
+                    if (IsRedmineConnected)
+                    {
+                        Task.Delay(300).ContinueWith(_ =>
+                        {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                LoadRedmineData();
+                            });
+                        });
+                    }
+                }
+                // プロジェクトが複数ある場合は最初のプロジェクトを選択（従来の動作）
+                else if (projects.Count > 1)
                 {
                     SelectedProject = projects[0];
+                    IsProjectSelectionReadOnly = false;
+                    ProjectSelectionDescription = $"複数プロジェクトから選択: {projects[0].Name}";
+                }
+                else
+                {
+                    IsProjectSelectionReadOnly = false;
+                    ProjectSelectionDescription = "プロジェクトが選択されていません";
                 }
             }
             catch (Exception ex)

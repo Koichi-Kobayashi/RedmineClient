@@ -1,19 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Media;
-using RedmineClient.Helpers;
+using Redmine.Net.Api.Types;
 using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
-using RedmineClient.Services;
-using Redmine.Net.Api.Types;
 using Wpf.Ui.Abstractions.Controls;
-using Wpf.Ui.Controls;
 
 namespace RedmineClient.Views.Pages
 {
@@ -67,10 +56,22 @@ namespace RedmineClient.Views.Pages
             // 年月の選択肢を初期化
             InitializeYearMonthOptions();
 
+
             // プロジェクト選択の初期化
+            System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: プロジェクト選択初期化開始 - AvailableProjects数={ViewModel.AvailableProjects.Count}");
+            
             if (ViewModel.AvailableProjects.Count == 0)
             {
+                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: AvailableProjectsが空のため、空のリストを設定");
                 ViewModel.AvailableProjects = new List<Project>();
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: AvailableProjects数={ViewModel.AvailableProjects.Count}");
+                foreach (var project in ViewModel.AvailableProjects.Take(3))
+                {
+                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: プロジェクト - ID={project.Id}, Name={project.Name}");
+                }
             }
 
             // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
@@ -956,10 +957,28 @@ namespace RedmineClient.Views.Pages
         {
             if (e.PropertyName == nameof(ViewModel.SelectedProject))
             {
+                System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: SelectedProject変更 - 新しいプロジェクト: {(ViewModel.SelectedProject?.Name ?? "null")}");
+                
                 // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                 if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
                 {
+                    System.Diagnostics.Debug.WriteLine("ViewModel_PropertyChanged: Redmineデータの自動読み込みを開始");
                     ViewModel.LoadRedmineData();
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: Redmineデータの自動読み込みをスキップ - SelectedProject: {(ViewModel.SelectedProject?.Name ?? "null")}, IsRedmineConnected: {ViewModel.IsRedmineConnected}");
+                }
+            }
+            else if (e.PropertyName == nameof(ViewModel.AvailableProjects))
+            {
+                System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: AvailableProjects変更 - 新しいプロジェクト数: {ViewModel.AvailableProjects.Count}");
+                if (ViewModel.AvailableProjects.Count > 0)
+                {
+                    foreach (var project in ViewModel.AvailableProjects.Take(3))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: プロジェクト - ID={project.Id}, Name={project.Name}");
+                    }
                 }
             }
         }

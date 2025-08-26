@@ -34,17 +34,16 @@
             <ui:TextBlock Grid.Column="0" Margin="0,8,8,0" VerticalAlignment="Center" Text="プロジェクト:" />
 
             <ComboBox
-                x:Name="ProjectComboBox" Grid.Column="1" Margin="0,8,16,0" DisplayMemberPath="Name" IsEnabled="True"
+                x:Name="ProjectComboBox" Grid.Column="1" Margin="0,8,16,0" DisplayMemberPath="Name" 
+                IsEnabled="{Binding ViewModel.IsProjectSelectionReadOnly, Converter={x:Static helpers:BooleanInverseConverter.Instance}}"
                 ItemsSource="{Binding ViewModel.AvailableProjects}"
                 SelectedItem="{Binding ViewModel.SelectedProject, Mode=TwoWay}" />
 
-            <ui:TextBlock Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding ViewModel.SelectedProject.Name, StringFormat='選択中: {0}'}" Visibility="{Binding ViewModel.SelectedProject, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}" />
+            <ui:TextBlock Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center" 
+                         Text="{Binding ViewModel.ProjectSelectionDescription}" 
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
-            <ui:TextBlock
-                Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center"
-                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                Text="プロジェクトが選択されていません"
-                Visibility="{Binding ViewModel.SelectedProject, Converter={x:Static helpers:ObjectToVisibilityInverseConverter.Instance}}" />
+
         </Grid>
 
         <!--  操作ボタンとフィルター  -->
