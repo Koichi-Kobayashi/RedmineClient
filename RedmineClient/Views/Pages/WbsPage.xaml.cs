@@ -1,8 +1,19 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
+using RedmineClient.Helpers;
 using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
 using RedmineClient.Services;
+using Redmine.Net.Api.Types;
 using Wpf.Ui.Abstractions.Controls;
+using Wpf.Ui.Controls;
 
 namespace RedmineClient.Views.Pages
 {
@@ -53,22 +64,23 @@ namespace RedmineClient.Views.Pages
 
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 開始");
-
             // 年月の選択肢を初期化
             InitializeYearMonthOptions();
 
+            // プロジェクト選択の初期化
+            if (ViewModel.AvailableProjects.Count == 0)
+            {
+                ViewModel.AvailableProjects = new List<Project>();
+            }
+
             // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
-            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 日付列の生成を遅延実行");
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 遅延実行で日付列の生成を開始");
                 GenerateDateColumns();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
 
             // このイベントは一度だけ実行
             this.Loaded -= WbsPage_InitialLoaded;
-            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: 完了");
         }
 
         private void WbsPage_DataGridLoaded(object sender, RoutedEventArgs e)
@@ -245,7 +257,7 @@ namespace RedmineClient.Views.Pages
             };
 
             // 1行目：月（月の開始日のみ表示、それ以外は空）
-            var monthText = new TextBlock
+            var monthText = new System.Windows.Controls.TextBlock
             {
                 Text = isMonthStart ? $"{date:MM}月" : "",
                 FontSize = 12,
@@ -257,7 +269,7 @@ namespace RedmineClient.Views.Pages
             stackPanel.Children.Add(monthText);
 
             // 2行目：日
-            var dayText = new TextBlock
+            var dayText = new System.Windows.Controls.TextBlock
             {
                 Text = $"{date:dd}",
                 FontSize = 12,
@@ -269,7 +281,7 @@ namespace RedmineClient.Views.Pages
             stackPanel.Children.Add(dayText);
 
             // 3行目：曜日（土日祝の色を変更）
-            var dayOfWeekText = new TextBlock
+            var dayOfWeekText = new System.Windows.Controls.TextBlock
             {
                 Text = GetDayOfWeek(date),
                 FontSize = 12,
@@ -365,7 +377,7 @@ namespace RedmineClient.Views.Pages
                 System.Diagnostics.Debug.WriteLine("GenerateDateColumns: 開始");
 
                 // 既存のスケジュール列を削除
-                var existingColumns = WbsDataGrid.Columns.Where(c => c.Header is StackPanel || c.Header is TextBlock).ToList();
+                var existingColumns = WbsDataGrid.Columns.Where(c => c.Header is StackPanel || c.Header is System.Windows.Controls.TextBlock).ToList();
                 foreach (var column in existingColumns)
                 {
                     WbsDataGrid.Columns.Remove(column);
@@ -481,7 +493,7 @@ namespace RedmineClient.Views.Pages
                 var wbsItem = target.DataContext;
 
                 // コンテキストメニューの各MenuItemにViewModelとWbsItemの両方を設定
-                foreach (MenuItem menuItem in contextMenu.Items.OfType<MenuItem>())
+                foreach (System.Windows.Controls.MenuItem menuItem in contextMenu.Items.OfType<System.Windows.Controls.MenuItem>())
                 {
                     // MenuItemのDataContextはWbsItemのまま保持
                     menuItem.DataContext = wbsItem;
@@ -946,21 +958,6 @@ namespace RedmineClient.Views.Pages
             {
                 // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                 if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
-                {
-                    ViewModel.LoadRedmineData();
-                }
-            }
-        }
-
-        /// <summary>
-        /// プロジェクト選択変更時のイベントハンドラー
-        /// </summary>
-        private void ProjectComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (e.AddedItems.Count > 0 && e.AddedItems[0] is RedmineProject selectedProject)
-            {
-                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
-                if (ViewModel.IsRedmineConnected)
                 {
                     ViewModel.LoadRedmineData();
                 }

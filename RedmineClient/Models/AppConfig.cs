@@ -19,6 +19,7 @@ namespace RedmineClient.Models
         public static double TaskDetailWidth { get; set; } = 400;
         public static ApplicationTheme ApplicationTheme { get; set; } = ApplicationTheme.Light;
         private static string _scheduleStartYearMonth = "";
+        private static int? _selectedProjectId = null;
 
         public static string Theme
         {
@@ -36,6 +37,23 @@ namespace RedmineClient.Models
                 if (_isInitialized)
                 {
                     SetSetting("ScheduleStartYearMonth", value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 選択されたプロジェクトID
+        /// </summary>
+        public static int? SelectedProjectId
+        {
+            get => _selectedProjectId;
+            set
+            {
+                _selectedProjectId = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SetSetting("SelectedProjectId", value.ToString());
                 }
             }
         }
@@ -107,6 +125,7 @@ namespace RedmineClient.Models
             SetSettingsItem(config, "TaskDetailWidth", TaskDetailWidth.ToString());
             SetSettingsItem(config, "ApplicationTheme", ApplicationTheme.ToString());
             SetSettingsItem(config, "ScheduleStartYearMonth", _scheduleStartYearMonth);
+            SetSettingsItem(config, "SelectedProjectId", _selectedProjectId?.ToString() ?? "");
             config.Save();
         }
 
@@ -222,6 +241,16 @@ namespace RedmineClient.Models
                     {
                         _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM"); // 無効な値の場合は現在の年月をデフォルトとする
                     }
+
+                    var selectedProjectId = ConfigurationManager.AppSettings["SelectedProjectId"];
+                    if (!string.IsNullOrEmpty(selectedProjectId) && int.TryParse(selectedProjectId, out int id))
+                    {
+                        _selectedProjectId = id;
+                    }
+                    else
+                    {
+                        _selectedProjectId = null; // デフォルト値
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -251,6 +280,7 @@ namespace RedmineClient.Models
             TaskDetailWidth = 400;
             ApplicationTheme = ApplicationTheme.Light;
             _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
+            _selectedProjectId = null; // デフォルト値
             _isInitialized = true;
         }
 

@@ -14,6 +14,7 @@ using System.Threading;
 using System.Linq;
 using System.Collections;
 using RedmineClient.Services;
+using Redmine.Net.Api.Types;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -91,6 +92,34 @@ namespace RedmineClient.ViewModels.Pages
             AppConfig.Save();
         }
 
+        partial void OnSelectedProjectChanged(Project? value)
+        {
+            if (value != null)
+            {
+                // 選択されたプロジェクトIDを保存
+                AppConfig.SelectedProjectId = value.Id;
+                AppConfig.Save();
+                
+                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
+                if (IsRedmineConnected)
+                {
+                    // 少し遅延を入れてから読み込みを実行（UIの更新を待つ）
+                    Task.Delay(100).ContinueWith(_ =>
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            LoadRedmineData();
+                        });
+                    });
+                }
+                else
+                {
+                    // 接続されていない場合は接続テストを実行
+                    TestRedmineConnection();
+                }
+            }
+        }
+
         [ObservableProperty]
         private bool _isLoading = false;
 
@@ -122,10 +151,10 @@ namespace RedmineClient.ViewModels.Pages
         private string _errorMessage = string.Empty;
 
         [ObservableProperty]
-        private List<RedmineProject> _availableProjects = new();
+        private List<Project> _availableProjects = new();
 
         [ObservableProperty]
-        private RedmineProject? _selectedProject;
+        private Project? _selectedProject;
 
         [ObservableProperty]
         private bool _isRedmineDataLoaded = false;
@@ -225,7 +254,13 @@ namespace RedmineClient.ViewModels.Pages
             InitializeScheduleItems();
             
             // Redmine接続状態を確認
-                            TestRedmineConnection();
+            TestRedmineConnection();
+            
+            // プロジェクト選択の初期化（接続状態に関係なく）
+            if (AvailableProjects.Count == 0)
+            {
+                AvailableProjects = new List<Project>();
+            }
         }
 
         public virtual async Task OnNavigatedFromAsync()
@@ -247,23 +282,25 @@ namespace RedmineClient.ViewModels.Pages
                 ConnectionStatus = "接続確認中...";
 
                 // 設定からRedmine接続情報を取得
-                System.Diagnostics.Debug.WriteLine($"WbsViewModel: 接続テスト開始 - RedmineHost: '{AppConfig.RedmineHost}', ApiKey長: {AppConfig.ApiKey?.Length ?? 0}");
-                
                 if (string.IsNullOrEmpty(AppConfig.RedmineHost))
                 {
-                    System.Diagnostics.Debug.WriteLine("WbsViewModel: RedmineHostが設定されていません");
                     IsRedmineConnected = false;
                     ConnectionStatus = "設定されていません";
                     ErrorMessage = "Redmineのホストが設定されていません。設定画面でRedmine接続情報を設定してください。";
+                    
+                    // 接続情報が設定されていない場合でも、プロジェクト選択を有効にする
+                    AvailableProjects = new List<Project>();
                     return;
                 }
 
                 if (string.IsNullOrEmpty(AppConfig.ApiKey))
                 {
-                    System.Diagnostics.Debug.WriteLine("WbsViewModel: ApiKeyが設定されていません");
                     IsRedmineConnected = false;
                     ConnectionStatus = "設定されていません";
                     ErrorMessage = "RedmineのAPIキーが設定されていません。設定画面でAPIキーを設定してください。";
+                    
+                    // APIキーが設定されていない場合でも、プロジェクト選択を有効にする
+                    AvailableProjects = new List<Project>();
                     return;
                 }
 
@@ -280,32 +317,39 @@ namespace RedmineClient.ViewModels.Pages
                         
                         // プロジェクト一覧を取得
                         LoadProjects(redmineService);
+                        
+                        // プロジェクトが選択されている場合は、自動的にRedmineデータを読み込む
+                        if (SelectedProject != null)
+                        {
+                            // 少し遅延を入れてから読み込みを実行（UIの更新を待つ）
+                            Task.Delay(200).ContinueWith(_ =>
+                            {
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    LoadRedmineData();
+                                });
+                            });
+                        }
                     }
                     else
                     {
                         IsRedmineConnected = false;
                         ConnectionStatus = "認証エラー";
                         ErrorMessage = "APIキーが無効です。正しいAPIキーを設定してください。";
+                        
+                        // 認証エラーの場合でも、プロジェクト選択を有効にする
+                        AvailableProjects = new List<Project>();
                     }
                 }
-            }
-            catch (HttpRequestException ex)
-            {
-                IsRedmineConnected = false;
-                ConnectionStatus = "接続エラー";
-                ErrorMessage = $"Redmineサーバーに接続できません: {ex.Message}";
-            }
-            catch (TaskCanceledException)
-            {
-                IsRedmineConnected = false;
-                ConnectionStatus = "接続タイムアウト";
-                ErrorMessage = "Redmineサーバーへの接続がタイムアウトしました。サーバーが起動しているか確認してください。";
             }
             catch (Exception ex)
             {
                 IsRedmineConnected = false;
                 ConnectionStatus = "接続エラー";
-                ErrorMessage = $"予期しないエラーが発生しました: {ex.Message}";
+                ErrorMessage = $"接続テストでエラーが発生しました: {ex.Message}";
+                
+                // エラーが発生した場合でも、プロジェクト選択を有効にする
+                AvailableProjects = new List<Project>();
             }
             finally
             {
@@ -993,7 +1037,31 @@ namespace RedmineClient.ViewModels.Pages
                 var projects = redmineService.GetProjects();
                 AvailableProjects = projects;
                 
-                // 最初のプロジェクトを選択
+                // 設定から選択されたプロジェクトIDを復元
+                if (AppConfig.SelectedProjectId.HasValue && projects.Count > 0)
+                {
+                    var restoredProject = projects.FirstOrDefault(p => p.Id == AppConfig.SelectedProjectId.Value);
+                    if (restoredProject != null)
+                    {
+                        SelectedProject = restoredProject;
+                        
+                        // プロジェクトが復元された場合、自動的にRedmineデータを読み込む
+                        if (IsRedmineConnected)
+                        {
+                            // 少し遅延を入れてから読み込みを実行（UIの更新を待つ）
+                            Task.Delay(300).ContinueWith(_ =>
+                            {
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    LoadRedmineData();
+                                });
+                            });
+                        }
+                        return; // 復元成功
+                    }
+                }
+                
+                // 復元できない場合は最初のプロジェクトを選択
                 if (projects.Count > 0)
                 {
                     SelectedProject = projects[0];
@@ -1002,6 +1070,8 @@ namespace RedmineClient.ViewModels.Pages
             catch (Exception ex)
             {
                 ErrorMessage = $"プロジェクト一覧の取得に失敗しました: {ex.Message}";
+                // エラーが発生しても空のリストを設定してプロジェクト選択を有効にする
+                AvailableProjects = new List<Project>();
             }
         }
 
@@ -1018,7 +1088,7 @@ namespace RedmineClient.ViewModels.Pages
 
             if (SelectedProject == null)
             {
-                ErrorMessage = "プロジェクトが選択されていません。";
+                ErrorMessage = "プロジェクトが選択されていません。上記のプロジェクト選択プルダウンからプロジェクトを選択してください。";
                 return;
             }
 
@@ -1078,7 +1148,19 @@ namespace RedmineClient.ViewModels.Pages
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"チケットの読み込みに失敗しました: {ex.Message}";
+                // より詳細なエラー情報を提供
+                var errorMessage = $"プロジェクトID {projectId} のチケットの読み込みに失敗しました。";
+                if (ex is RedmineApiException redmineEx)
+                {
+                    errorMessage += $" Redmine API エラー: {redmineEx.Message}";
+                }
+                else
+                {
+                    errorMessage += $" エラー: {ex.Message}";
+                }
+                
+                ErrorMessage = errorMessage;
+                IsRedmineDataLoaded = false;
             }
         }
 

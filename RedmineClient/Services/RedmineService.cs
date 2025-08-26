@@ -16,33 +16,28 @@ namespace RedmineClient.Services
             if (string.IsNullOrEmpty(apiKey))
                 throw new ArgumentException("apiKey cannot be null or empty", nameof(apiKey));
 
-            System.Diagnostics.Debug.WriteLine($"RedmineService: 接続設定 - Host: {baseUrl}, API Key: {apiKey.Substring(0, Math.Min(8, apiKey.Length))}...");
+            // URLの形式を正規化
+            var normalizedUrl = baseUrl.TrimEnd('/');
+            if (!normalizedUrl.StartsWith("http://") && !normalizedUrl.StartsWith("https://"))
+            {
+                normalizedUrl = "https://" + normalizedUrl;
+            }
 
             var builder = new RedmineManagerOptionsBuilder();
-            builder.WithHost(baseUrl.TrimEnd('/'));
+            builder.WithHost(normalizedUrl);
             builder.WithApiKeyAuthentication(apiKey);
             _redmineManager = new RedmineManager(builder);
-
-            System.Diagnostics.Debug.WriteLine($"RedmineService: RedmineManager初期化完了");
         }
 
         /// <summary>
         /// プロジェクト一覧を取得
         /// </summary>
-        public List<RedmineProject> GetProjects()
+        public List<Project> GetProjects()
         {
             try
             {
-                var projects = _redmineManager.Get<Project>(new RequestOptions());
-                return projects.Select(p => new RedmineProject
-                {
-                    Id          = p.Id,
-                    Name        = p.Name        ?? string.Empty,
-                    Identifier  = p.Identifier  ?? string.Empty,
-                    Description = p.Description ?? string.Empty,
-                    CreatedOn   = p.CreatedOn,
-                    UpdatedOn   = p.UpdatedOn
-                }).ToList();
+                var projects = _redmineManager.Get<Project>();
+                return projects ?? new List<Project>();
             }
             catch (Exception ex)
             {
@@ -58,37 +53,57 @@ namespace RedmineClient.Services
             try
             {
                 var options = new RequestOptions();
+                
+                // プロジェクトIDをクエリパラメータに追加
+                options.QueryString.Add("project_id", projectId.ToString());
+                
                 if (limit.HasValue)
-                    options.QueryString.Add(RedmineKeys.LIMIT, limit.Value.ToString());
+                    options.QueryString.Add("limit", limit.Value.ToString());
                 if (offset.HasValue)
-                    options.QueryString.Add(RedmineKeys.OFFSET, offset.Value.ToString());
+                    options.QueryString.Add("offset", offset.Value.ToString());
 
                 var issues = _redmineManager.Get<Issue>(options);
-                return issues.Where(i => i.Project?.Id == projectId)
-                           .Select(i => new RedmineIssue
-                           {
-                               Id             = i.Id,
-                               Subject        = i.Subject          ?? string.Empty,
-                               Description    = i.Description      ?? string.Empty,
-                               Status         = i.Status?.Name     ?? string.Empty,
-                               Priority       = i.Priority?.Name   ?? string.Empty,
-                               Author         = i.Author?.Name     ?? string.Empty,
-                               AssignedTo     = i.AssignedTo?.Name ?? string.Empty,
-                               ProjectId      = i.Project?.Id      ?? 0,
-                               ProjectName    = i.Project?.Name    ?? string.Empty,
-                               Tracker        = i.Tracker?.Name    ?? string.Empty,
-                               StartDate      = i.StartDate,
-                               DueDate        = i.DueDate,
-                               DoneRatio      = i.DoneRatio        ?? 0,
-                               EstimatedHours = i.EstimatedHours,
-                               ParentId       = null, // TODO: 階層構造の取得方法を調査
-                               CreatedOn      = i.CreatedOn,
-                               UpdatedOn      = i.UpdatedOn
-                           }).ToList();
+                
+                if (issues == null)
+                {
+                    return new List<RedmineIssue>();
+                }
+                
+                return issues.Select(i => new RedmineIssue
+                {
+                    Id             = i.Id,
+                    Subject        = i.Subject          ?? string.Empty,
+                    Description    = i.Description      ?? string.Empty,
+                    Status         = i.Status?.Name     ?? string.Empty,
+                    Priority       = i.Priority?.Name   ?? string.Empty,
+                    Author         = i.Author?.Name     ?? string.Empty,
+                    AssignedTo     = i.AssignedTo?.Name ?? string.Empty,
+                    ProjectId      = i.Project?.Id      ?? 0,
+                    ProjectName    = i.Project?.Name    ?? string.Empty,
+                    Tracker        = i.Tracker?.Name    ?? string.Empty,
+                    StartDate      = i.StartDate,
+                    DueDate        = i.DueDate,
+                    DoneRatio      = i.DoneRatio        ?? 0,
+                    EstimatedHours = i.EstimatedHours,
+                    ParentId       = null, // TODO: 階層構造の取得方法を調査
+                    CreatedOn      = i.CreatedOn,
+                    UpdatedOn      = i.UpdatedOn
+                }).ToList();
             }
             catch (Exception ex)
             {
-                throw new RedmineApiException($"チケット一覧の取得に失敗しました: {ex.Message}", ex);
+                // より詳細なエラー情報を提供
+                var errorMessage = $"プロジェクトID {projectId} のチケット一覧の取得に失敗しました。";
+                if (ex is RedmineApiException redmineEx)
+                {
+                    errorMessage += $" Redmine API エラー: {redmineEx.Message}";
+                }
+                else
+                {
+                    errorMessage += $" エラー: {ex.Message}";
+                }
+                
+                throw new RedmineApiException(errorMessage, ex);
             }
         }
 
@@ -103,8 +118,8 @@ namespace RedmineClient.Services
                 {
                     QueryString = new NameValueCollection()
                     {
-                        {RedmineKeys.ID, issueId.ToString()},
-                        {RedmineKeys.INCLUDE, RedmineKeys.JOURNALS},
+                        {"id", issueId.ToString()},
+                        {"include", "journals"},
                     }
                 });
                 if (issue == null) return null;
@@ -143,15 +158,14 @@ namespace RedmineClient.Services
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("RedmineService: 現在のユーザー情報取得開始");
-                var user = _redmineManager.Get<User>(RedmineKeys.CURRENT_USER);
+                
+                // 正しいエンドポイントを使用して現在のユーザー情報を取得
+                var user = _redmineManager.Get<User>("current");
                 if (user == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("RedmineService: ユーザー情報がnull");
                     return null;
                 }
 
-                System.Diagnostics.Debug.WriteLine($"RedmineService: ユーザー情報取得成功 - ID: {user.Id}, Login: {user.Login}");
                 return new RedmineUser
                 {
                     Id          = user.Id,
@@ -165,7 +179,6 @@ namespace RedmineClient.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RedmineService: ユーザー情報取得失敗 - エラー: {ex.GetType().Name}: {ex.Message}");
                 throw new RedmineApiException($"ユーザー情報の取得に失敗しました: {ex.Message}", ex);
             }
         }
@@ -180,6 +193,11 @@ namespace RedmineClient.Services
                 // 全チケットを取得
                 var allIssues = GetIssues(projectId, 1000, 0);
 
+                if (allIssues == null || allIssues.Count == 0)
+                {
+                    return new List<RedmineIssue>();
+                }
+
                 // 親チケットを取得
                 var parentIssues = allIssues.Where(i => i.ParentId == null).ToList();
 
@@ -193,7 +211,18 @@ namespace RedmineClient.Services
             }
             catch (Exception ex)
             {
-                throw new RedmineApiException($"チケット階層の取得に失敗しました: {ex.Message}", ex);
+                // より詳細なエラー情報を提供
+                var errorMessage = $"プロジェクトID {projectId} のチケット階層の取得に失敗しました。";
+                if (ex is RedmineApiException redmineEx)
+                {
+                    errorMessage += $" Redmine API エラー: {redmineEx.Message}";
+                }
+                else
+                {
+                    errorMessage += $" エラー: {ex.Message}";
+                }
+                
+                throw new RedmineApiException(errorMessage, ex);
             }
         }
 
@@ -218,16 +247,50 @@ namespace RedmineClient.Services
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("RedmineService: 接続テスト開始");
-                var user = GetCurrentUser();
-                var result = user != null;
-                System.Diagnostics.Debug.WriteLine($"RedmineService: 接続テスト結果 - 成功: {result}");
-                return result;
+                // 方法1: 現在のユーザー情報を取得
+                try
+                {
+                    var user = GetCurrentUser();
+                    if (user != null)
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // ユーザー情報取得でエラーが発生した場合の詳細ログ
+                    if (ex is RedmineApiException redmineEx)
+                    {
+                        // Redmine API固有のエラーの場合は詳細情報を記録
+                        throw new RedmineApiException($"ユーザー情報取得でエラー: {redmineEx.Message}", redmineEx);
+                    }
+                }
+
+                // 方法2: プロジェクト一覧を取得して接続をテスト
+                try
+                {
+                    var projects = GetProjects();
+                    if (projects != null && projects.Count > 0)
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // プロジェクト一覧取得でエラーが発生した場合の詳細ログ
+                    if (ex is RedmineApiException redmineEx)
+                    {
+                        // Redmine API固有のエラーの場合は詳細情報を記録
+                        throw new RedmineApiException($"プロジェクト一覧取得でエラー: {redmineEx.Message}", redmineEx);
+                    }
+                }
+
+                return false;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RedmineService: 接続テスト失敗 - エラー: {ex.GetType().Name}: {ex.Message}");
-                return false;
+                // 予期しないエラーの場合は再スロー
+                throw new RedmineApiException($"接続テストで予期しないエラー: {ex.Message}", ex);
             }
         }
 

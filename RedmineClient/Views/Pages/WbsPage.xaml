@@ -17,40 +17,65 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!--  ページタイトル（削除）  -->
 
+        <!--  プロジェクト選択  -->
+        <Grid Grid.Row="0" Margin="0,8,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ui:TextBlock Grid.Column="0" Margin="0,8,8,0" VerticalAlignment="Center" Text="プロジェクト:" />
+
+            <ComboBox
+                x:Name="ProjectComboBox" Grid.Column="1" Margin="0,8,16,0" DisplayMemberPath="Name" IsEnabled="True"
+                ItemsSource="{Binding ViewModel.AvailableProjects}"
+                SelectedItem="{Binding ViewModel.SelectedProject, Mode=TwoWay}" />
+
+            <ui:TextBlock Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center" Text="{Binding ViewModel.SelectedProject.Name, StringFormat='選択中: {0}'}" Visibility="{Binding ViewModel.SelectedProject, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}" />
+
+            <ui:TextBlock
+                Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="プロジェクトが選択されていません"
+                Visibility="{Binding ViewModel.SelectedProject, Converter={x:Static helpers:ObjectToVisibilityInverseConverter.Instance}}" />
+        </Grid>
+
         <!--  操作ボタンとフィルター  -->
-        <StackPanel Grid.Row="0" Margin="0,8,0,16" Orientation="Horizontal">
-            <ui:Button Margin="0,0,8,0" Appearance="Primary" Command="{Binding ViewModel.AddRootItemCommand}" Content="ルートタスク追加" Icon="Add24" />
+        <StackPanel Grid.Row="1" Margin="0,8,0,16" Orientation="Horizontal">
+            <ui:Button Margin="0,0,8,0" Appearance="Primary" Command="{Binding ViewModel.AddRootItemCommand}" Content="ルートタスク追加" Icon="Add" />
 
             <ui:Button
                 Margin="0,0,8,0"
                 Command="{Binding ViewModel.AddChildItemCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
-                Content="子タスク追加" Icon="Add24"
+                Content="子タスク追加" Icon="Add"
                 IsEnabled="{Binding ViewModel.CanAddChild}" />
 
             <ui:Button
                 Margin="0,0,8,0"
                 Command="{Binding ViewModel.AddMultipleChildrenCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
-                Content="一括サブタスク追加" Icon="Add24"
+                Content="一括サブタスク追加" Icon="Add"
                 IsEnabled="{Binding ViewModel.CanAddChild}" />
 
             <ui:Button
                 Margin="0,0,8,0" Appearance="Danger"
                 Command="{Binding ViewModel.DeleteItemCommand}"
                 CommandParameter="{Binding ViewModel.SelectedItem}"
-                Content="削除" Icon="Delete24"
+                Content="削除" Icon="Delete"
                 IsEnabled="{Binding ViewModel.CanAddChild}" />
 
             <Separator Margin="8,0" />
 
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExpandAllCommand}" Content="全展開" Icon="ChevronDown24" />
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CollapseAllCommand}" Content="全折りたたみ" Icon="ChevronUp24" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExpandAllCommand}" Content="全展開" Icon="ChevronDown" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CollapseAllCommand}" Content="全折りたたみ" Icon="ChevronUp" />
 
             <Separator Margin="8,0" />
 
@@ -70,31 +95,31 @@
 
             <!--  スケジュール表設定  -->
             <StackPanel Margin="0,0,8,0" Orientation="Horizontal">
-                <TextBlock Margin="0,0,5,0" VerticalAlignment="Center" Text="スケジュール開始年月:" />
+                <ui:TextBlock Margin="0,0,5,0" VerticalAlignment="Center" Text="スケジュール開始年月:" />
                 <ComboBox x:Name="ScheduleStartYearMonthComboBox" Width="100" VerticalAlignment="Center" SelectedItem="{Binding ViewModel.ScheduleStartYearMonth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ScheduleStartYearMonthComboBox_SelectionChanged" />
             </StackPanel>
 
             <Separator Margin="8,0" />
 
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.UpdateProgressCommand}" Content="進捗更新" Icon="Refresh24" />
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LimitHierarchyCommand}" Content="階層制限" Icon="Settings24" />
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.SettingsCommand}" Content="設定" Icon="Settings24" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.UpdateProgressCommand}" Content="進捗更新" Icon="Refresh" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LimitHierarchyCommand}" Content="階層制限" Icon="Settings" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.SettingsCommand}" Content="設定" Icon="Settings" />
 
             <Separator Margin="8,0" />
 
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshCommand}" Content="更新" Icon="ArrowClockwise24" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshCommand}" Content="更新" Icon="ArrowClockwise" />
 
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LoadRedmineDataCommand}" Content="Redmine読み込み" Icon="ArrowImportDown24" IsEnabled="{Binding ViewModel.IsRedmineConnected}" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LoadRedmineDataCommand}" Content="Redmine読み込み" Icon="ArrowImportDown" IsEnabled="{Binding ViewModel.IsRedmineConnected}" />
 
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshRedmineDataCommand}" Content="Redmine更新" Icon="ArrowClockwise24" IsEnabled="{Binding ViewModel.IsRedmineDataLoaded}" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshRedmineDataCommand}" Content="Redmine更新" Icon="ArrowClockwise" IsEnabled="{Binding ViewModel.IsRedmineDataLoaded}" />
 
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExportCommand}" Content="エクスポート" Icon="ArrowExportUp24" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExportCommand}" Content="エクスポート" Icon="ArrowExportUp" />
 
-            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ImportCommand}" Content="インポート" Icon="ArrowImportDown24" />
+            <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ImportCommand}" Content="インポート" Icon="ArrowImportDown" />
         </StackPanel>
 
         <!--  接続状態とエラー表示  -->
-        <Grid Grid.Row="1" Margin="0,0,0,8">
+        <Grid Grid.Row="2" Margin="0,0,0,8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -102,7 +127,7 @@
 
             <!--  接続状態  -->
             <StackPanel Grid.Row="0" Margin="0,0,0,8" Orientation="Horizontal">
-                <ui:Button Margin="0,0,8,0" Appearance="Secondary" Command="{Binding ViewModel.TestConnectionCommand}" Content="接続テスト" Icon="Wifi24" />
+                <ui:Button Margin="0,0,8,0" Appearance="Secondary" Command="{Binding ViewModel.TestConnectionCommand}" Content="接続テスト" Icon="Wifi" />
 
                 <Border Margin="0,0,8,0" Padding="8,4" Background="{Binding ViewModel.IsRedmineConnected, Converter={x:Static helpers:BooleanToBrushConverter.Instance}}" CornerRadius="4">
                     <ui:TextBlock HorizontalAlignment="Center" FontTypography="Caption" Foreground="White" Text="{Binding ViewModel.ConnectionStatus}" />
@@ -116,30 +141,8 @@
                 <ui:TextBlock FontTypography="Caption" Text="{Binding ViewModel.ErrorMessage}" TextWrapping="Wrap" />
             </ui:Card>
 
-        <!--  プロジェクト選択  -->
-        <Grid Grid.Row="2" Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="300" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0" Margin="0,8,8,0" VerticalAlignment="Center" Text="プロジェクト:" />
-
-                <ComboBox x:Name="ProjectComboBox" Grid.Column="1" Margin="0,8,16,0" 
-                          ItemsSource="{Binding ViewModel.AvailableProjects}"
-                          SelectedItem="{Binding ViewModel.SelectedProject, Mode=TwoWay}"
-                          DisplayMemberPath="Name"
-                          IsEnabled="{Binding ViewModel.IsRedmineConnected}"
-                          SelectionChanged="ProjectComboBox_SelectionChanged" />
-
-                <ui:TextBlock Grid.Column="2" Margin="0,8,0,0" VerticalAlignment="Center" 
-                              Text="{Binding ViewModel.SelectedProject.Name, StringFormat='選択中: {0}'}"
-                              Visibility="{Binding ViewModel.SelectedProject, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}" />
-            </Grid>
-
             <!--  フィルターと検索  -->
-            <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid Grid.Row="2" Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -147,7 +150,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <ui:TextBox Grid.Column="0" Margin="0,8,0,0" Icon="Search24" PlaceholderText="タスクを検索..." Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:TextBox Grid.Column="0" Margin="0,8,0,0" Icon="Search" PlaceholderText="タスクを検索..." Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                 <ui:ToggleSwitch Grid.Column="1" Margin="16,8,0,0" Content="完了" IsChecked="{Binding ViewModel.ShowCompleted}" />
 
@@ -158,7 +161,7 @@
         </Grid>
 
         <!--  WBSツリービュー  -->
-        <Grid x:Name="MainContentGrid" Grid.Row="3">
+        <Grid x:Name="MainContentGrid" Grid.Row="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="DataGridColumn" Width="*" />
                 <ColumnDefinition x:Name="TaskDetailColumn" Width="16" />
@@ -272,7 +275,7 @@
                                                 CommandParameter="{Binding}"
                                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                 Icon="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}" />
-                                            <TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                            <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
                                         </StackPanel>
 
                                         <!--  階層レベル表示  -->
@@ -286,19 +289,31 @@
                                             </Border.InputBindings>
                                             <StackPanel Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}" Orientation="Horizontal">
                                                 <!--  階層インデント表示  -->
-                                                <TextBlock VerticalAlignment="Center" FontFamily="Consolas, Courier New, monospace" FontSize="11" Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
+                                                <ui:TextBlock VerticalAlignment="Center" FontFamily="Consolas, Courier New, monospace" FontSize="11" Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
                                                 <!--  タスクタイトル  -->
-                                                <TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
+                                                <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
                                             </StackPanel>
                                         </Border>
 
                                         <!--  コンテキストメニュー  -->
                                         <Grid.ContextMenu>
                                             <ContextMenu Opened="ContextMenu_Opened">
-                                                <MenuItem Header="サブタスク追加" Icon="Add24" />
-                                                <MenuItem Header="編集" Icon="Edit24" />
+                                                <ui:MenuItem Header="サブタスク追加">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="Add16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
+                                                <ui:MenuItem Header="編集">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="Edit16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
                                                 <Separator />
-                                                <MenuItem Header="削除" Icon="Delete24" />
+                                                <ui:MenuItem Header="削除">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="Delete16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
                                             </ContextMenu>
                                         </Grid.ContextMenu>
                                     </Grid>
@@ -320,7 +335,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock MinWidth="40" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
+                                        <ui:TextBlock MinWidth="40" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
                                         <ui:ProgressRing Width="16" Height="16" Margin="4,0,0,0" Progress="{Binding TotalProgress}" />
                                     </StackPanel>
                                 </DataTemplate>
@@ -332,7 +347,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="{Binding Status, Converter={x:Static helpers:StatusToBrushConverter.Instance}}" CornerRadius="2">
-                                        <TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Status}" />
+                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Status}" />
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -343,7 +358,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="{Binding Priority, Converter={x:Static helpers:PriorityToBrushConverter.Instance}}" CornerRadius="2">
-                                        <TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Priority}" />
+                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Priority}" />
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
