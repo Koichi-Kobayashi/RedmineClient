@@ -11,10 +11,7 @@ namespace RedmineClient.ViewModels.Pages
 {
     public partial class WbsViewModel : ObservableObject, INavigationAware
     {
-        /// <summary>
-        /// フォーカス設定要求イベント（編集モードかどうかを渡す）
-        /// </summary>
-        public event Action<bool>? RequestFocus;
+
 
             [ObservableProperty]
     private ObservableCollection<WbsItem> _wbsItems = new();
@@ -40,13 +37,7 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private bool _canAddChild = false;
 
-        /// <summary>
-        /// タスク追加後の動作モード
-        /// true: 編集モード（新しく追加されたタスクを選択）
-        /// false: 連続追加モード（親タスクを選択したまま）
-        /// </summary>
-        [ObservableProperty]
-        private bool _isEditModeAfterAdd = true;
+
 
         /// <summary>
         /// タスク詳細の表示/非表示
@@ -62,11 +53,7 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private bool _isProjectSelectionReadOnly = false;
 
-        /// <summary>
-        /// プロジェクト選択の説明テキスト
-        /// </summary>
-        [ObservableProperty]
-        private string _projectSelectionDescription = string.Empty;
+
 
         partial void OnSelectedItemChanged(WbsItem? value)
         {
@@ -83,10 +70,7 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        partial void OnIsEditModeAfterAddChanged(bool value)
-        {
-            // 編集モード変更時の処理
-        }
+
 
         partial void OnScheduleStartYearMonthChanged(string value)
         {
@@ -617,41 +601,14 @@ namespace RedmineClient.ViewModels.Pages
 
             parent.AddChild(newItem);
             
-            // モードに応じて選択するアイテムを決定
-            if (IsEditModeAfterAdd)
-            {
-                // 編集モード：新しく追加されたサブタスクを選択
-                SelectedItem = newItem;
-            }
-            else
-            {
-                // 連続追加モード：親タスクを選択したまま
-                SelectedItem = parent;
-                
-                            // 連続追加モードでは、親タスクが確実に選択されていることを確認
-            }
-        
-        // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
-        OnPropertyChanged(nameof(WbsItems));
-        
-        // 平坦化リストを更新
-        UpdateFlattenedList();
-        
-        // 平坦化リスト更新後に選択状態を再確認・復元（遅延実行で確実に復元）
-        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (!IsEditModeAfterAdd && SelectedItem != parent)
-            {
-                SelectedItem = parent;
-            }
-            else if (IsEditModeAfterAdd && SelectedItem != newItem)
-            {
-                SelectedItem = newItem;
-            }
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
-        
-        // フォーカスを設定（編集モードかどうかを渡す）
-        RequestFocus?.Invoke(IsEditModeAfterAdd);
+            // 新しく追加されたサブタスクを選択
+            SelectedItem = newItem;
+            
+            // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
+            OnPropertyChanged(nameof(WbsItems));
+            
+            // 平坦化リストを更新
+            UpdateFlattenedList();
         }
 
         private void DeleteItem(WbsItem? item)
@@ -732,18 +689,6 @@ namespace RedmineClient.ViewModels.Pages
             
             // 平坦化リストを更新
             UpdateFlattenedList();
-            
-                    // 平坦化リスト更新後に選択状態を再確認・復元（遅延実行で確実に復元）
-        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (SelectedItem != parent)
-            {
-                SelectedItem = parent;
-            }
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
-            
-            // フォーカスを設定（編集モードかどうかを渡す）
-            RequestFocus?.Invoke(IsEditModeAfterAdd);
         }
 
         /// <summary>
@@ -1150,7 +1095,6 @@ namespace RedmineClient.ViewModels.Pages
                     var singleProject = projects[0];
                     SelectedProject = singleProject;
                     IsProjectSelectionReadOnly = true;
-                    ProjectSelectionDescription = $"プロジェクトが1つのため自動選択: {singleProject.Name}";
                     System.Diagnostics.Debug.WriteLine($"LoadProjects: 単一プロジェクトを自動選択: {singleProject.Name}");
                     
                     // 自動選択されたプロジェクトのデータを読み込む
@@ -1170,13 +1114,11 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     SelectedProject = projects[0];
                     IsProjectSelectionReadOnly = false;
-                    ProjectSelectionDescription = $"複数プロジェクトから選択: {projects[0].Name}";
                     System.Diagnostics.Debug.WriteLine($"LoadProjects: 複数プロジェクトから最初のプロジェクトを選択: {projects[0].Name}");
                 }
                 else
                 {
                     IsProjectSelectionReadOnly = false;
-                    ProjectSelectionDescription = "プロジェクトが選択されていません";
                     System.Diagnostics.Debug.WriteLine("LoadProjects: プロジェクトが見つかりませんでした");
                 }
             }

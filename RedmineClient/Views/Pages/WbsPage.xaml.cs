@@ -20,8 +20,7 @@ namespace RedmineClient.Views.Pages
 
             InitializeComponent();
 
-            // ViewModelのフォーカス要求イベントに応答
-            ViewModel.RequestFocus += SetFocus;
+
 
             // 初期化完了後にタスク詳細の幅を設定
             this.Loaded += WbsPage_InitialLoaded;
@@ -549,23 +548,7 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        /// <summary>
-        /// モードに応じてフォーカスを設定する
-        /// </summary>
-        /// <param name="isEditModeAfterAdd">追加後編集モードかどうか</param>
-        public void SetFocus(bool isEditModeAfterAdd)
-        {
-            if (isEditModeAfterAdd)
-            {
-                // 追加後編集モード：タイトルフィールドにフォーカス
-                SetTitleFocus();
-            }
-            else
-            {
-                // 連続追加モード：DataGridにフォーカス
-                SetDataGridFocus();
-            }
-        }
+
 
         /// <summary>
         /// 日付テキストボックスのキーイベントハンドラー
