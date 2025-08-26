@@ -45,11 +45,11 @@
     </FluentValidationExcludedCultures>
   </ItemGroup>
 
-
-
   <ItemGroup>
     <Folder Include="Assets\Icon\" />
   </ItemGroup>
+
+
 
   <ItemGroup>
     <None Update="Assets\syukujitsu.csv">

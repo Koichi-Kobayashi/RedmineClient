@@ -60,6 +60,9 @@ namespace RedmineClient.Services
                 // プロジェクトIDをクエリパラメータに追加
                 options.QueryString.Add("project_id", projectId.ToString());
                 
+                // 親子関係を含めて取得
+                options.QueryString.Add("include", "relations,children");
+                
                 if (limit.HasValue)
                     options.QueryString.Add("limit", limit.Value.ToString());
                 if (offset.HasValue)
@@ -69,8 +72,11 @@ namespace RedmineClient.Services
                 
                 if (issues == null)
                 {
+                    System.Diagnostics.Debug.WriteLine($"GetIssues: プロジェクトID {projectId} のチケットがnullでした");
                     return new List<RedmineIssue>();
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"GetIssues: プロジェクトID {projectId} から {issues.Count} 件のチケットを取得しました");
                 
                 return issues.Select(i => new RedmineIssue
                 {
@@ -88,7 +94,7 @@ namespace RedmineClient.Services
                     DueDate        = i.DueDate,
                     DoneRatio      = i.DoneRatio        ?? 0,
                     EstimatedHours = i.EstimatedHours,
-                    ParentId       = null, // TODO: 階層構造の取得方法を調査
+                    ParentId       = null, // 親チケットのID（一時的にnull）
                     CreatedOn      = i.CreatedOn,
                     UpdatedOn      = i.UpdatedOn
                 }).ToList();
@@ -143,7 +149,7 @@ namespace RedmineClient.Services
                     DueDate        = issue.DueDate,
                     DoneRatio      = issue.DoneRatio        ?? 0,
                     EstimatedHours = issue.EstimatedHours,
-                    ParentId       = null, // TODO: 階層構造の取得方法を調査
+                    ParentId       = null, // 親チケットのID（一時的にnull）
                     CreatedOn      = issue.CreatedOn,
                     UpdatedOn      = issue.UpdatedOn
                 };
@@ -294,6 +300,190 @@ namespace RedmineClient.Services
             {
                 // 予期しないエラーの場合は再スロー
                 throw new RedmineApiException($"接続テストで予期しないエラー: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// チケットを作成
+        /// </summary>
+        public int CreateIssue(RedmineIssue issue)
+        {
+            try
+            {
+                var newIssue = new Issue
+                {
+                    Subject = issue.Subject,
+                    Description = issue.Description,
+                    StartDate = issue.StartDate,
+                    DueDate = issue.DueDate,
+                    DoneRatio = 0
+                };
+
+                // プロパティをリフレクションで設定（読み取り専用プロパティのため）
+                var projectProperty = typeof(Issue).GetProperty("Project");
+                if (projectProperty?.CanWrite == true)
+                {
+                    var project = new IdentifiableName();
+                    var projectIdProperty = typeof(IdentifiableName).GetProperty("Id");
+                    if (projectIdProperty?.CanWrite == true)
+                    {
+                        projectIdProperty.SetValue(project, issue.ProjectId);
+                    }
+                    projectProperty.SetValue(newIssue, project);
+                }
+
+                var trackerProperty = typeof(Issue).GetProperty("Tracker");
+                if (trackerProperty?.CanWrite == true)
+                {
+                    var tracker = new IdentifiableName();
+                    var trackerIdProperty = typeof(IdentifiableName).GetProperty("Id");
+                    if (trackerIdProperty?.CanWrite == true)
+                    {
+                        trackerIdProperty.SetValue(tracker, 1); // デフォルトのトラッカーID
+                    }
+                    trackerProperty.SetValue(newIssue, tracker);
+                }
+
+                var statusProperty = typeof(Issue).GetProperty("Status");
+                if (statusProperty?.CanWrite == true)
+                {
+                    var status = new IdentifiableName();
+                    var statusIdProperty = typeof(IdentifiableName).GetProperty("Id");
+                    if (statusIdProperty?.CanWrite == true)
+                    {
+                        statusIdProperty.SetValue(status, 1); // デフォルトのステータスID（新規）
+                    }
+                    statusProperty.SetValue(newIssue, status);
+                }
+
+                var priorityProperty = typeof(Issue).GetProperty("Priority");
+                if (priorityProperty?.CanWrite == true)
+                {
+                    var priority = new IdentifiableName();
+                    var priorityIdProperty = typeof(IdentifiableName).GetProperty("Id");
+                    if (priorityIdProperty?.CanWrite == true)
+                    {
+                        priorityIdProperty.SetValue(priority, 2); // デフォルトの優先度ID（中）
+                    }
+                    priorityProperty.SetValue(newIssue, priority);
+                }
+
+                var estimatedHoursProperty = typeof(Issue).GetProperty("EstimatedHours");
+                if (estimatedHoursProperty?.CanWrite == true)
+                {
+                    estimatedHoursProperty.SetValue(newIssue, (float?)issue.EstimatedHours);
+                }
+
+                // チケットを作成（Redmine.Net.Apiの正しいメソッドを使用）
+                var createdIssue = _redmineManager.CreateObject(newIssue);
+                return createdIssue.Id;
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"チケットの作成に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// チケットを更新
+        /// </summary>
+        public void UpdateIssue(RedmineIssue issue)
+        {
+            try
+            {
+                var existingIssue = _redmineManager.Get<Issue>(issue.Id.ToString());
+                if (existingIssue == null)
+                {
+                    throw new RedmineApiException($"チケットID {issue.Id} が見つかりません。");
+                }
+
+                existingIssue.Subject = issue.Subject;
+                existingIssue.Description = issue.Description;
+                existingIssue.StartDate = issue.StartDate;
+                existingIssue.DueDate = issue.DueDate;
+                
+                // EstimatedHoursプロパティをリフレクションで設定
+                var estimatedHoursProperty = typeof(Issue).GetProperty("EstimatedHours");
+                if (estimatedHoursProperty?.CanWrite == true)
+                {
+                    estimatedHoursProperty.SetValue(existingIssue, (float?)issue.EstimatedHours);
+                }
+
+                // DoneRatioプロパティをリフレクションで設定
+                var doneRatioProperty = typeof(Issue).GetProperty("DoneRatio");
+                if (doneRatioProperty?.CanWrite == true)
+                {
+                    doneRatioProperty.SetValue(existingIssue, (float?)issue.DoneRatio);
+                }
+
+                _redmineManager.UpdateObject(existingIssue.Id.ToString(), existingIssue);
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"チケットの更新に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// チケットを削除
+        /// </summary>
+        public void DeleteIssue(int issueId)
+        {
+            try
+            {
+                _redmineManager.DeleteObject<Issue>(issueId.ToString());
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"チケットの削除に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// トラッカー一覧を取得
+        /// </summary>
+        public List<Tracker> GetTrackers()
+        {
+            try
+            {
+                var trackers = _redmineManager.Get<Tracker>();
+                return trackers ?? new List<Tracker>();
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"トラッカー一覧の取得に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// ステータス一覧を取得
+        /// </summary>
+        public List<IssueStatus> GetIssueStatuses()
+        {
+            try
+            {
+                var statuses = _redmineManager.Get<IssueStatus>();
+                return statuses ?? new List<IssueStatus>();
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"ステータス一覧の取得に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 優先度一覧を取得
+        /// </summary>
+        public List<IssuePriority> GetIssuePriorities()
+        {
+            try
+            {
+                var priorities = _redmineManager.Get<IssuePriority>();
+                return priorities ?? new List<IssuePriority>();
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"優先度一覧の取得に失敗しました: {ex.Message}", ex);
             }
         }
 

@@ -1,20 +1,11 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using System.Windows.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using RedmineClient.Models;
-using Wpf.Ui.Abstractions.Controls;
-using Wpf.Ui.Controls;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Linq;
-using System.Collections;
-using RedmineClient.Services;
 using Redmine.Net.Api.Types;
+using RedmineClient.Models;
+using RedmineClient.Services;
+using RedmineClient.ViewModels.Windows;
+using RedmineClient.Views.Windows;
+using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -194,6 +185,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand LoadRedmineDataCommand { get; }
         public ICommand RefreshRedmineDataCommand { get; }
         public ICommand SettingsCommand { get; }
+        public ICommand CreateNewIssueCommand { get; }
 
         public WbsViewModel()
         {
@@ -230,6 +222,7 @@ namespace RedmineClient.ViewModels.Pages
             LoadRedmineDataCommand = new RelayCommand(() => LoadRedmineData());
             RefreshRedmineDataCommand = new RelayCommand(() => RefreshRedmineData());
             SettingsCommand = new RelayCommand(OpenSettings);
+            CreateNewIssueCommand = new RelayCommand(CreateNewIssue);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -1245,12 +1238,16 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     var issues = redmineService.GetIssuesWithHierarchy(projectId);
                     
+                    // デバッグ用ログ
+                    System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: プロジェクトID {projectId} から {issues.Count} 件のチケットを取得しました");
+                    
                     // WBSアイテムに変換
                     WbsItems.Clear();
                     foreach (var issue in issues)
                     {
                         var wbsItem = ConvertRedmineIssueToWbsItem(issue);
                         WbsItems.Add(wbsItem);
+                        System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: チケット '{issue.Subject}' (ID: {issue.Id}) をWBSアイテムに変換しました");
                     }
                     
                     // 平坦化リストを更新
@@ -1258,6 +1255,8 @@ namespace RedmineClient.ViewModels.Pages
                     
                     IsRedmineDataLoaded = true;
                     ErrorMessage = string.Empty;
+                    
+                    System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: 完了。WBSアイテム数: {WbsItems.Count}");
                 }
             }
             catch (Exception ex)
@@ -1328,6 +1327,46 @@ namespace RedmineClient.ViewModels.Pages
             }
 
             await Application.Current.Dispatcher.InvokeAsync(action);
+        }
+
+        /// <summary>
+        /// 新しいチケットを作成
+        /// </summary>
+        private void CreateNewIssue()
+        {
+            if (SelectedProject == null)
+            {
+                ErrorMessage = "プロジェクトが選択されていません。プロジェクトを選択してからチケットを作成してください。";
+                return;
+            }
+
+            if (!IsRedmineConnected)
+            {
+                ErrorMessage = "Redmineに接続されていません。接続を確認してからチケットを作成してください。";
+                return;
+            }
+
+            try
+            {
+                using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                {
+                    var viewModel = new CreateIssueViewModel(redmineService, SelectedProject);
+                    var window = new CreateIssueWindow(viewModel);
+                    
+                    // ダイアログを表示
+                    var result = window.ShowDialog();
+                    
+                    // チケットが作成された場合は、プロジェクトのデータを再読み込み
+                    if (result == true)
+                    {
+                        LoadRedmineData();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"チケット作成ダイアログの表示に失敗しました: {ex.Message}";
+            }
         }
 
         /// <summary>
