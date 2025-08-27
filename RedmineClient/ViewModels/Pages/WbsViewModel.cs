@@ -676,6 +676,8 @@ namespace RedmineClient.ViewModels.Pages
         public void AddMultipleChildren(WbsItem? parent)
         {
             if (parent == null) return;
+            
+            System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 親タスク '{parent.Title}' に一括サブタスク追加を開始");
 
 
 
@@ -701,11 +703,16 @@ namespace RedmineClient.ViewModels.Pages
             // 一括追加の場合は常に親タスクを選択（連続追加のため）
             SelectedItem = parent;
             
+            // 手動でCanAddChildを更新（OnSelectedItemChangedが呼び出されない場合の対策）
+            CanAddChild = parent.IsParentTask;
+            
             // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
             OnPropertyChanged(nameof(WbsItems));
             
-            // 平坦化リストを更新
-            UpdateFlattenedList();
+            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
+            UpdateFlattenedListManually();
+            
+            System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 完了。{count}個のサブタスクを追加しました。CanAddChild: {CanAddChild}");
         }
 
         /// <summary>
@@ -844,8 +851,8 @@ namespace RedmineClient.ViewModels.Pages
             // 展開状態を切り替え
             item.IsExpanded = !item.IsExpanded;
             
-            // 平坦化リストを更新
-            UpdateFlattenedList();
+            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
+            UpdateFlattenedListManually();
         }
 
         /// <summary>
@@ -1286,6 +1293,19 @@ namespace RedmineClient.ViewModels.Pages
                     
                     // 平坦化リストを更新
                     UpdateFlattenedList();
+                    
+                    // Redmineデータ読み込み後、選択状態を復元
+                    if (SelectedItem != null)
+                    {
+                        // 選択されたアイテムがまだ存在するかチェック
+                        var currentSelectedItem = SelectedItem;
+                        var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
+                        if (foundItem != null)
+                        {
+                            SelectedItem = foundItem;
+                            CanAddChild = foundItem.IsParentTask;
+                        }
+                    }
                     
                     IsRedmineDataLoaded = true;
                     ErrorMessage = string.Empty;
