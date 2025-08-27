@@ -617,9 +617,8 @@ namespace RedmineClient.ViewModels.Pages
             // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
             OnPropertyChanged(nameof(WbsItems));
             
-            // 平坦化リストの更新は削除（無限ループの原因となるため）
-            // 代わりに、必要な部分のみを更新
-            OnPropertyChanged(nameof(FlattenedWbsItems));
+            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
+            UpdateFlattenedListManually();
         }
 
         private void DeleteItem(WbsItem? item)
@@ -1417,6 +1416,28 @@ namespace RedmineClient.ViewModels.Pages
                 AddItemToFlattened(rootItem);
             }
             UpdateScheduleItems();
+        }
+
+        /// <summary>
+        /// 階層構造を平坦化したリストを手動で更新（無限ループを避けるため）
+        /// </summary>
+        private void UpdateFlattenedListManually()
+        {
+            // 現在の選択状態を保存
+            var currentSelectedItem = SelectedItem;
+            
+            // FlattenedWbsItemsを手動で更新
+            FlattenedWbsItems.Clear();
+            foreach (var rootItem in WbsItems)
+            {
+                AddItemToFlattened(rootItem);
+            }
+            
+            // 選択状態を復元
+            if (currentSelectedItem != null)
+            {
+                SelectedItem = currentSelectedItem;
+            }
         }
     }
 }
