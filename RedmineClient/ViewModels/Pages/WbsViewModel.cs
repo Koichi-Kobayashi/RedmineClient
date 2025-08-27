@@ -63,10 +63,12 @@ namespace RedmineClient.ViewModels.Pages
             {
                 // 選択されたアイテムが親タスクかどうかを判定
                 CanAddChild = value.IsParentTask;
+                System.Diagnostics.Debug.WriteLine($"OnSelectedItemChanged: アイテム '{value.Title}' が選択されました。IsParentTask: {value.IsParentTask}, CanAddChild: {CanAddChild}");
             }
             else
             {
                 CanAddChild = false;
+                System.Diagnostics.Debug.WriteLine("OnSelectedItemChanged: アイテムの選択がクリアされました。CanAddChild: false");
             }
         }
 
@@ -583,11 +585,16 @@ namespace RedmineClient.ViewModels.Pages
             // 新しいタスクを選択状態にする
             SelectedItem = newItem;
             
+            // 手動でCanAddChildを更新（OnSelectedItemChangedが呼び出されない場合の対策）
+            CanAddChild = newItem.IsParentTask;
+            System.Diagnostics.Debug.WriteLine($"AddRootItem: 新しいルートタスク '{newItem.Title}' を追加しました。IsParentTask: {newItem.IsParentTask}");
+            
             // UIの更新を強制する（新規タスクの表示更新のため）
             OnPropertyChanged(nameof(WbsItems));
             
-            // 平坦化リストを更新
-            UpdateFlattenedList();
+            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
+            UpdateFlattenedListManually();
+            System.Diagnostics.Debug.WriteLine($"AddRootItem: SelectedItemを設定しました。CanAddChild: {CanAddChild}");
         }
 
         private void AddChildItem(WbsItem? parent)
