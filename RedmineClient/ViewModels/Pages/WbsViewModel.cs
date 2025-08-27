@@ -169,6 +169,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand ToggleExpansionCommand { get; }
         public ICommand MoveItemCommand { get; }
         public ICommand AddMultipleChildrenCommand { get; }
+        public ICommand AddBatchChildrenCommand { get; }
         public ICommand UpdateProgressCommand { get; }
         public ICommand LimitHierarchyCommand { get; }
         public ICommand SelectItemCommand { get; }
@@ -206,6 +207,7 @@ namespace RedmineClient.ViewModels.Pages
                 }
             });
             AddMultipleChildrenCommand = new RelayCommand<WbsItem>(AddMultipleChildren);
+            AddBatchChildrenCommand = new RelayCommand<WbsItem>(parent => AddBatchChildren(parent, 20)); // 20個のサブタスクを一括追加
             UpdateProgressCommand = new RelayCommand(UpdateParentProgress);
             LimitHierarchyCommand = new RelayCommand(() => LimitHierarchyDepth(5));
             SelectItemCommand = new RelayCommand<WbsItem>(SelectItem);
@@ -569,17 +571,10 @@ namespace RedmineClient.ViewModels.Pages
 
         private void AddRootItem()
         {
-            var newItem = new WbsItem
-            {
-                Id = $"TASK-{DateTime.Now:yyyyMMdd-HHmmss}",
-                Title = "新しいタスク",
-                Description = "タスクの説明を入力してください",
-                StartDate = DateTime.Today,
-                EndDate = DateTime.Today.AddDays(7),
-                Status = "未着手",
-                Priority = "中",
-                Assignee = "未割り当て"
-            };
+            // パフォーマンス向上：事前にアイテムを作成
+            var newItem = CreateWbsItemTemplate(null, "新しいタスク", "タスクの説明を入力してください");
+            newItem.StartDate = DateTime.Today;
+            newItem.EndDate = DateTime.Today.AddDays(7);
 
             // パフォーマンス向上のため、一括更新
             WbsItems.Add(newItem);
@@ -591,14 +586,11 @@ namespace RedmineClient.ViewModels.Pages
             CanAddChild = newItem.IsParentTask;
             System.Diagnostics.Debug.WriteLine($"AddRootItem: 新しいルートタスク '{newItem.Title}' を追加しました。IsParentTask: {newItem.IsParentTask}");
             
-            // 遅延実行でUI更新（パフォーマンス向上）
-            Task.Delay(10).ContinueWith(_ =>
+            // MS Projectレベルの高速化：即座にUI更新
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    UpdateFlattenedListManually();
-                });
-            });
+                UpdateFlattenedListManually();
+            }), System.Windows.Threading.DispatcherPriority.Background);
             
             System.Diagnostics.Debug.WriteLine($"AddRootItem: SelectedItemを設定しました。CanAddChild: {CanAddChild}");
         }
@@ -607,18 +599,10 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (parent == null) return;
 
-            var newItem = new WbsItem
-            {
-                Id = $"TASK-{DateTime.Now:yyyyMMdd-HHmmss}",
-                Title = "新しいサブタスク",
-                Description = "サブタスクの説明を入力してください",
-                StartDate = parent.StartDate,
-                EndDate = parent.EndDate,
-                Status = "未着手",
-                Priority = "中",
-                Assignee = "未割り当て"
-            };
-
+            // パフォーマンス向上：事前にアイテムを作成
+            var newItem = CreateWbsItemTemplate(parent, "新しいサブタスク", "サブタスクの説明を入力してください");
+            
+            // 親タスクに追加
             parent.AddChild(newItem);
             
             // 親タスクを選択状態に保つ（連続追加のため）
@@ -627,14 +611,74 @@ namespace RedmineClient.ViewModels.Pages
             // 手動でCanAddChildを更新（OnSelectedItemChangedが呼び出されない場合の対策）
             CanAddChild = parent.IsParentTask;
             
-            // 遅延実行でUI更新（パフォーマンス向上）
-            Task.Delay(10).ContinueWith(_ =>
+            // MS Projectレベルの高速化：即座にUI更新
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    UpdateFlattenedListManually();
-                });
-            });
+                UpdateFlattenedListManually();
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        /// <summary>
+        /// WBSアイテムのテンプレートを作成（パフォーマンス向上のため）
+        /// </summary>
+        private WbsItem CreateWbsItemTemplate(WbsItem? parent, string title, string description)
+        {
+            return new WbsItem
+            {
+                Id = $"TASK-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N").Substring(0, 8)}",
+                Title = title,
+                Description = description,
+                StartDate = parent?.StartDate ?? DateTime.Today,
+                EndDate = parent?.EndDate ?? DateTime.Today.AddDays(7),
+                Status = "未着手",
+                Priority = "中",
+                Assignee = parent?.Assignee ?? "未割り当て",
+                Parent = parent
+            };
+        }
+
+        /// <summary>
+        /// 大量のサブタスクをバッチ処理で追加（パフォーマンス最適化版）
+        /// </summary>
+        public void AddBatchChildren(WbsItem? parent, int count = 10)
+        {
+            if (parent == null) return;
+            
+            System.Diagnostics.Debug.WriteLine($"AddBatchChildren: 親タスク '{parent.Title}' に{count}個のサブタスクをバッチ追加開始");
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            // フェーズ1: 事前作成（メモリ上で全アイテムを作成）
+            var newItems = new List<WbsItem>(count); // 容量を事前に確保
+            for (int i = 0; i < count; i++)
+            {
+                var newItem = CreateWbsItemTemplate(parent, $"バッチサブタスク {i + 1}", $"バッチサブタスク {i + 1} の説明");
+                newItems.Add(newItem);
+            }
+            
+            var creationTime = stopwatch.Elapsed;
+            System.Diagnostics.Debug.WriteLine($"AddBatchChildren: 作成完了 {creationTime.TotalMilliseconds:F2}ms");
+
+            // フェーズ2: 一括挿入（全アイテムを親に追加）
+            foreach (var item in newItems)
+            {
+                parent.AddChild(item);
+            }
+            
+            var insertionTime = stopwatch.Elapsed - creationTime;
+            System.Diagnostics.Debug.WriteLine($"AddBatchChildren: 挿入完了 {insertionTime.TotalMilliseconds:F2}ms");
+
+            // フェーズ3: UI更新
+            SelectedItem = parent;
+            CanAddChild = parent.IsParentTask;
+            
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                UpdateFlattenedListManually();
+            }), System.Windows.Threading.DispatcherPriority.Background);
+            
+            stopwatch.Stop();
+            var totalTime = stopwatch.Elapsed;
+            System.Diagnostics.Debug.WriteLine($"AddBatchChildren: 完了。{count}個のサブタスクを追加しました。総時間: {totalTime.TotalMilliseconds:F2}ms");
         }
 
         private void DeleteItem(WbsItem? item)
@@ -688,25 +732,21 @@ namespace RedmineClient.ViewModels.Pages
             
             System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 親タスク '{parent.Title}' に一括サブタスク追加を開始");
 
-            // パフォーマンス向上のため、一括でサブタスクを追加
+            // パフォーマンス向上：事前に全アイテムを作成
             var newItems = new List<WbsItem>();
             int count = 3;
+            
+            // 事前作成フェーズ：全アイテムをメモリ上で作成
             for (int i = 0; i < count; i++)
             {
-                var newItem = new WbsItem
-                {
-                    Id = $"TASK-{DateTime.Now:yyyyMMdd-HHmmss}-{i + 1}",
-                    Title = $"サブタスク {i + 1}",
-                    Description = $"サブタスク {i + 1} の説明",
-                    StartDate = parent.StartDate,
-                    EndDate = parent.EndDate,
-                    Status = "未着手",
-                    Priority = "中",
-                    Assignee = "未割り当て"
-                };
-
-                parent.AddChild(newItem);
+                var newItem = CreateWbsItemTemplate(parent, $"サブタスク {i + 1}", $"サブタスク {i + 1} の説明");
                 newItems.Add(newItem);
+            }
+            
+            // 一括挿入フェーズ：全アイテムを親に追加
+            foreach (var item in newItems)
+            {
+                parent.AddChild(item);
             }
             
             // 一括追加の場合は常に親タスクを選択（連続追加のため）
@@ -715,14 +755,11 @@ namespace RedmineClient.ViewModels.Pages
             // 手動でCanAddChildを更新（OnSelectedItemChangedが呼び出されない場合の対策）
             CanAddChild = parent.IsParentTask;
             
-            // 遅延実行でUI更新（パフォーマンス向上）
-            Task.Delay(10).ContinueWith(_ =>
+            // MS Projectレベルの高速化：即座にUI更新
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    UpdateFlattenedListManually();
-                });
-            });
+                UpdateFlattenedListManually();
+            }), System.Windows.Threading.DispatcherPriority.Background);
             
             System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 完了。{count}個のサブタスクを追加しました。CanAddChild: {CanAddChild}");
         }

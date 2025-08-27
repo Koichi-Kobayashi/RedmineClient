@@ -404,6 +404,7 @@ namespace RedmineClient.Views.Pages
         {
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && WbsDataGrid.IsInitialized)
             {
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 System.Diagnostics.Debug.WriteLine("GenerateDateColumns: 開始");
 
                 // 既存のスケジュール列を削除
@@ -433,6 +434,8 @@ namespace RedmineClient.Views.Pages
 
                 // 固定列の数を取得（タスク名、ID、説明、開始日、終了日、進捗、ステータス、優先度、担当者）
                 var fixedColumnCount = 9;
+
+                var columnCreationStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
                 while (currentDate <= endDate)
                 {
@@ -478,7 +481,14 @@ namespace RedmineClient.Views.Pages
                     currentDate = currentDate.AddDays(1);
                 }
 
+                columnCreationStopwatch.Stop();
+                var columnCreationTime = columnCreationStopwatch.Elapsed;
+                
+                stopwatch.Stop();
+                var executionTime = stopwatch.Elapsed;
                 System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 完了。{columnCount}個の日付列を追加しました。現在の総列数: {WbsDataGrid.Columns.Count}");
+                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 列作成時間: {columnCreationTime.TotalMilliseconds:F2}ms ({columnCreationTime.TotalSeconds:F3}秒)");
+                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 全体実行時間: {executionTime.TotalMilliseconds:F2}ms ({executionTime.TotalSeconds:F3}秒)");
             }
             else
             {

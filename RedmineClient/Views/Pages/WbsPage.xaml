@@ -56,6 +56,12 @@
                     Content="一括サブタスク追加" Icon="Add"
                     IsEnabled="{Binding ViewModel.CanAddChild}" />
                 <ui:Button
+                    Margin="0,0,8,0"
+                    Command="{Binding ViewModel.AddBatchChildrenCommand}"
+                    CommandParameter="{Binding ViewModel.SelectedItem}"
+                    Content="バッチ追加(20個)" Icon="Add"
+                    IsEnabled="{Binding ViewModel.CanAddChild}" />
+                <ui:Button
                     Margin="0,0,8,0" Appearance="Danger"
                     Command="{Binding ViewModel.DeleteItemCommand}"
                     CommandParameter="{Binding ViewModel.SelectedItem}"
