@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using System.Windows.Input;
 using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
 using Wpf.Ui.Abstractions.Controls;
@@ -1000,11 +1001,11 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
-        /// 展開/折りたたみボタンのクリックイベントハンドラー
+        /// 展開/折りたたみテキストのマウスクリックイベントハンドラー（軽量化版）
         /// </summary>
-        private void ExpansionButton_Click(object sender, RoutedEventArgs e)
+        private void ExpansionText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is Wpf.Ui.Controls.Button button && button.DataContext is WbsItem item)
+            if (sender is TextBlock textBlock && textBlock.DataContext is WbsItem item)
             {
                 // 展開状態を切り替え
                 item.IsExpanded = !item.IsExpanded;

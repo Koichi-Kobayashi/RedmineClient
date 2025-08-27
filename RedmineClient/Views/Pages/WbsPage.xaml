@@ -178,7 +178,7 @@
                     VirtualizingPanel.IsVirtualizing="True" 
                     VirtualizingPanel.VirtualizationMode="Recycling"
                     VirtualizingPanel.ScrollUnit="Pixel"
-                    VirtualizingPanel.CacheLength="10,10"
+                    VirtualizingPanel.CacheLength="5,5"
                     VirtualizingPanel.CacheLengthUnit="Page">
 
                     <DataGrid.Resources>
@@ -264,18 +264,17 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
-                                        <!--  展開/折りたたみボタンとサブタスク数表示  -->
+                                        <!--  展開/折りたたみテキストとサブタスク数表示（軽量化版）  -->
                                         <StackPanel Grid.Column="0" Margin="0,0,8,0" Orientation="Horizontal" Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
-                                            <ui:Button
-                                                x:Name="ExpansionButton"
-                                                Appearance="Transparent" 
-                                                Background="Transparent" 
-                                                BorderBrush="Transparent"
-                                                Command="{Binding DataContext.ViewModel.ToggleExpansionCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                                CommandParameter="{Binding}"
+                                            <TextBlock
+                                                Margin="0,0,4,0"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="Bold"
                                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                Icon="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}"
-                                                Click="ExpansionButton_Click" />
+                                                Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}"
+                                                Cursor="Hand"
+                                                MouseLeftButtonDown="ExpansionText_MouseLeftButtonDown" />
                                             <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
                                         </StackPanel>
 
