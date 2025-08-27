@@ -1,5 +1,4 @@
 using System.Windows.Controls;
-using Redmine.Net.Api.Types;
 using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
 using Wpf.Ui.Abstractions.Controls;
@@ -520,7 +519,9 @@ namespace RedmineClient.Views.Pages
             if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is FrameworkElement target)
             {
                 // プレースメントターゲットからWbsItemのDataContextを取得
-                var wbsItem = target.DataContext;
+                var wbsItem = target.DataContext as WbsItem;
+                
+                if (wbsItem == null) return;
 
                 // コンテキストメニューの各MenuItemにViewModelとWbsItemの両方を設定
                 foreach (System.Windows.Controls.MenuItem menuItem in contextMenu.Items.OfType<System.Windows.Controls.MenuItem>())
@@ -533,17 +534,19 @@ namespace RedmineClient.Views.Pages
                     {
                         case "サブタスク追加":
                             menuItem.Command = ViewModel.AddChildItemCommand;
+                            menuItem.CommandParameter = wbsItem;
+                            // 親タスクでない場合は無効化
+                            menuItem.IsEnabled = wbsItem.IsParentTask;
                             break;
                         case "編集":
                             menuItem.Command = ViewModel.EditItemCommand;
+                            menuItem.CommandParameter = wbsItem;
                             break;
                         case "削除":
                             menuItem.Command = ViewModel.DeleteItemCommand;
+                            menuItem.CommandParameter = wbsItem;
                             break;
                     }
-
-                    // CommandParameterはWbsItemを設定
-                    menuItem.CommandParameter = wbsItem;
                 }
             }
         }

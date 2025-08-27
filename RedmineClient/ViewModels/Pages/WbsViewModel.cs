@@ -128,6 +128,13 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private bool _showNotStarted = true;
 
+        /// <summary>
+        /// 追加後編集モードかどうか
+        /// true: 追加後編集、false: 連続追加
+        /// </summary>
+        [ObservableProperty]
+        private bool _isEditModeAfterAdd = false;
+
         [ObservableProperty]
         private bool _isRedmineConnected = false;
 
@@ -601,14 +608,18 @@ namespace RedmineClient.ViewModels.Pages
 
             parent.AddChild(newItem);
             
-            // 新しく追加されたサブタスクを選択
-            SelectedItem = newItem;
+            // 親タスクを選択状態に保つ（連続追加のため）
+            SelectedItem = parent;
+            
+            // 手動でCanAddChildを更新（OnSelectedItemChangedが呼び出されない場合の対策）
+            CanAddChild = parent.IsParentTask;
             
             // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
             OnPropertyChanged(nameof(WbsItems));
             
-            // 平坦化リストを更新
-            UpdateFlattenedList();
+            // 平坦化リストの更新は削除（無限ループの原因となるため）
+            // 代わりに、必要な部分のみを更新
+            OnPropertyChanged(nameof(FlattenedWbsItems));
         }
 
         private void DeleteItem(WbsItem? item)
@@ -1393,6 +1404,19 @@ namespace RedmineClient.ViewModels.Pages
         {
             // TODO: 設定画面の実装
             System.Windows.MessageBox.Show("設定画面は今後実装予定です。", "設定", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// 階層構造を平坦化したリストを更新（無限ループを避けるため）
+        /// </summary>
+        private void UpdateFlattenedListSafely()
+        {
+            FlattenedWbsItems.Clear();
+            foreach (var rootItem in WbsItems)
+            {
+                AddItemToFlattened(rootItem);
+            }
+            UpdateScheduleItems();
         }
     }
 }
