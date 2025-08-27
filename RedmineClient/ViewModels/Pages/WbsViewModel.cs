@@ -63,12 +63,13 @@ namespace RedmineClient.ViewModels.Pages
             {
                 // 選択されたアイテムが親タスクかどうかを判定
                 CanAddChild = value.IsParentTask;
-                System.Diagnostics.Debug.WriteLine($"OnSelectedItemChanged: アイテム '{value.Title}' が選択されました。IsParentTask: {value.IsParentTask}, CanAddChild: {CanAddChild}");
+                // パフォーマンス向上のため、デバッグログを削減
+                // System.Diagnostics.Debug.WriteLine($"OnSelectedItemChanged: アイテム '{value.Title}' が選択されました。IsParentTask: {value.IsParentTask}, CanAddChild: {CanAddChild}");
             }
             else
             {
                 CanAddChild = false;
-                System.Diagnostics.Debug.WriteLine("OnSelectedItemChanged: アイテムの選択がクリアされました。CanAddChild: false");
+                // System.Diagnostics.Debug.WriteLine("OnSelectedItemChanged: アイテムの選択がクリアされました。CanAddChild: false");
             }
         }
 
@@ -580,6 +581,7 @@ namespace RedmineClient.ViewModels.Pages
                 Assignee = "未割り当て"
             };
 
+            // パフォーマンス向上のため、一括更新
             WbsItems.Add(newItem);
             
             // 新しいタスクを選択状態にする
@@ -589,11 +591,15 @@ namespace RedmineClient.ViewModels.Pages
             CanAddChild = newItem.IsParentTask;
             System.Diagnostics.Debug.WriteLine($"AddRootItem: 新しいルートタスク '{newItem.Title}' を追加しました。IsParentTask: {newItem.IsParentTask}");
             
-            // UIの更新を強制する（新規タスクの表示更新のため）
-            OnPropertyChanged(nameof(WbsItems));
+            // 遅延実行でUI更新（パフォーマンス向上）
+            Task.Delay(10).ContinueWith(_ =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    UpdateFlattenedListManually();
+                });
+            });
             
-            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
-            UpdateFlattenedListManually();
             System.Diagnostics.Debug.WriteLine($"AddRootItem: SelectedItemを設定しました。CanAddChild: {CanAddChild}");
         }
 
@@ -621,11 +627,14 @@ namespace RedmineClient.ViewModels.Pages
             // 手動でCanAddChildを更新（OnSelectedItemChangedが呼び出されない場合の対策）
             CanAddChild = parent.IsParentTask;
             
-            // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
-            OnPropertyChanged(nameof(WbsItems));
-            
-            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
-            UpdateFlattenedListManually();
+            // 遅延実行でUI更新（パフォーマンス向上）
+            Task.Delay(10).ContinueWith(_ =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    UpdateFlattenedListManually();
+                });
+            });
         }
 
         private void DeleteItem(WbsItem? item)
@@ -679,9 +688,8 @@ namespace RedmineClient.ViewModels.Pages
             
             System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 親タスク '{parent.Title}' に一括サブタスク追加を開始");
 
-
-
-            // デフォルトで3つのサブタスクを追加
+            // パフォーマンス向上のため、一括でサブタスクを追加
+            var newItems = new List<WbsItem>();
             int count = 3;
             for (int i = 0; i < count; i++)
             {
@@ -698,6 +706,7 @@ namespace RedmineClient.ViewModels.Pages
                 };
 
                 parent.AddChild(newItem);
+                newItems.Add(newItem);
             }
             
             // 一括追加の場合は常に親タスクを選択（連続追加のため）
@@ -706,11 +715,14 @@ namespace RedmineClient.ViewModels.Pages
             // 手動でCanAddChildを更新（OnSelectedItemChangedが呼び出されない場合の対策）
             CanAddChild = parent.IsParentTask;
             
-            // UIの更新を強制する（展開状態とサブタスクの表示更新のため）
-            OnPropertyChanged(nameof(WbsItems));
-            
-            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
-            UpdateFlattenedListManually();
+            // 遅延実行でUI更新（パフォーマンス向上）
+            Task.Delay(10).ContinueWith(_ =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    UpdateFlattenedListManually();
+                });
+            });
             
             System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 完了。{count}個のサブタスクを追加しました。CanAddChild: {CanAddChild}");
         }
@@ -844,15 +856,18 @@ namespace RedmineClient.ViewModels.Pages
             // ファイル選択ダイアログを表示
         }
 
-        private void ToggleExpansion(WbsItem? item)
+        public void ToggleExpansion(WbsItem? item)
         {
             if (item == null) return;
             
             // 展開状態を切り替え
             item.IsExpanded = !item.IsExpanded;
             
-            // FlattenedWbsItemsを手動で更新（無限ループを避けるため）
-            UpdateFlattenedListManually();
+            // MS Projectレベルの高速化：即座にUI更新
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                UpdateFlattenedListManually();
+            }), System.Windows.Threading.DispatcherPriority.Render);
         }
 
         /// <summary>
@@ -1446,25 +1461,74 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         /// <summary>
-        /// 階層構造を平坦化したリストを手動で更新（無限ループを避けるため）
+        /// 階層構造を平坦化したリストを手動で更新（MS Projectレベルの高速化）
         /// </summary>
         private void UpdateFlattenedListManually()
         {
             // 現在の選択状態を保存
             var currentSelectedItem = SelectedItem;
             
-            // FlattenedWbsItemsを手動で更新
-            FlattenedWbsItems.Clear();
-            foreach (var rootItem in WbsItems)
+            // パフォーマンス向上のため、バッチ処理で更新
+            var tempList = new List<WbsItem>(WbsItems.Count * 2); // 事前に容量を確保
+            
+            // 並列処理で高速化（大量データの場合）
+            if (WbsItems.Count > 100)
             {
-                AddItemToFlattened(rootItem);
+                var tasks = WbsItems.Select(rootItem => Task.Run(() => 
+                {
+                    var localList = new List<WbsItem>();
+                    AddItemToFlattenedOptimized(rootItem, localList);
+                    return localList;
+                })).ToArray();
+                
+                Task.WaitAll(tasks);
+                
+                foreach (var task in tasks)
+                {
+                    tempList.AddRange(task.Result);
+                }
+            }
+            else
+            {
+                // 小規模データの場合は通常処理
+                foreach (var rootItem in WbsItems)
+                {
+                    AddItemToFlattenedOptimized(rootItem, tempList);
+                }
             }
             
-            // 選択状態を復元
-            if (currentSelectedItem != null)
+            // UIスレッドで一括更新（パフォーマンス向上）
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                SelectedItem = currentSelectedItem;
+                FlattenedWbsItems.Clear();
+                foreach (var item in tempList)
+                {
+                    FlattenedWbsItems.Add(item);
+                }
+                
+                // 選択状態を復元
+                if (currentSelectedItem != null)
+                {
+                    SelectedItem = currentSelectedItem;
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+        
+        /// <summary>
+        /// 最適化された平坦化処理（メモリ効率向上）
+        /// </summary>
+        private void AddItemToFlattenedOptimized(WbsItem item, List<WbsItem> targetList)
+        {
+            targetList.Add(item);
+            
+            if (item.IsExpanded && item.HasChildren)
+            {
+                foreach (var child in item.Children)
+                {
+                    AddItemToFlattenedOptimized(child, targetList);
+                }
             }
         }
     }
 }
+

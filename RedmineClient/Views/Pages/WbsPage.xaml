@@ -167,9 +167,19 @@
                     HeadersVisibility="Column"
                     ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
                     RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    RowHeaderWidth="0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    RowHeaderWidth="0" 
+                    ScrollViewer.CanContentScroll="True" 
+                    ScrollViewer.HorizontalScrollBarVisibility="Auto" 
+                    ScrollViewer.VerticalScrollBarVisibility="Visible"
                     SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
-                    SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.IsContainerVirtualizable="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                    SelectionMode="Single" 
+                    SelectionUnit="FullRow" 
+                    VirtualizingPanel.IsContainerVirtualizable="True" 
+                    VirtualizingPanel.IsVirtualizing="True" 
+                    VirtualizingPanel.VirtualizationMode="Recycling"
+                    VirtualizingPanel.ScrollUnit="Pixel"
+                    VirtualizingPanel.CacheLength="10,10"
+                    VirtualizingPanel.CacheLengthUnit="Page">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
@@ -257,11 +267,15 @@
                                         <!--  展開/折りたたみボタンとサブタスク数表示  -->
                                         <StackPanel Grid.Column="0" Margin="0,0,8,0" Orientation="Horizontal" Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
                                             <ui:Button
-                                                Appearance="Transparent" Background="Transparent" BorderBrush="Transparent"
+                                                x:Name="ExpansionButton"
+                                                Appearance="Transparent" 
+                                                Background="Transparent" 
+                                                BorderBrush="Transparent"
                                                 Command="{Binding DataContext.ViewModel.ToggleExpansionCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                 CommandParameter="{Binding}"
                                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                Icon="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}" />
+                                                Icon="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}"
+                                                Click="ExpansionButton_Click" />
                                             <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
                                         </StackPanel>
 

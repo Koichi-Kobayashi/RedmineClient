@@ -998,5 +998,23 @@ namespace RedmineClient.Views.Pages
                 }
             }
         }
+
+        /// <summary>
+        /// 展開/折りたたみボタンのクリックイベントハンドラー
+        /// </summary>
+        private void ExpansionButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Wpf.Ui.Controls.Button button && button.DataContext is WbsItem item)
+            {
+                // 展開状態を切り替え
+                item.IsExpanded = !item.IsExpanded;
+                
+                // ViewModelの更新処理を実行
+                ViewModel.ToggleExpansion(item);
+                
+                // UIを即座に更新
+                WbsDataGrid.Items.Refresh();
+            }
+        }
     }
 }
