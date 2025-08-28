@@ -20,14 +20,15 @@ namespace RedmineClient.Models
         private string _assignee = string.Empty;
         private bool _isExpanded = true;
         private bool _isSelected = false;
-        private int _redmineIssueId = 0;
+        private int? _redmineIssueId = null;
         private string _redmineUrl = string.Empty;
-        private int _redmineProjectId = 0;
+        private int? _redmineProjectId = null;
         private string _redmineProjectName = string.Empty;
         private string _redmineTracker = string.Empty;
         private string _redmineAuthor = string.Empty;
         private DateTime _redmineCreatedOn = DateTime.MinValue;
         private DateTime _redmineUpdatedOn = DateTime.MinValue;
+        private bool _isNew = false;
 
         public string Id
         {
@@ -95,7 +96,7 @@ namespace RedmineClient.Models
             set => SetProperty(ref _isSelected, value);
         }
 
-        public int RedmineIssueId
+        public int? RedmineIssueId
         {
             get => _redmineIssueId;
             set => SetProperty(ref _redmineIssueId, value);
@@ -107,7 +108,7 @@ namespace RedmineClient.Models
             set => SetProperty(ref _redmineUrl, value);
         }
 
-        public int RedmineProjectId
+        public int? RedmineProjectId
         {
             get => _redmineProjectId;
             set => SetProperty(ref _redmineProjectId, value);
@@ -141,6 +142,15 @@ namespace RedmineClient.Models
         {
             get => _redmineUpdatedOn;
             set => SetProperty(ref _redmineUpdatedOn, value);
+        }
+
+        /// <summary>
+        /// 新しく追加されたWBSアイテムかどうか
+        /// </summary>
+        public bool IsNew
+        {
+            get => _isNew;
+            set => SetProperty(ref _isNew, value);
         }
 
         /// <summary>

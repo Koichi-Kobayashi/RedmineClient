@@ -247,6 +247,34 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private bool _isRedmineDataLoaded = false;
 
+        /// <summary>
+        /// 新しく追加されたWBSアイテムのリスト（Redmineに未登録）
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<WbsItem> _newWbsItems = new();
+
+        /// <summary>
+        /// 登録可能なアイテムがあるかどうか
+        /// </summary>
+        [ObservableProperty]
+        private bool _canRegisterItems = false;
+
+        /// <summary>
+        /// 登録処理中かどうか
+        /// </summary>
+        [ObservableProperty]
+        private bool _isRegistering = false;
+
+        /// <summary>
+        /// 登録ボタンのコマンド
+        /// </summary>
+        public ICommand RegisterItemsCommand { get; }
+
+        /// <summary>
+        /// 登録可能なアイテムの数を取得
+        /// </summary>
+        public int NewItemsCount => NewWbsItems.Count;
+
         public ICommand AddRootItemCommand { get; }
         public ICommand AddChildItemCommand { get; }
         public ICommand DeleteItemCommand { get; }
@@ -310,6 +338,7 @@ namespace RedmineClient.ViewModels.Pages
             RefreshRedmineDataCommand = new AsyncRelayCommand(RefreshRedmineDataAsync);
             SettingsCommand = new RelayCommand(OpenSettings);
             CreateNewIssueCommand = new RelayCommand(CreateNewIssue);
+            RegisterItemsCommand = new RelayCommand(RegisterItems);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -564,6 +593,13 @@ namespace RedmineClient.ViewModels.Pages
             // パフォーマンス向上のため、一括更新
             WbsItems.Add(newItem);
             
+            // 新しく追加されたアイテムをNewWbsItemsリストに追加
+            NewWbsItems.Add(newItem);
+            CanRegisterItems = true;
+            OnPropertyChanged(nameof(NewItemsCount));
+            
+            System.Diagnostics.Debug.WriteLine($"AddRootItem: 新しいアイテムをNewWbsItemsに追加しました。NewWbsItems数: {NewWbsItems.Count}, CanRegisterItems: {CanRegisterItems}");
+            
             // 新しいタスクを選択状態にする
             SelectedItem = newItem;
             
@@ -589,6 +625,13 @@ namespace RedmineClient.ViewModels.Pages
             
             // 親タスクに追加
             parent.AddChild(newItem);
+            
+            // 新しく追加されたアイテムをNewWbsItemsリストに追加
+            NewWbsItems.Add(newItem);
+            CanRegisterItems = true;
+            OnPropertyChanged(nameof(NewItemsCount));
+            
+            System.Diagnostics.Debug.WriteLine($"AddChildItem: 新しいアイテムを追加しました。NewWbsItems数: {NewWbsItems.Count}, CanRegisterItems: {CanRegisterItems}");
             
             // 親タスクを選択状態に保つ（連続追加のため）
             SelectedItem = parent;
@@ -618,7 +661,8 @@ namespace RedmineClient.ViewModels.Pages
                 Status = "未着手",
                 Priority = "中",
                 Assignee = parent?.Assignee ?? "未割り当て",
-                Parent = parent
+                Parent = parent,
+                IsNew = true // 新しく作成されたアイテムであることを示す
             };
         }
 
@@ -651,6 +695,16 @@ namespace RedmineClient.ViewModels.Pages
             
             var insertionTime = stopwatch.Elapsed - creationTime;
             System.Diagnostics.Debug.WriteLine($"AddBatchChildren: 挿入完了 {insertionTime.TotalMilliseconds:F2}ms");
+
+            // 新しく追加されたアイテムをNewWbsItemsリストに追加
+            foreach (var item in newItems)
+            {
+                NewWbsItems.Add(item);
+            }
+            CanRegisterItems = true;
+            OnPropertyChanged(nameof(NewItemsCount));
+            
+            System.Diagnostics.Debug.WriteLine($"AddBatchChildren: 新しいアイテムを追加しました。NewWbsItems数: {NewWbsItems.Count}, CanRegisterItems: {CanRegisterItems}");
 
             // フェーズ3: UI更新
             SelectedItem = parent;
@@ -733,6 +787,16 @@ namespace RedmineClient.ViewModels.Pages
             {
                 parent.AddChild(item);
             }
+            
+            // 新しく追加されたアイテムをNewWbsItemsリストに追加
+            foreach (var item in newItems)
+            {
+                NewWbsItems.Add(item);
+            }
+            CanRegisterItems = true;
+            OnPropertyChanged(nameof(NewItemsCount));
+            
+            System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 新しいアイテムを追加しました。NewWbsItems数: {NewWbsItems.Count}, CanRegisterItems: {CanRegisterItems}");
             
             // 一括追加の場合は常に親タスクを選択（連続追加のため）
             SelectedItem = parent;
@@ -1604,6 +1668,175 @@ namespace RedmineClient.ViewModels.Pages
                 }
             }
         }
+
+                 /// <summary>
+         /// 新しく追加されたWBSアイテムをRedmineに登録する
+         /// </summary>
+         private async void RegisterItems()
+         {
+             if (!IsRedmineConnected)
+             {
+                 ErrorMessage = "Redmineに接続されていません。接続を確認してください。";
+                 return;
+             }
+
+             if (SelectedProject == null)
+             {
+                 ErrorMessage = "プロジェクトが選択されていません。プロジェクトを選択してから登録を実行してください。";
+                 return;
+             }
+
+             if (NewWbsItems.Count == 0)
+             {
+                 ErrorMessage = "登録するアイテムがありません。";
+                 return;
+             }
+
+             try
+             {
+                 IsRegistering = true;
+                 ErrorMessage = string.Empty;
+
+                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                 {
+                     int successCount = 0;
+                     var itemsToRegister = NewWbsItems.ToList();
+
+                     // 階層順にソート（親タスクを先に登録）
+                     var sortedItems = itemsToRegister.OrderBy(item => item.Level).ToList();
+                     
+                     // 親タスクを先に登録
+                     foreach (var newItem in sortedItems.Where(item => item.Parent == null))
+                     {
+                         try
+                         {
+                             var newIssue = new Issue
+                             {
+                                 Subject = newItem.Title,
+                                 Description = newItem.Description,
+                                 StartDate = newItem.StartDate,
+                                 DueDate = newItem.EndDate
+                             };
+                             
+                             // プロジェクトIDを設定（リフレクションを使用）
+                             var projectIdProperty = typeof(Issue).GetProperty("ProjectId");
+                             if (projectIdProperty?.CanWrite == true)
+                             {
+                                 projectIdProperty.SetValue(newIssue, SelectedProject.Id);
+                                 System.Diagnostics.Debug.WriteLine($"RegisterItems: ProjectIdを設定しました: {SelectedProject.Id}");
+                             }
+                             
+                             // Projectプロパティにも設定（RedmineServiceで使用）
+                             var project = new Project();
+                             var projectIdProperty2 = typeof(Project).GetProperty("Id");
+                             if (projectIdProperty2?.CanWrite == true)
+                             {
+                                 projectIdProperty2.SetValue(project, SelectedProject.Id);
+                             }
+                             newIssue.Project = project;
+
+                             var createdIssueId = await redmineService.CreateIssueAsync(newIssue);
+                             
+                             // 登録成功したアイテムに RedmineIssueId を設定
+                             newItem.RedmineIssueId = createdIssueId;
+                             newItem.IsNew = false; // 新規フラグを無効化
+                             
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 親タスク '{newItem.Title}' (ID: {createdIssueId}) を登録しました。");
+                             successCount++;
+                         }
+                         catch (Exception ex)
+                         {
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 親タスク '{newItem.Title}' の登録に失敗: {ex.Message}");
+                         }
+                     }
+
+                     // 子タスクを登録（親タスクのIDを設定）
+                     foreach (var newItem in sortedItems.Where(item => item.Parent != null))
+                     {
+                         try
+                         {
+                             var newIssue = new Issue
+                             {
+                                 Subject = newItem.Title,
+                                 Description = newItem.Description,
+                                 StartDate = newItem.StartDate,
+                                 DueDate = newItem.EndDate
+                             };
+                             
+                             // プロジェクトIDを設定
+                             var projectIdProperty = typeof(Issue).GetProperty("ProjectId");
+                             if (projectIdProperty?.CanWrite == true)
+                             {
+                                 projectIdProperty.SetValue(newIssue, SelectedProject.Id);
+                                 System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスクのProjectIdを設定しました: {SelectedProject.Id}");
+                             }
+                             
+                             // Projectプロパティにも設定（RedmineServiceで使用）
+                             var project2 = new Project();
+                             var projectIdProperty3 = typeof(Project).GetProperty("Id");
+                             if (projectIdProperty3?.CanWrite == true)
+                             {
+                                 projectIdProperty3.SetValue(project2, SelectedProject.Id);
+                             }
+                             newIssue.Project = project2;
+
+                             // 親タスクのIDを設定
+                             if (newItem.Parent?.RedmineIssueId.HasValue == true)
+                             {
+                                 var parentIdProperty = typeof(Issue).GetProperty("ParentId");
+                                 if (parentIdProperty?.CanWrite == true)
+                                 {
+                                     parentIdProperty.SetValue(newIssue, newItem.Parent.RedmineIssueId.Value);
+                                 }
+                             }
+
+                             var createdIssueId = await redmineService.CreateIssueAsync(newIssue);
+                             
+                             // 登録成功したアイテムに RedmineIssueId を設定
+                             newItem.RedmineIssueId = createdIssueId;
+                             newItem.IsNew = false; // 新規フラグを無効化
+                             
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスク '{newItem.Title}' (ID: {createdIssueId}) を登録しました。親タスクID: {newItem.Parent?.RedmineIssueId}");
+                             successCount++;
+                         }
+                         catch (Exception ex)
+                         {
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスク '{newItem.Title}' の登録に失敗: {ex.Message}");
+                         }
+                     }
+
+                     if (successCount > 0)
+                     {
+                         // 登録成功したアイテムを NewWbsItems から削除
+                         foreach (var item in itemsToRegister.Where(i => i.RedmineIssueId.HasValue))
+                         {
+                             NewWbsItems.Remove(item);
+                         }
+                         
+                         CanRegisterItems = NewWbsItems.Count > 0;
+                         OnPropertyChanged(nameof(NewItemsCount));
+                         UpdateFlattenedList();
+                         
+                         ErrorMessage = $"{successCount} 件のチケットを登録しました。";
+                         System.Diagnostics.Debug.WriteLine($"RegisterItems: 登録完了。{successCount} 件のチケットを登録しました。");
+                     }
+                     else
+                     {
+                         ErrorMessage = "チケットの登録に失敗しました。";
+                         System.Diagnostics.Debug.WriteLine("RegisterItems: すべてのチケットの登録に失敗しました。");
+                     }
+                 }
+             }
+             catch (Exception ex)
+             {
+                 ErrorMessage = $"チケットの登録中にエラーが発生しました: {ex.Message}";
+                 System.Diagnostics.Debug.WriteLine($"RegisterItems: エラー - {ex.Message}");
+             }
+             finally
+             {
+                 IsRegistering = false;
+             }
+         }
     }
 }
 

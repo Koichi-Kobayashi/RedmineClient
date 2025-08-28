@@ -20,6 +20,7 @@ namespace RedmineClient.Models
         public static ApplicationTheme ApplicationTheme { get; set; } = ApplicationTheme.Light;
         private static string _scheduleStartYearMonth = "";
         private static int? _selectedProjectId = null;
+        private static int _defaultTrackerId = 1;
 
         public static string Theme
         {
@@ -54,6 +55,23 @@ namespace RedmineClient.Models
                 if (_isInitialized)
                 {
                     SetSetting("SelectedProjectId", value.ToString());
+                }
+            }
+        }
+
+        /// <summary>
+        /// デフォルトのトラッカーID
+        /// </summary>
+        public static int DefaultTrackerId
+        {
+            get => _defaultTrackerId;
+            set
+            {
+                _defaultTrackerId = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SetSetting("DefaultTrackerId", value.ToString());
                 }
             }
         }
@@ -105,28 +123,48 @@ namespace RedmineClient.Models
         /// </summary>
         public static void Save()
         {
-            // app.configの読み込み
-            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-            // 暗号化するセクションの取得
-            var section = config.GetSection("appSettings") as AppSettingsSection;
-            if (section != null && section.SectionInformation.IsProtected == false)
+            try
             {
-                // DPAPIによる暗号化  
-                section.SectionInformation.ProtectSection("DataProtectionConfigurationProvider");
+                System.Diagnostics.Debug.WriteLine("AppConfig: 設定保存開始");
+                
+                // app.configの読み込み
+                var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイル読み込み結果 - config: {(config != null ? "成功" : "失敗")}");
+                
+                if (config == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイルがnull、保存をスキップ");
+                    return;
+                }
+
+                // 暗号化するセクションの取得
+                var section = config.GetSection("appSettings") as AppSettingsSection;
+                if (section != null && section.SectionInformation.IsProtected == false)
+                {
+                    // DPAPIによる暗号化  
+                    section.SectionInformation.ProtectSection("DataProtectionConfigurationProvider");
+                }
+                SetSettingsItem(config, "RedmineHost", RedmineHost);
+                SetSettingsItem(config, "ApiKey", ApiKey);
+                SetSettingsItem(config, "WindowWidth", WindowWidth.ToString());
+                SetSettingsItem(config, "WindowHeight", WindowHeight.ToString());
+                SetSettingsItem(config, "WindowLeft", WindowLeft.ToString());
+                SetSettingsItem(config, "WindowTop", WindowTop.ToString());
+                SetSettingsItem(config, "WindowState", WindowState);
+                SetSettingsItem(config, "TaskDetailWidth", TaskDetailWidth.ToString());
+                SetSettingsItem(config, "ApplicationTheme", ApplicationTheme.ToString());
+                SetSettingsItem(config, "ScheduleStartYearMonth", _scheduleStartYearMonth);
+                SetSettingsItem(config, "SelectedProjectId", _selectedProjectId?.ToString() ?? "");
+                SetSettingsItem(config, "DefaultTrackerId", DefaultTrackerId.ToString());
+                
+                System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイルを保存中...");
+                config.Save();
+                System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイル保存完了");
             }
-            SetSettingsItem(config, "RedmineHost", RedmineHost);
-            SetSettingsItem(config, "ApiKey", ApiKey);
-            SetSettingsItem(config, "WindowWidth", WindowWidth.ToString());
-            SetSettingsItem(config, "WindowHeight", WindowHeight.ToString());
-            SetSettingsItem(config, "WindowLeft", WindowLeft.ToString());
-            SetSettingsItem(config, "WindowTop", WindowTop.ToString());
-            SetSettingsItem(config, "WindowState", WindowState);
-            SetSettingsItem(config, "TaskDetailWidth", TaskDetailWidth.ToString());
-            SetSettingsItem(config, "ApplicationTheme", ApplicationTheme.ToString());
-            SetSettingsItem(config, "ScheduleStartYearMonth", _scheduleStartYearMonth);
-            SetSettingsItem(config, "SelectedProjectId", _selectedProjectId?.ToString() ?? "");
-            config.Save();
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定保存中にエラー - {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -162,6 +200,8 @@ namespace RedmineClient.Models
                     
                     // app.configの読み込み
                     var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイル読み込み結果 - config: {(config != null ? "成功" : "失敗")}");
+                    
                     if (config == null)
                     {
                         System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイルがnull、デフォルト値を使用");
@@ -169,15 +209,38 @@ namespace RedmineClient.Models
                         _isLoaded = true;
                         return;
                     }
+                    
+                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイルパス: {config.FilePath}");
+                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイル存在: {System.IO.File.Exists(config.FilePath)}");
 
                     // 暗号化するセクションの取得
                     var section = config.GetSection("appSettings") as AppSettingsSection;
-                    if (section != null && section.SectionInformation.IsProtected == true)
+                    System.Diagnostics.Debug.WriteLine($"AppConfig: appSettingsセクション取得 - section: {(section != null ? "成功" : "失敗")}");
+                    
+                    if (section != null)
                     {
-                        // セクションの復号化
-                        section.SectionInformation.UnprotectSection();
+                        System.Diagnostics.Debug.WriteLine($"AppConfig: セクション暗号化状態: {section.SectionInformation.IsProtected}");
+                        if (section.SectionInformation.IsProtected == true)
+                        {
+                            try
+                            {
+                                // セクションの復号化
+                                section.SectionInformation.UnprotectSection();
+                                System.Diagnostics.Debug.WriteLine("AppConfig: セクション復号化成功");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"AppConfig: セクション復号化失敗: {ex.Message}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("AppConfig: appSettingsセクションが見つかりません");
                     }
 
+                    System.Diagnostics.Debug.WriteLine("AppConfig: ConfigurationManager.AppSettingsから値を読み込み開始");
+                    
                     var redmineHost = ConfigurationManager.AppSettings["RedmineHost"];
                     RedmineHost = string.IsNullOrEmpty(redmineHost) != true ? redmineHost : "";
                     System.Diagnostics.Debug.WriteLine($"AppConfig: RedmineHost読み込み - 値: '{RedmineHost}'");
@@ -251,6 +314,16 @@ namespace RedmineClient.Models
                     {
                         _selectedProjectId = null; // デフォルト値
                     }
+
+                    var defaultTrackerId = ConfigurationManager.AppSettings["DefaultTrackerId"];
+                    if (!string.IsNullOrEmpty(defaultTrackerId) && int.TryParse(defaultTrackerId, out int trackerId))
+                    {
+                        _defaultTrackerId = trackerId;
+                    }
+                    else
+                    {
+                        _defaultTrackerId = 1; // デフォルト値
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -279,9 +352,9 @@ namespace RedmineClient.Models
             WindowState = "Normal";
             TaskDetailWidth = 400;
             ApplicationTheme = ApplicationTheme.Light;
+            _defaultTrackerId = 1;
             _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
             _selectedProjectId = null; // デフォルト値
-            _isInitialized = true;
         }
 
         /// <summary>

@@ -103,6 +103,14 @@
             <!--  データ操作ボタン  -->
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshCommand}" Content="更新" Icon="ArrowClockwise" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.CreateNewIssueCommand}" Content="チケット登録" Icon="Add" />
+            <ui:Button 
+                Margin="0,0,8,0" 
+                Appearance="Success"
+                Command="{Binding ViewModel.RegisterItemsCommand}" 
+                Content="{Binding ViewModel.NewItemsCount, StringFormat='登録 ({0})'}" 
+                Icon="CloudAdd"
+                IsEnabled="{Binding ViewModel.CanRegisterItems}"
+                ToolTip="新しく追加されたアイテムをRedmineに登録します" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LoadRedmineDataCommand}" Content="Redmine読み込み" Icon="ArrowImportDown" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.RefreshRedmineDataCommand}" Content="Redmine更新" Icon="ArrowClockwise" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.ExportCommand}" Content="エクスポート" Icon="ArrowExportUp" />

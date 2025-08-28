@@ -2,6 +2,8 @@
 using RedmineClient.Models;
 using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Appearance;
+using System.Collections.ObjectModel;
+using Redmine.Net.Api.Types;
 
 namespace RedmineClient.ViewModels.Pages
 {
@@ -19,11 +21,38 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private ApplicationTheme _currentTheme = ApplicationTheme.Unknown;
 
-        public async Task OnNavigatedToAsync()
+        [ObservableProperty]
+        private ObservableCollection<Tracker> _availableTrackers = new();
+
+        [ObservableProperty]
+        private Tracker? _selectedTracker;
+
+        partial void OnSelectedTrackerChanged(Tracker? value)
+        {
+            System.Diagnostics.Debug.WriteLine($"OnSelectedTrackerChanged: 値が変更されました - {value?.Name ?? "null"} (ID: {value?.Id ?? 0})");
+            
+            if (value != null)
+            {
+                try
+                {
+                    AppConfig.DefaultTrackerId = value.Id;
+                    System.Diagnostics.Debug.WriteLine($"OnSelectedTrackerChanged: 設定保存開始 - トラッカー: {value.Name} (ID: {value.Id})");
+                    AppConfig.Save();
+                    System.Diagnostics.Debug.WriteLine($"トラッカー設定を保存しました: {value.Name} (ID: {value.Id})");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"OnSelectedTrackerChanged: 設定保存でエラー - {ex.GetType().Name}: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"OnSelectedTrackerChanged: スタックトレース: {ex.StackTrace}");
+                }
+            }
+        }
+
+        public Task OnNavigatedToAsync()
         {
             using CancellationTokenSource cts = new();
 
-            await DispatchAsync(OnNavigatedFrom, cts.Token);
+            return DispatchAsync(OnNavigatedFrom, cts.Token);
         }
 
         public virtual async Task OnNavigatedTo()
@@ -31,19 +60,153 @@ namespace RedmineClient.ViewModels.Pages
             await InitializeViewModel();
         }
 
-        private Task InitializeViewModel()
+        private async Task InitializeViewModel()
         {
-            // 保存された設定を読み込み
-            AppConfig.Load();
-            RedmineHost = AppConfig.RedmineHost;
-            ApiKey = AppConfig.ApiKey;
+            System.Diagnostics.Debug.WriteLine("SettingsViewModel: InitializeViewModel開始");
+            
+            try
+            {
+                // 保存された設定を読み込み
+                System.Diagnostics.Debug.WriteLine("SettingsViewModel: AppConfig.Load()呼び出し前");
+                AppConfig.Load();
+                System.Diagnostics.Debug.WriteLine("SettingsViewModel: AppConfig.Load()呼び出し完了");
+                
+                RedmineHost = AppConfig.RedmineHost;
+                ApiKey = AppConfig.ApiKey;
             
             // 保存されたテーマ設定を読み込む
             CurrentTheme = AppConfig.ApplicationTheme;
             
-            AppVersion = $"RedmineClient - {GetAssemblyVersion()}";
+            // 保存されたトラッカーIDがあれば、デフォルトトラッカーを設定
+            if (AppConfig.DefaultTrackerId > 0)
+            {
+                // UIスレッドで実行
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    // デフォルトトラッカーを一時的に設定
+                    var defaultTracker = new Redmine.Net.Api.Types.Tracker();
+                    var idProperty = typeof(Redmine.Net.Api.Types.Tracker).GetProperty("Id");
+                    var nameProperty = typeof(Redmine.Net.Api.Types.Tracker).GetProperty("Name");
+                    
+                    if (idProperty?.CanWrite == true)
+                    {
+                        idProperty.SetValue(defaultTracker, AppConfig.DefaultTrackerId);
+                    }
+                    if (nameProperty?.CanWrite == true)
+                    {
+                        nameProperty.SetValue(defaultTracker, $"トラッカー {AppConfig.DefaultTrackerId}");
+                    }
+                    
+                    AvailableTrackers.Add(defaultTracker);
+                    SelectedTracker = defaultTracker;
+                    
+                    System.Diagnostics.Debug.WriteLine($"初期化時にデフォルトトラッカーを設定: {defaultTracker.Name} (ID: {AppConfig.DefaultTrackerId})");
+                });
+            }
+            
+                AppVersion = $"RedmineClient - {GetAssemblyVersion()}";
+                
+                System.Diagnostics.Debug.WriteLine("SettingsViewModel: InitializeViewModel完了");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: InitializeViewModelでエラー - {ex.GetType().Name}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: スタックトレース: {ex.StackTrace}");
+            }
+        }
 
-            return Task.CompletedTask;
+        private async Task LoadTrackersAsync()
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(RedmineHost) && !string.IsNullOrEmpty(ApiKey))
+                {
+                    using var redmineService = new RedmineClient.Services.RedmineService(RedmineHost, ApiKey);
+                    var trackers = await redmineService.GetTrackersAsync();
+                    
+                    // UIスレッドで実行
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        AvailableTrackers.Clear();
+                        foreach (var tracker in trackers)
+                        {
+                            AvailableTrackers.Add(tracker);
+                        }
+                        
+                        // 保存されたトラッカーIDを選択
+                        var savedTrackerId = AppConfig.DefaultTrackerId;
+                        var defaultTracker = AvailableTrackers.FirstOrDefault(t => t.Id == savedTrackerId);
+                        
+                        // 選択状態を設定
+                        if (defaultTracker != null)
+                        {
+                            SelectedTracker = defaultTracker;
+                            System.Diagnostics.Debug.WriteLine($"トラッカー一覧取得成功: {trackers.Count}件, 選択されたトラッカー: {defaultTracker.Name} (ID: {savedTrackerId})");
+                        }
+                        else
+                        {
+                            // 保存されたIDが見つからない場合は最初のトラッカーを選択
+                            if (AvailableTrackers.Count > 0)
+                            {
+                                SelectedTracker = AvailableTrackers[0];
+                                System.Diagnostics.Debug.WriteLine($"トラッカー一覧取得成功: {trackers.Count}件, 保存されたID {savedTrackerId}が見つからないため、最初のトラッカーを選択: {AvailableTrackers[0].Name}");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"トラッカー一覧取得成功: {trackers.Count}件, 選択可能なトラッカーなし");
+                            }
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"トラッカー読み込みエラー: {ex.Message}");
+                // エラーが発生した場合はデフォルト値を設定
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    AvailableTrackers.Clear();
+                    
+                    var bugTracker = new Redmine.Net.Api.Types.Tracker();
+                    var bugIdProperty = typeof(Redmine.Net.Api.Types.Tracker).GetProperty("Id");
+                    if (bugIdProperty?.CanWrite == true)
+                    {
+                        bugIdProperty.SetValue(bugTracker, 1);
+                    }
+                    var bugNameProperty = typeof(Redmine.Net.Api.Types.Tracker).GetProperty("Name");
+                    if (bugNameProperty?.CanWrite == true)
+                    {
+                        bugNameProperty.SetValue(bugTracker, "バグ");
+                    }
+                    AvailableTrackers.Add(bugTracker);
+                    
+                    var featureTracker = new Redmine.Net.Api.Types.Tracker();
+                    if (bugIdProperty?.CanWrite == true)
+                    {
+                        bugIdProperty.SetValue(featureTracker, 2);
+                    }
+                    if (bugNameProperty?.CanWrite == true)
+                    {
+                        bugNameProperty.SetValue(featureTracker, "機能");
+                    }
+                    AvailableTrackers.Add(featureTracker);
+                    
+                    var supportTracker = new Redmine.Net.Api.Types.Tracker();
+                    if (bugIdProperty?.CanWrite == true)
+                    {
+                        bugIdProperty.SetValue(supportTracker, 3);
+                    }
+                    if (bugNameProperty?.CanWrite == true)
+                    {
+                        bugNameProperty.SetValue(supportTracker, "サポート");
+                    }
+                    AvailableTrackers.Add(supportTracker);
+                    
+                    SelectedTracker = AvailableTrackers.FirstOrDefault(t => t.Id == AppConfig.DefaultTrackerId);
+                    
+                    System.Diagnostics.Debug.WriteLine($"フォールバックトラッカーを設定: {AvailableTrackers.Count}件");
+                });
+            }
         }
 
         public virtual async Task OnNavigatedFromAsync()
@@ -83,40 +246,98 @@ namespace RedmineClient.ViewModels.Pages
         [RelayCommand]
         private void OnChangeTheme(string parameter)
         {
-            switch (parameter)
+            try
             {
-                case "theme_light":
-                    if (CurrentTheme == ApplicationTheme.Light)
+                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnChangeTheme開始 - パラメータ: {parameter}");
+                
+                switch (parameter)
+                {
+                    case "theme_light":
+                        if (CurrentTheme == ApplicationTheme.Light)
+                            break;
+
+                        ApplicationThemeManager.Apply(ApplicationTheme.Light);
+                        CurrentTheme = ApplicationTheme.Light;
+                        AppConfig.ApplicationTheme = ApplicationTheme.Light;
+                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ライトテーマを保存中...");
+                        AppConfig.Save();
+                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ライトテーマ保存完了");
+
                         break;
 
-                    ApplicationThemeManager.Apply(ApplicationTheme.Light);
-                    CurrentTheme = ApplicationTheme.Light;
-                    AppConfig.ApplicationTheme = ApplicationTheme.Light;
-                    AppConfig.Save();
+                    default:
+                        if (CurrentTheme == ApplicationTheme.Dark)
+                            break;
 
-                    break;
+                        ApplicationThemeManager.Apply(ApplicationTheme.Dark);
+                        CurrentTheme = ApplicationTheme.Dark;
+                        AppConfig.ApplicationTheme = ApplicationTheme.Dark;
+                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ダークテーマを保存中...");
+                        AppConfig.Save();
+                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ダークテーマ保存完了");
 
-                default:
-                    if (CurrentTheme == ApplicationTheme.Dark)
                         break;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnChangeThemeでエラー - {ex.GetType().Name}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: スタックトレース: {ex.StackTrace}");
+            }
+        }
 
-                    ApplicationThemeManager.Apply(ApplicationTheme.Dark);
-                    CurrentTheme = ApplicationTheme.Dark;
-                    AppConfig.ApplicationTheme = ApplicationTheme.Dark;
-                    AppConfig.Save();
+        [RelayCommand]
+        private async Task Connect()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(RedmineHost) || string.IsNullOrEmpty(ApiKey))
+                {
+                    WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "ホストURLとAPIキーを入力してください。" });
+                    return;
+                }
 
-                    break;
+                // 接続テストとトラッカー一覧取得
+                await LoadTrackersAsync();
+                
+                WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "接続成功！トラッカー一覧を取得しました。" });
+            }
+            catch (Exception ex)
+            {
+                WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = $"接続失敗: {ex.Message}" });
+                System.Diagnostics.Debug.WriteLine($"接続エラー: {ex.Message}");
             }
         }
 
         [RelayCommand]
         private void OnSave()
         {
-            AppConfig.RedmineHost = RedmineHost;
-            AppConfig.ApiKey = ApiKey;
-            AppConfig.Save();
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnSave開始");
+                
+                AppConfig.RedmineHost = RedmineHost;
+                AppConfig.ApiKey = ApiKey;
+                
+                // トラッカー設定も保存
+                if (SelectedTracker != null)
+                {
+                    AppConfig.DefaultTrackerId = SelectedTracker.Id;
+                    System.Diagnostics.Debug.WriteLine($"SettingsViewModel: トラッカー設定を設定: {SelectedTracker.Name} (ID: {SelectedTracker.Id})");
+                }
+                
+                System.Diagnostics.Debug.WriteLine("SettingsViewModel: 設定を保存中...");
+                AppConfig.Save();
+                System.Diagnostics.Debug.WriteLine("SettingsViewModel: 設定保存完了");
 
-            WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "設定を保存しました。" });
+                WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "設定を保存しました。" });
+                System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnSave完了");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnSaveでエラー - {ex.GetType().Name}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: スタックトレース: {ex.StackTrace}");
+            }
         }
     }
 }
