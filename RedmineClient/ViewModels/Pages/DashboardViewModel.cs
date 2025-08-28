@@ -50,26 +50,71 @@ namespace RedmineClient.ViewModels.Pages
         private async Task Loaded()
         {
             if (String.IsNullOrEmpty(AppConfig.RedmineHost)) return;
-            RedmineManagerOptionsBuilder builder = new RedmineManagerOptionsBuilder();
-            builder.WithHost(AppConfig.RedmineHost);
-            builder.WithApiKeyAuthentication(AppConfig.ApiKey);
-            manager = new RedmineManager(builder);
-
+            
             try
             {
-                var opotions = new RequestOptions()
+                RedmineManagerOptionsBuilder builder = new RedmineManagerOptionsBuilder();
+                builder.WithHost(AppConfig.RedmineHost);
+                builder.WithApiKeyAuthentication(AppConfig.ApiKey);
+                manager = new RedmineManager(builder);
+
+                // 非同期でプロジェクト一覧を取得
+                var projects = await Task.Run(() => manager.Get<Project>());
+                if (projects != null)
                 {
-                    QueryString = new NameValueCollection()
-                    {
-                        {RedmineKeys.INCLUDE, RedmineKeys.JOURNALS},
-                    }
-                };
-                Issues = await manager.GetAsync<Issue>(opotions);
-                Issues = manager.Get<Issue>(opotions);
+                    Projects = projects;
+                    System.Diagnostics.Debug.WriteLine($"Dashboard: {projects.Count}件のプロジェクトを取得しました");
+                }
+                else
+                {
+                    Projects = new List<Project>();
+                    System.Diagnostics.Debug.WriteLine("Dashboard: プロジェクトが取得できませんでした");
+                }
+
+                // プロジェクトが選択されている場合は、そのプロジェクトのチケットを取得
+                if (ProjectSelectedIndex >= 0 && ProjectSelectedIndex < Projects.Count)
+                {
+                    var selectedProject = Projects[ProjectSelectedIndex];
+                    await LoadIssuesForProject(selectedProject.Id);
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // エラー処理：必要に応じて実装
+                System.Diagnostics.Debug.WriteLine($"Dashboard: エラー - {ex.Message}");
+                                    Projects = new List<Project>();
+                    Issues = new List<Issue>();
+            }
+        }
+
+        /// <summary>
+        /// 指定されたプロジェクトのチケットを読み込む
+        /// </summary>
+        private async Task LoadIssuesForProject(int projectId)
+        {
+            try
+            {
+                var options = new RequestOptions();
+                options.QueryString = new NameValueCollection();
+                options.QueryString.Add("project_id", projectId.ToString());
+                options.QueryString.Add("limit", "100");
+                options.QueryString.Add("offset", "0");
+
+                var issues = await Task.Run(() => manager.Get<Issue>(options));
+                if (issues != null)
+                {
+                    Issues = issues;
+                    System.Diagnostics.Debug.WriteLine($"Dashboard: プロジェクトID {projectId} から {issues.Count} 件のチケットを取得しました");
+                }
+                else
+                {
+                    Issues = new List<Issue>();
+                    System.Diagnostics.Debug.WriteLine($"Dashboard: プロジェクトID {projectId} のチケットが取得できませんでした");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Dashboard: チケット読み込みエラー - {ex.Message}");
+                Issues = new List<Issue>();
             }
         }
 

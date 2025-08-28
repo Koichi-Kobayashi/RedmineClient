@@ -66,13 +66,23 @@ namespace RedmineClient.Views.Pages
                 System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: AvailableProjectsが空のため、Redmineからプロジェクトを取得");
                 try
                 {
-                    // Redmine接続テストを実行してプロジェクトを取得
-                    ViewModel.TestRedmineConnection();
-                    System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: Redmine接続テスト完了");
+                    // Redmine接続テストを実行してプロジェクトを取得（非同期で実行）
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await ViewModel.TestRedmineConnection();
+                            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: Redmine接続テスト完了");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: Redmine接続テストに失敗: {ex.Message}");
+                        }
+                    });
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: Redmine接続テストに失敗: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: Redmine接続テストの開始に失敗: {ex.Message}");
                 }
             }
             else
