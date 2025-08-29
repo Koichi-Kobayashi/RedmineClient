@@ -130,8 +130,6 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         private async Task LoadTrackersFromAppConfig()
         {
-            System.Diagnostics.Debug.WriteLine("SettingsViewModel: LoadTrackersFromAppConfig開始");
-            
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 AvailableTrackers.Clear();
@@ -142,43 +140,26 @@ namespace RedmineClient.ViewModels.Pages
                 
                 // 保存されたトラッカーIDを選択
                 var savedTrackerId = AppConfig.DefaultTrackerId;
-                System.Diagnostics.Debug.WriteLine($"LoadTrackersFromAppConfig: 保存されたトラッカーID: {savedTrackerId}");
                 
                 var defaultTracker = AvailableTrackers.FirstOrDefault(t => t.Id == savedTrackerId);
                 
                 if (defaultTracker != null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"LoadTrackersFromAppConfig: 保存されたID {savedTrackerId}に対応するトラッカーを発見: {defaultTracker.Name}");
-                    
                     // 現在選択されているトラッカーと同じIDの場合は、変更を避ける
                     if (SelectedTracker?.Id != defaultTracker.Id)
                     {
-                        System.Diagnostics.Debug.WriteLine($"LoadTrackersFromAppConfig: トラッカーを選択状態に設定: {defaultTracker.Name} (ID: {defaultTracker.Id})");
                         SelectedTracker = defaultTracker;
                     }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"LoadTrackersFromAppConfig: 既に同じトラッカーが選択されています: {defaultTracker.Name} (ID: {defaultTracker.Id})");
-                    }
-                    
-                    System.Diagnostics.Debug.WriteLine($"AppConfigからトラッカー一覧を読み込み: {AvailableTrackers.Count}件, 選択されたトラッカー: {defaultTracker.Name} (ID: {savedTrackerId})");
                 }
                 else
                 {
                     // 保存されたIDが見つからない場合は最初のトラッカーを選択
                     if (AvailableTrackers.Count > 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"LoadTrackersFromAppConfig: 保存されたID {savedTrackerId}が見つからないため、最初のトラッカーを選択: {AvailableTrackers[0].Name} (ID: {AvailableTrackers[0].Id})");
                         SelectedTracker = AvailableTrackers[0];
-                        System.Diagnostics.Debug.WriteLine($"AppConfigからトラッカー一覧を読み込み: {AvailableTrackers.Count}件, 保存されたID {savedTrackerId}が見つからないため、最初のトラッカーを選択: {AvailableTrackers[0].Name}");
                     }
                 }
-                
-                // 選択状態を確認
-                System.Diagnostics.Debug.WriteLine($"LoadTrackersFromAppConfig: 最終的な選択状態 - SelectedTracker: {SelectedTracker?.Name ?? "null"} (ID: {SelectedTracker?.Id ?? 0})");
             });
-            
-            System.Diagnostics.Debug.WriteLine("SettingsViewModel: LoadTrackersFromAppConfig完了");
         }
 
         /// <summary>
@@ -186,8 +167,6 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         private async Task SetFallbackTrackers()
         {
-            System.Diagnostics.Debug.WriteLine("SettingsViewModel: フォールバックトラッカーを設定開始");
-            
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 AvailableTrackers.Clear();
@@ -209,8 +188,6 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     SelectedTracker = AvailableTrackers[0];
                 }
-                
-                System.Diagnostics.Debug.WriteLine($"フォールバックトラッカーを設定: {AvailableTrackers.Count}件, 選択されたトラッカー: {SelectedTracker?.Name ?? "なし"}");
             });
         }
 
@@ -244,15 +221,8 @@ namespace RedmineClient.ViewModels.Pages
                             // 現在選択されているトラッカーと同じIDの場合は、変更を避ける
                             if (SelectedTracker?.Id != defaultTracker.Id)
                             {
-                                System.Diagnostics.Debug.WriteLine($"LoadTrackersAsync: トラッカーを選択状態に設定: {defaultTracker.Name} (ID: {defaultTracker.Id})");
                                 SelectedTracker = defaultTracker;
                             }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine($"LoadTrackersAsync: 既に同じトラッカーが選択されています: {defaultTracker.Name} (ID: {defaultTracker.Id})");
-                            }
-                            
-                            System.Diagnostics.Debug.WriteLine($"トラッカー一覧取得成功: {trackers.Count}件, 選択されたトラッカー: {defaultTracker.Name} (ID: {savedTrackerId})");
                         }
                         else
                         {
@@ -260,19 +230,13 @@ namespace RedmineClient.ViewModels.Pages
                             if (AvailableTrackers.Count > 0)
                             {
                                 SelectedTracker = AvailableTrackers[0];
-                                System.Diagnostics.Debug.WriteLine($"トラッカー一覧取得成功: {trackers.Count}件, 保存されたID {savedTrackerId}が見つからないため、最初のトラッカーを選択: {AvailableTrackers[0].Name}");
-                            }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine($"トラッカー一覧取得成功: {trackers.Count}件, 選択可能なトラッカーなし");
                             }
                         }
                     });
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"トラッカー読み込みエラー: {ex.Message}");
                 // エラーが発生した場合はフォールバックトラッカーを設定
                 await SetFallbackTrackers();
             }
@@ -317,8 +281,6 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnChangeTheme開始 - パラメータ: {parameter}");
-                
                 switch (parameter)
                 {
                     case "theme_light":
@@ -328,9 +290,7 @@ namespace RedmineClient.ViewModels.Pages
                         ApplicationThemeManager.Apply(ApplicationTheme.Light);
                         CurrentTheme = ApplicationTheme.Light;
                         AppConfig.ApplicationTheme = ApplicationTheme.Light;
-                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ライトテーマを保存中...");
                         AppConfig.Save();
-                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ライトテーマ保存完了");
 
                         break;
 
@@ -341,17 +301,14 @@ namespace RedmineClient.ViewModels.Pages
                         ApplicationThemeManager.Apply(ApplicationTheme.Dark);
                         CurrentTheme = ApplicationTheme.Dark;
                         AppConfig.ApplicationTheme = ApplicationTheme.Dark;
-                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ダークテーマを保存中...");
                         AppConfig.Save();
-                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: ダークテーマ保存完了");
 
                         break;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnChangeThemeでエラー - {ex.GetType().Name}: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: スタックトレース: {ex.StackTrace}");
+                // エラーが発生した場合は何もしない
             }
         }
 
@@ -374,7 +331,6 @@ namespace RedmineClient.ViewModels.Pages
             catch (Exception ex)
             {
                 WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = $"接続失敗: {ex.Message}" });
-                System.Diagnostics.Debug.WriteLine($"接続エラー: {ex.Message}");
             }
         }
 
