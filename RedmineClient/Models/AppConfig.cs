@@ -21,7 +21,9 @@ namespace RedmineClient.Models
         private static string _scheduleStartYearMonth = "";
         private static int? _selectedProjectId = null;
         private static int _defaultTrackerId = 1;
+        private static int _defaultStatusId = 1;
         private static List<TrackerItem> _availableTrackers = new();
+        private static List<StatusItem> _availableStatuses = new();
 
         public static string Theme
         {
@@ -78,6 +80,23 @@ namespace RedmineClient.Models
         }
 
         /// <summary>
+        /// デフォルトのステータスID
+        /// </summary>
+        public static int DefaultStatusId
+        {
+            get => _defaultStatusId;
+            set
+            {
+                _defaultStatusId = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SetSetting("DefaultStatusId", value.ToString());
+                }
+            }
+        }
+
+        /// <summary>
         /// 利用可能なトラッカー一覧
         /// </summary>
         public static List<TrackerItem> AvailableTrackers
@@ -90,6 +109,23 @@ namespace RedmineClient.Models
                 if (_isInitialized)
                 {
                     SaveTrackers(_availableTrackers);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 利用可能なステータス一覧
+        /// </summary>
+        public static List<StatusItem> AvailableStatuses
+        {
+            get => _availableStatuses;
+            set
+            {
+                _availableStatuses = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SaveStatuses(_availableStatuses);
                 }
             }
         }
@@ -170,6 +206,7 @@ namespace RedmineClient.Models
                 SetSettingsItem(config, "ScheduleStartYearMonth", _scheduleStartYearMonth);
                 SetSettingsItem(config, "SelectedProjectId", _selectedProjectId?.ToString() ?? "");
                 SetSettingsItem(config, "DefaultTrackerId", DefaultTrackerId.ToString());
+                SetSettingsItem(config, "DefaultStatusId", DefaultStatusId.ToString());
                 
                 config.Save();
             }
@@ -320,6 +357,16 @@ namespace RedmineClient.Models
                     {
                         _defaultTrackerId = 1; // デフォルト値
                     }
+
+                    var defaultStatusId = ConfigurationManager.AppSettings["DefaultStatusId"];
+                    if (!string.IsNullOrEmpty(defaultStatusId) && int.TryParse(defaultStatusId, out int statusId))
+                    {
+                        _defaultStatusId = statusId;
+                    }
+                    else
+                    {
+                        _defaultStatusId = 1; // デフォルト値
+                    }
                 }
                 catch
                 {
@@ -347,6 +394,7 @@ namespace RedmineClient.Models
             TaskDetailWidth = 400;
             ApplicationTheme = ApplicationTheme.Light;
             _defaultTrackerId = 1;
+            _defaultStatusId = 1;
             _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
             _selectedProjectId = null; // デフォルト値
         }
@@ -363,6 +411,21 @@ namespace RedmineClient.Models
             catch
             {
                 // トラッカー一覧の保存でエラー
+            }
+        }
+
+        /// <summary>
+        /// ステータス一覧を保存
+        /// </summary>
+        public static void SaveStatuses(List<StatusItem> statuses)
+        {
+            try
+            {
+                _availableStatuses = statuses ?? new List<StatusItem>();
+            }
+            catch
+            {
+                // ステータス一覧の保存でエラー
             }
         }
 

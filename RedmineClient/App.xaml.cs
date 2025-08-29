@@ -93,12 +93,19 @@ namespace RedmineClient
             // 注意: 本番環境では適切な証明書を使用してください
             try
             {
+                // グローバルなSSL証明書検証の無効化（Redmine.Net.Apiライブラリにも適用）
                 System.Net.ServicePointManager.ServerCertificateValidationCallback += 
                     (sender, cert, chain, sslPolicyErrors) => true;
+                
+                // 追加のSSL設定
+                System.Net.ServicePointManager.SecurityProtocol = 
+                    System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11 | System.Net.SecurityProtocolType.Tls;
+                
+                System.Diagnostics.Debug.WriteLine("SSL証明書検証を無効化しました（開発環境用）");
             }
-            catch
+            catch (Exception ex)
             {
-                // SSL証明書検証の無効化に失敗
+                System.Diagnostics.Debug.WriteLine($"SSL証明書検証の無効化に失敗: {ex.Message}");
             }
 
             try
@@ -124,41 +131,74 @@ namespace RedmineClient
                         {
                             using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                             {
-                                // 接続テスト
+                                // 接続テスト（タイムアウトを短く設定）
                                 var isConnected = await redmineService.TestConnectionAsync();
                                 if (isConnected)
                                 {
+                                    System.Diagnostics.Debug.WriteLine("起動時: Redmine接続成功");
+                                    
                                     // トラッカー一覧を取得してデフォルト値を設定
-                                    var trackers = await redmineService.GetTrackersAsync();
-                                    if (trackers != null && trackers.Count > 0)
+                                    try
                                     {
-                                        // 設定されたデフォルトトラッカーIDが有効かチェック
-                                        var defaultTracker = trackers.FirstOrDefault(t => t.Id == AppConfig.DefaultTrackerId);
-                                        if (defaultTracker == null)
+                                        var trackers = await redmineService.GetTrackersAsync();
+                                        if (trackers != null && trackers.Count > 0)
                                         {
-                                            // デフォルトトラッカーIDが無効な場合は、最初のトラッカーを設定
-                                            var newDefaultTrackerId = trackers[0].Id;
-                                            AppConfig.DefaultTrackerId = newDefaultTrackerId;
-                                        }
-                                        
-                                        // トラッカー一覧をAppConfigに保存（SettingsViewModelで使用）
-                                        try
-                                        {
-                                            // TrackerをTrackerItemに変換
-                                            var trackerItems = trackers.Select(t => new TrackerItem(t)).ToList();
-                                            AppConfig.SaveTrackers(trackerItems);
-                                        }
-                                        catch
-                                        {
-                                            // トラッカー一覧の保存でエラー
+                                            // 設定されたデフォルトトラッカーIDが有効かチェック
+                                            var defaultTracker = trackers.FirstOrDefault(t => t.Id == AppConfig.DefaultTrackerId);
+                                            if (defaultTracker == null)
+                                            {
+                                                // デフォルトトラッカーIDが無効な場合は、最初のトラッカーを設定
+                                                var newDefaultTrackerId = trackers[0].Id;
+                                                AppConfig.DefaultTrackerId = newDefaultTrackerId;
+                                                System.Diagnostics.Debug.WriteLine($"起動時: デフォルトトラッカーIDを更新: {newDefaultTrackerId}");
+                                            }
+                                            
+                                            // トラッカー一覧をAppConfigに保存（SettingsViewModelで使用）
+                                            try
+                                            {
+                                                // TrackerをTrackerItemに変換
+                                                var trackerItems = trackers.Select(t => new TrackerItem(t)).ToList();
+                                                AppConfig.SaveTrackers(trackerItems);
+                                                System.Diagnostics.Debug.WriteLine($"起動時: トラッカー一覧を保存: {trackerItems.Count}件");
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                System.Diagnostics.Debug.WriteLine($"起動時: トラッカー一覧の保存でエラー: {ex.Message}");
+                                            }
+
+                                            // ステータス一覧を取得してAppConfigに保存
+                                            try
+                                            {
+                                                var statuses = await redmineService.GetStatusesAsync();
+                                                if (statuses != null && statuses.Count > 0)
+                                                {
+                                                    // IssueStatusをStatusItemに変換
+                                                    var statusItems = statuses.Select(s => new StatusItem(s)).ToList();
+                                                    AppConfig.SaveStatuses(statusItems);
+                                                    System.Diagnostics.Debug.WriteLine($"起動時: ステータス一覧を保存: {statusItems.Count}件");
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                System.Diagnostics.Debug.WriteLine($"起動時: ステータス一覧の保存でエラー: {ex.Message}");
+                                            }
                                         }
                                     }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"起動時: トラッカー・ステータス取得でエラー: {ex.Message}");
+                                    }
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine("起動時: Redmine接続失敗");
                                 }
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             // 自動Redmine接続処理でエラー
+                            System.Diagnostics.Debug.WriteLine($"起動時: Redmine接続処理でエラー: {ex.Message}");
                         }
                     }
                 }

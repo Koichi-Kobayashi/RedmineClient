@@ -25,11 +25,25 @@ namespace RedmineClient.Services
                 normalizedUrl = "https://" + normalizedUrl;
             }
 
+            // SSL証明書の検証を無効化（RedmineServiceレベルでも設定）
+            try
+            {
+                System.Net.ServicePointManager.ServerCertificateValidationCallback += 
+                    (sender, cert, chain, sslPolicyErrors) => true;
+                
+                System.Net.ServicePointManager.SecurityProtocol = 
+                    System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11 | System.Net.SecurityProtocolType.Tls;
+                
+                System.Diagnostics.Debug.WriteLine($"RedmineService: SSL証明書検証を無効化しました - {normalizedUrl}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RedmineService: SSL証明書検証の無効化に失敗: {ex.Message}");
+            }
+
             var builder = new RedmineManagerOptionsBuilder();
             builder.WithHost(normalizedUrl);
             builder.WithApiKeyAuthentication(apiKey);
-            
-            // SSL証明書の検証はApp.xaml.csのOnStartupでグローバルに無効化済み
             
             _redmineManager = new RedmineManager(builder);
         }
@@ -348,6 +362,29 @@ namespace RedmineClient.Services
         }
 
         /// <summary>
+        /// ステータス一覧を取得（非同期版）
+        /// </summary>
+        public async Task<List<IssueStatus>> GetStatusesAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                var statuses = await Task.Run(() => _redmineManager.Get<IssueStatus>(), cts.Token);
+                return statuses ?? new List<IssueStatus>();
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"ステータス一覧の取得がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"ステータス一覧の取得に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// チケットを作成（非同期版）
         /// </summary>
         public async Task<int> CreateIssueAsync(Issue issue, CancellationToken cancellationToken = default)
@@ -367,35 +404,68 @@ namespace RedmineClient.Services
                     DoneRatio = 0
                 };
 
-                // プロジェクトIDを設定（リフレクションを使用）
-                var projectIdProperty = typeof(Issue).GetProperty("ProjectId");
+                // Issueクラスの利用可能なプロパティをデバッグ出力
+                System.Diagnostics.Debug.WriteLine("CreateIssueAsync: Issueクラスの利用可能なプロパティ:");
+                foreach (var prop in typeof(Issue).GetProperties())
+                {
+                    System.Diagnostics.Debug.WriteLine($"  {prop.Name}: {prop.PropertyType.Name} (CanWrite: {prop.CanWrite})");
+                }
+
+                // プロジェクトを設定（Projectオブジェクトを使用）
+                if (issue.Project != null)
+                {
+                    newIssue.Project = issue.Project;
+                    System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: Projectを設定しました: {issue.Project.Id}");
+                }
+                else
+                {
+                                    // Projectオブジェクトが設定されていない場合は、新しいProjectオブジェクトを作成
+                var project = new Project();
+                // Idプロパティをリフレクションで設定
+                var projectIdProperty = typeof(Project).GetProperty("Id");
                 if (projectIdProperty?.CanWrite == true)
                 {
-                    var projectId = issue.Project?.Id ?? 0;
-                    projectIdProperty.SetValue(newIssue, projectId);
+                    projectIdProperty.SetValue(project, 1); // デフォルトプロジェクトID
+                }
+                newIssue.Project = project;
+                System.Diagnostics.Debug.WriteLine("CreateIssueAsync: デフォルトProjectを設定しました");
                 }
 
-                // トラッカーIDを設定（設定ファイルから読み込み）
-                var trackerIdProperty = typeof(Issue).GetProperty("TrackerId");
+                // トラッカーを設定（Trackerオブジェクトを使用）
+                var tracker = new Tracker();
+                // Idプロパティをリフレクションで設定
+                var trackerIdProperty = typeof(Tracker).GetProperty("Id");
                 if (trackerIdProperty?.CanWrite == true)
                 {
-                    var trackerId = AppConfig.DefaultTrackerId;
-                    trackerIdProperty.SetValue(newIssue, trackerId);
+                    trackerIdProperty.SetValue(tracker, AppConfig.DefaultTrackerId);
                 }
+                newIssue.Tracker = tracker;
+                System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: Trackerを設定しました: {AppConfig.DefaultTrackerId}");
 
-                // ステータスIDを設定（デフォルト: 1 = 新規）
-                var statusIdProperty = typeof(Issue).GetProperty("StatusId");
+                // ステータスを設定（IssueStatusオブジェクトを使用）
+                var status = new IssueStatus();
+                // Idプロパティをリフレクションで設定
+                var statusIdProperty = typeof(IssueStatus).GetProperty("Id");
                 if (statusIdProperty?.CanWrite == true)
                 {
-                    statusIdProperty.SetValue(newIssue, 1);
+                    statusIdProperty.SetValue(status, AppConfig.DefaultStatusId);
                 }
+                newIssue.Status = status;
+                System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: Statusを設定しました: {AppConfig.DefaultStatusId}");
 
-                // 優先度IDを設定（デフォルト: 2 = 中）
-                var priorityIdProperty = typeof(Issue).GetProperty("PriorityId");
+                // 優先度を設定（IssuePriorityオブジェクトを使用）
+                var priority = new IssuePriority();
+                // Idプロパティをリフレクションで設定
+                var priorityIdProperty = typeof(IssuePriority).GetProperty("Id");
                 if (priorityIdProperty?.CanWrite == true)
                 {
-                    priorityIdProperty.SetValue(newIssue, 2);
+                    priorityIdProperty.SetValue(priority, 2); // デフォルト: 2 = 中
                 }
+                newIssue.Priority = priority;
+                System.Diagnostics.Debug.WriteLine("CreateIssueAsync: Priorityを設定しました: 2");
+
+                // 設定された値を確認
+                System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: 最終設定値 - Project: {newIssue.Project?.Id}, Tracker: {newIssue.Tracker?.Id}, Status: {newIssue.Status?.Id}, Priority: {newIssue.Priority?.Id}");
 
                 // 新しいAPIを使用してチケットを作成
                 var createdIssue = await Task.Run(() => _redmineManager.Create(newIssue), cts.Token);

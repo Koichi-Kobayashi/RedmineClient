@@ -31,5 +31,13 @@ namespace RedmineClient.Views.Pages
                 ViewModel.OnTrackerSelectedCommand.Execute(selectedTracker);
             }
         }
+
+        private void StatusComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (e.AddedItems.Count > 0 && e.AddedItems[0] is StatusItem selectedStatus)
+            {
+                ViewModel.OnStatusSelectedCommand.Execute(selectedStatus);
+            }
+        }
     }
 }

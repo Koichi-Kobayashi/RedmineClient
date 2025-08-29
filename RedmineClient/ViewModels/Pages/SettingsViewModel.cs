@@ -25,8 +25,11 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private ObservableCollection<TrackerItem> _availableTrackers = new();
 
+        [ObservableProperty]
+        private ObservableCollection<StatusItem> _availableStatuses = new();
+
         private TrackerItem? _selectedTracker;
-                public TrackerItem? SelectedTracker
+        public TrackerItem? SelectedTracker
         {
             get => _selectedTracker;
             set
@@ -44,7 +47,27 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        private StatusItem? _selectedStatus;
+        public StatusItem? SelectedStatus
+        {
+            get => _selectedStatus;
+            set
+            {
+                // 参照比較ではなく、IDベースの比較を使用
+                var currentId = _selectedStatus?.Id ?? 0;
+                var newId = value?.Id ?? 0;
+                var isDifferent = currentId != newId;
+
+                if (isDifferent)
+                {
+                    _selectedStatus = value;
+                    OnPropertyChanged(nameof(SelectedStatus));
+                }
+            }
+        }
+
         private bool _isUpdatingTracker = false;
+        private bool _isUpdatingStatus = false;
 
         public async Task OnNavigatedToAsync()
         {
@@ -109,6 +132,23 @@ namespace RedmineClient.ViewModels.Pages
                             await SetFallbackTrackers();
                         }
                     }
+
+                    // ステータス一覧も読み込み
+                    if (AppConfig.AvailableStatuses.Count > 0)
+                    {
+                        await LoadStatusesFromAppConfig();
+                    }
+                    else
+                    {
+                        try
+                        {
+                            await LoadStatusesAsync();
+                        }
+                        catch
+                        {
+                            // エラーが発生した場合は何もしない
+                        }
+                    }
                 }
                 else
                 {
@@ -158,6 +198,32 @@ namespace RedmineClient.ViewModels.Pages
                     {
                         SelectedTracker = AvailableTrackers[0];
                     }
+                }
+            });
+        }
+
+        /// <summary>
+        /// AppConfigから保存されたステータス一覧を読み込み
+        /// </summary>
+        private async Task LoadStatusesFromAppConfig()
+        {
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                AvailableStatuses.Clear();
+                foreach (var status in AppConfig.AvailableStatuses)
+                {
+                    AvailableStatuses.Add(status);
+                }
+                
+                // デフォルトステータス（新規）を選択
+                var defaultStatus = AvailableStatuses.FirstOrDefault(s => s.Id == 1);
+                if (defaultStatus != null)
+                {
+                    SelectedStatus = defaultStatus;
+                }
+                else if (AvailableStatuses.Count > 0)
+                {
+                    SelectedStatus = AvailableStatuses[0];
                 }
             });
         }
@@ -242,6 +308,34 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        private async Task LoadStatusesAsync()
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(RedmineHost) && !string.IsNullOrEmpty(ApiKey))
+                {
+                    using var redmineService = new RedmineClient.Services.RedmineService(RedmineHost, ApiKey);
+                    var statuses = await redmineService.GetStatusesAsync();
+                    
+                    // UIスレッドで実行
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        AvailableStatuses.Clear();
+                        foreach (var status in statuses)
+                        {
+                            // IssueStatusをStatusItemに変換
+                            var statusItem = new StatusItem(status);
+                            AvailableStatuses.Add(statusItem);
+                        }
+                    });
+                }
+            }
+            catch
+            {
+                // エラーが発生した場合は何もしない
+            }
+        }
+
         public virtual async Task OnNavigatedFromAsync()
         {
             using CancellationTokenSource cts = new();
@@ -323,10 +417,11 @@ namespace RedmineClient.ViewModels.Pages
                     return;
                 }
 
-                // 接続テストとトラッカー一覧取得
+                // 接続テストとトラッカー一覧、ステータス一覧取得
                 await LoadTrackersAsync();
+                await LoadStatusesAsync();
                 
-                WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "接続成功！トラッカー一覧を取得しました。" });
+                WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "接続成功！トラッカー一覧とステータス一覧を取得しました。" });
             }
             catch (Exception ex)
             {
@@ -346,6 +441,12 @@ namespace RedmineClient.ViewModels.Pages
                 if (SelectedTracker != null)
                 {
                     AppConfig.DefaultTrackerId = SelectedTracker.Id;
+                }
+
+                // ステータス設定も保存
+                if (SelectedStatus != null)
+                {
+                    AppConfig.DefaultStatusId = SelectedStatus.Id;
                 }
                 
                 AppConfig.Save();
@@ -420,5 +521,62 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         public ICommand OnTrackerSelectedCommand => new RelayCommand<TrackerItem?>(OnTrackerSelected);
+
+        private void OnStatusSelected(StatusItem? selectedStatus)
+        {
+            // 無限ループを防ぐ
+            if (_isUpdatingStatus)
+            {
+                return;
+            }
+
+            if (selectedStatus != null)
+            {
+                try
+                {
+                    _isUpdatingStatus = true;
+                    
+                    // 同じステータスが選択されている場合は何もしない
+                    if (SelectedStatus?.Id == selectedStatus.Id)
+                    {
+                        return;
+                    }
+                    
+                    // AvailableStatusesから同じIDのStatusオブジェクトを取得（参照問題を回避）
+                    var existingStatus = AvailableStatuses.FirstOrDefault(s => s.Id == selectedStatus.Id);
+                    if (existingStatus != null)
+                    {
+                        var statusFromCollection = AvailableStatuses.FirstOrDefault(s => s.Id == selectedStatus.Id);
+                        if (statusFromCollection != null)
+                        {
+                            SelectedStatus = statusFromCollection;
+                        }
+                        else
+                        {
+                            SelectedStatus = existingStatus;
+                        }
+                    }
+                    else
+                    {
+                        // 見つからない場合は元のオブジェクトを使用
+                        SelectedStatus = selectedStatus;
+                    }
+                    
+                    // 強制的にUIを更新（AvailableStatusesコレクションをリフレッシュ）
+                    var currentStatuses = AvailableStatuses.ToList();
+                    AvailableStatuses.Clear();
+                    foreach (var status in currentStatuses)
+                    {
+                        AvailableStatuses.Add(status);
+                    }
+                }
+                finally
+                {
+                    _isUpdatingStatus = false;
+                }
+            }
+        }
+
+        public ICommand OnStatusSelectedCommand => new RelayCommand<StatusItem?>(OnStatusSelected);
     }
 }

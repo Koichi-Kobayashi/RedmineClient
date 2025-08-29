@@ -627,6 +627,9 @@ namespace RedmineClient.ViewModels.Pages
 
         private void AddRootItem()
         {
+            // デフォルト設定の確認ログ
+            System.Diagnostics.Debug.WriteLine($"AddRootItem: デフォルト設定 - プロジェクトID: {SelectedProject?.Id}, トラッカーID: {AppConfig.DefaultTrackerId}, ステータスID: {AppConfig.DefaultStatusId}");
+            
             // パフォーマンス向上：事前にアイテムを作成
             var newItem = CreateWbsItemTemplate(null, "新しいタスク", "タスクの説明を入力してください");
             newItem.StartDate = DateTime.Today;
@@ -662,6 +665,9 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (parent == null) return;
 
+            // デフォルト設定の確認ログ
+            System.Diagnostics.Debug.WriteLine($"AddChildItem: デフォルト設定 - プロジェクトID: {SelectedProject?.Id}, トラッカーID: {AppConfig.DefaultTrackerId}, ステータスID: {AppConfig.DefaultStatusId}");
+
             // パフォーマンス向上：事前にアイテムを作成
             var newItem = CreateWbsItemTemplate(parent, "新しいサブタスク", "サブタスクの説明を入力してください");
             
@@ -693,7 +699,7 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         private WbsItem CreateWbsItemTemplate(WbsItem? parent, string title, string description)
         {
-            return new WbsItem
+            var newItem = new WbsItem
             {
                 Id = $"TASK-{DateTime.Now:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N").Substring(0, 8)}",
                 Title = title,
@@ -706,6 +712,48 @@ namespace RedmineClient.ViewModels.Pages
                 Parent = parent,
                 IsNew = true // 新しく作成されたアイテムであることを示す
             };
+
+            // デフォルト設定を適用
+            ApplyDefaultSettings(newItem);
+
+            return newItem;
+        }
+
+        /// <summary>
+        /// 新しく作成されたWBSアイテムにデフォルト設定を適用
+        /// </summary>
+        private void ApplyDefaultSettings(WbsItem item)
+        {
+            if (SelectedProject != null)
+            {
+                // プロジェクト情報を設定
+                item.RedmineProjectId = SelectedProject.Id;
+                item.RedmineProjectName = SelectedProject.Name;
+
+                // デバッグログ
+                System.Diagnostics.Debug.WriteLine($"ApplyDefaultSettings: プロジェクト設定 - ID: {SelectedProject.Id}, 名前: {SelectedProject.Name}");
+            }
+
+            // デフォルトトラッカーとステータスの情報を設定（表示用）
+            if (AppConfig.DefaultTrackerId > 0)
+            {
+                var defaultTracker = AppConfig.AvailableTrackers.FirstOrDefault(t => t.Id == AppConfig.DefaultTrackerId);
+                if (defaultTracker != null)
+                {
+                    item.RedmineTracker = defaultTracker.Name;
+                    System.Diagnostics.Debug.WriteLine($"ApplyDefaultSettings: デフォルトトラッカー設定 - ID: {AppConfig.DefaultTrackerId}, 名前: {defaultTracker.Name}");
+                }
+            }
+
+            if (AppConfig.DefaultStatusId > 0)
+            {
+                var defaultStatus = AppConfig.AvailableStatuses.FirstOrDefault(s => s.Id == AppConfig.DefaultStatusId);
+                if (defaultStatus != null)
+                {
+                    item.Status = defaultStatus.Name;
+                    System.Diagnostics.Debug.WriteLine($"ApplyDefaultSettings: デフォルトステータス設定 - ID: {AppConfig.DefaultStatusId}, 名前: {defaultStatus.Name}");
+                }
+            }
         }
 
         /// <summary>
@@ -715,6 +763,9 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (parent == null) return;
             
+            // デフォルト設定の確認ログ
+            System.Diagnostics.Debug.WriteLine($"AddBatchChildren: デフォルト設定 - プロジェクトID: {SelectedProject?.Id}, トラッカーID: {AppConfig.DefaultTrackerId}, ステータスID: {AppConfig.DefaultStatusId}");
+            
             System.Diagnostics.Debug.WriteLine($"AddBatchChildren: 親タスク '{parent.Title}' に{count}個のサブタスクをバッチ追加開始");
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -723,6 +774,7 @@ namespace RedmineClient.ViewModels.Pages
             for (int i = 0; i < count; i++)
             {
                 var newItem = CreateWbsItemTemplate(parent, $"バッチサブタスク {i + 1}", $"バッチサブタスク {i + 1} の説明");
+                // CreateWbsItemTemplate内でApplyDefaultSettingsが呼ばれるため、追加の設定は不要
                 newItems.Add(newItem);
             }
             
@@ -811,6 +863,9 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (parent == null) return;
             
+            // デフォルト設定の確認ログ
+            System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: デフォルト設定 - プロジェクトID: {SelectedProject?.Id}, トラッカーID: {AppConfig.DefaultTrackerId}, ステータスID: {AppConfig.DefaultStatusId}");
+            
             System.Diagnostics.Debug.WriteLine($"AddMultipleChildren: 親タスク '{parent.Title}' に一括サブタスク追加を開始");
 
             // パフォーマンス向上：事前に全アイテムを作成
@@ -821,6 +876,7 @@ namespace RedmineClient.ViewModels.Pages
             for (int i = 0; i < count; i++)
             {
                 var newItem = CreateWbsItemTemplate(parent, $"サブタスク {i + 1}", $"サブタスク {i + 1} の説明");
+                // CreateWbsItemTemplate内でApplyDefaultSettingsが呼ばれるため、追加の設定は不要
                 newItems.Add(newItem);
             }
             
@@ -1744,6 +1800,9 @@ namespace RedmineClient.ViewModels.Pages
                      int successCount = 0;
                      var itemsToRegister = NewWbsItems.ToList();
 
+                     // 登録設定のログ出力
+                     System.Diagnostics.Debug.WriteLine($"RegisterItems: 登録設定 - プロジェクトID: {SelectedProject.Id}, デフォルトトラッカーID: {AppConfig.DefaultTrackerId}, デフォルトステータスID: {AppConfig.DefaultStatusId}");
+
                      // 階層順にソート（親タスクを先に登録）
                      var sortedItems = itemsToRegister.OrderBy(item => item.Level).ToList();
                      
@@ -1760,22 +1819,41 @@ namespace RedmineClient.ViewModels.Pages
                                  DueDate = newItem.EndDate
                              };
                              
-                             // プロジェクトIDを設定（リフレクションを使用）
-                             var projectIdProperty = typeof(Issue).GetProperty("ProjectId");
+                             // プロジェクトを設定（Projectオブジェクトを使用）
+                             var project = new Project();
+                             // Idプロパティをリフレクションで設定
+                             var projectIdProperty = typeof(Project).GetProperty("Id");
                              if (projectIdProperty?.CanWrite == true)
                              {
-                                 projectIdProperty.SetValue(newIssue, SelectedProject.Id);
-                                 System.Diagnostics.Debug.WriteLine($"RegisterItems: ProjectIdを設定しました: {SelectedProject.Id}");
-                             }
-                             
-                             // Projectプロパティにも設定（RedmineServiceで使用）
-                             var project = new Project();
-                             var projectIdProperty2 = typeof(Project).GetProperty("Id");
-                             if (projectIdProperty2?.CanWrite == true)
-                             {
-                                 projectIdProperty2.SetValue(project, SelectedProject.Id);
+                                 projectIdProperty.SetValue(project, SelectedProject.Id);
                              }
                              newIssue.Project = project;
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: Projectを設定しました: {SelectedProject.Id}");
+
+                             // トラッカーを設定（Trackerオブジェクトを使用）
+                             var tracker = new Tracker();
+                             // Idプロパティをリフレクションで設定
+                             var trackerIdProperty = typeof(Tracker).GetProperty("Id");
+                             if (trackerIdProperty?.CanWrite == true)
+                             {
+                                 trackerIdProperty.SetValue(tracker, AppConfig.DefaultTrackerId);
+                             }
+                             newIssue.Tracker = tracker;
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: Trackerを設定しました: {AppConfig.DefaultTrackerId}");
+
+                             // ステータスを設定（IssueStatusオブジェクトを使用）
+                             var status = new IssueStatus();
+                             // Idプロパティをリフレクションで設定
+                             var statusIdProperty = typeof(IssueStatus).GetProperty("Id");
+                             if (statusIdProperty?.CanWrite == true)
+                             {
+                                 statusIdProperty.SetValue(status, AppConfig.DefaultStatusId);
+                             }
+                             newIssue.Status = status;
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: Statusを設定しました: {AppConfig.DefaultStatusId}");
+
+                             // 設定された値を確認
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 最終設定値 - Project: {newIssue.Project?.Id}, Tracker: {newIssue.Tracker?.Id}, Status: {newIssue.Status?.Id}");
 
                              var createdIssueId = await redmineService.CreateIssueAsync(newIssue);
                              
@@ -1805,22 +1883,41 @@ namespace RedmineClient.ViewModels.Pages
                                  DueDate = newItem.EndDate
                              };
                              
-                             // プロジェクトIDを設定
-                             var projectIdProperty = typeof(Issue).GetProperty("ProjectId");
+                             // プロジェクトを設定（Projectオブジェクトを使用）
+                             var project2 = new Project();
+                             // Idプロパティをリフレクションで設定
+                             var projectIdProperty = typeof(Project).GetProperty("Id");
                              if (projectIdProperty?.CanWrite == true)
                              {
-                                 projectIdProperty.SetValue(newIssue, SelectedProject.Id);
-                                 System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスクのProjectIdを設定しました: {SelectedProject.Id}");
-                             }
-                             
-                             // Projectプロパティにも設定（RedmineServiceで使用）
-                             var project2 = new Project();
-                             var projectIdProperty3 = typeof(Project).GetProperty("Id");
-                             if (projectIdProperty3?.CanWrite == true)
-                             {
-                                 projectIdProperty3.SetValue(project2, SelectedProject.Id);
+                                 projectIdProperty.SetValue(project2, SelectedProject.Id);
                              }
                              newIssue.Project = project2;
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスクのProjectを設定しました: {SelectedProject.Id}");
+
+                             // トラッカーを設定（Trackerオブジェクトを使用）
+                             var tracker = new Tracker();
+                             // Idプロパティをリフレクションで設定
+                             var trackerIdProperty = typeof(Tracker).GetProperty("Id");
+                             if (trackerIdProperty?.CanWrite == true)
+                             {
+                                 trackerIdProperty.SetValue(tracker, AppConfig.DefaultTrackerId);
+                             }
+                             newIssue.Tracker = tracker;
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスクのTrackerを設定しました: {AppConfig.DefaultTrackerId}");
+
+                             // ステータスを設定（IssueStatusオブジェクトを使用）
+                             var status = new IssueStatus();
+                             // Idプロパティをリフレクションで設定
+                             var statusIdProperty = typeof(IssueStatus).GetProperty("Id");
+                             if (statusIdProperty?.CanWrite == true)
+                             {
+                                 statusIdProperty.SetValue(status, AppConfig.DefaultStatusId);
+                             }
+                             newIssue.Status = status;
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスクのStatusを設定しました: {AppConfig.DefaultStatusId}");
+
+                             // 設定された値を確認
+                             System.Diagnostics.Debug.WriteLine($"RegisterItems: 子タスクの最終設定値 - Project: {newIssue.Project?.Id}, Tracker: {newIssue.Tracker?.Id}, Status: {newIssue.Status?.Id}");
 
                              // 親タスクのIDを設定
                              if (newItem.Parent?.RedmineIssueId.HasValue == true)
@@ -1881,4 +1978,5 @@ namespace RedmineClient.ViewModels.Pages
          }
     }
 }
+
 
