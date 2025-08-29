@@ -22,6 +22,7 @@ namespace RedmineClient.Models
         private static int? _selectedProjectId = null;
         private static int _defaultTrackerId = 1;
         private static int _defaultStatusId = 1;
+        private static bool _showTodayLine = true;
         private static List<TrackerItem> _availableTrackers = new();
         private static List<StatusItem> _availableStatuses = new();
 
@@ -92,6 +93,23 @@ namespace RedmineClient.Models
                 if (_isInitialized)
                 {
                     SetSetting("DefaultStatusId", value.ToString());
+                }
+            }
+        }
+
+        /// <summary>
+        /// 今日の日付ラインを表示するかどうか
+        /// </summary>
+        public static bool ShowTodayLine
+        {
+            get => _showTodayLine;
+            set
+            {
+                _showTodayLine = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SetSetting("ShowTodayLine", value.ToString());
                 }
             }
         }
@@ -207,6 +225,7 @@ namespace RedmineClient.Models
                 SetSettingsItem(config, "SelectedProjectId", _selectedProjectId?.ToString() ?? "");
                 SetSettingsItem(config, "DefaultTrackerId", DefaultTrackerId.ToString());
                 SetSettingsItem(config, "DefaultStatusId", DefaultStatusId.ToString());
+                SetSettingsItem(config, "ShowTodayLine", ShowTodayLine.ToString());
                 
                 config.Save();
             }
@@ -260,18 +279,16 @@ namespace RedmineClient.Models
                     
                     if (section != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"AppConfig: セクション暗号化状態: {section.SectionInformation.IsProtected}");
                         if (section.SectionInformation.IsProtected == true)
                         {
                             try
                             {
                                 // セクションの復号化
                                 section.SectionInformation.UnprotectSection();
-                                System.Diagnostics.Debug.WriteLine("AppConfig: セクション復号化成功");
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"AppConfig: セクション復号化失敗: {ex.Message}");
+                                // セクション復号化失敗
                             }
                         }
                     }
@@ -366,6 +383,16 @@ namespace RedmineClient.Models
                     else
                     {
                         _defaultStatusId = 1; // デフォルト値
+                    }
+
+                    var showTodayLine = ConfigurationManager.AppSettings["ShowTodayLine"];
+                    if (!string.IsNullOrEmpty(showTodayLine) && bool.TryParse(showTodayLine, out bool todayLine))
+                    {
+                        _showTodayLine = todayLine;
+                    }
+                    else
+                    {
+                        _showTodayLine = true; // デフォルト値
                     }
                 }
                 catch

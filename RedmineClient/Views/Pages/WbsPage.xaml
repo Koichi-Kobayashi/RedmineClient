@@ -93,6 +93,7 @@
             <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
                 <ui:TextBlock Margin="0,0,5,0" VerticalAlignment="Center" Text="スケジュール開始年月:" />
                 <ComboBox x:Name="ScheduleStartYearMonthComboBox" Width="100" VerticalAlignment="Center" SelectedItem="{Binding ViewModel.ScheduleStartYearMonth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ScheduleStartYearMonthComboBox_SelectionChanged" />
+                <ui:ToggleSwitch Margin="16,0,0,0" Content="今日の日付ライン" IsChecked="{Binding ViewModel.ShowTodayLine, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
             <!--  管理機能ボタン  -->
@@ -169,31 +170,38 @@
             </Grid.ColumnDefinitions>
 
             <!--  左側：DataGrid  -->
-            <ui:Card Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Top">
-                <DataGrid
-                    x:Name="WbsDataGrid" VerticalAlignment="Top"
-                    AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
-                    AutoGenerateColumns="False"
-                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                    BorderThickness="0" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
-                    CanUserSortColumns="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="Horizontal"
-                    HeadersVisibility="Column"
-                    ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
-                    RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    RowHeaderWidth="0" 
-                    ScrollViewer.CanContentScroll="True" 
-                    ScrollViewer.HorizontalScrollBarVisibility="Auto" 
-                    ScrollViewer.VerticalScrollBarVisibility="Visible"
-                    SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
-                    SelectionMode="Single" 
-                    SelectionUnit="FullRow" 
-                    VirtualizingPanel.IsContainerVirtualizable="True" 
-                    VirtualizingPanel.IsVirtualizing="True" 
-                    VirtualizingPanel.VirtualizationMode="Recycling"
-                    VirtualizingPanel.ScrollUnit="Pixel"
-                    VirtualizingPanel.CacheLength="5,5"
-                    VirtualizingPanel.CacheLengthUnit="Page">
+            <DataGrid
+                x:Name="WbsDataGrid" 
+                Grid.Column="0"
+                Margin="0,0,8,0"
+                VerticalAlignment="Stretch"
+                MaxHeight="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualHeight}"
+                MinHeight="200"
+                AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
+                AutoGenerateColumns="False"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
+                CanUserSortColumns="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="Horizontal"
+                HeadersVisibility="Column"
+                ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
+                RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                RowHeaderWidth="0" 
+                ScrollViewer.CanContentScroll="True" 
+                ScrollViewer.HorizontalScrollBarVisibility="Auto" 
+                ScrollViewer.VerticalScrollBarVisibility="Visible"
+                ScrollViewer.IsDeferredScrollingEnabled="False"
+                ScrollViewer.PanningMode="Both"
+                SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
+                SelectionMode="Single" 
+                SelectionUnit="FullRow" 
+                VirtualizingPanel.IsContainerVirtualizable="False" 
+                VirtualizingPanel.IsVirtualizing="False" 
+                VirtualizingPanel.VirtualizationMode="Standard"
+                VirtualizingPanel.ScrollUnit="Pixel"
+                VirtualizingPanel.CacheLength="1,1"
+                VirtualizingPanel.CacheLengthUnit="Item">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
@@ -408,7 +416,6 @@
                         <KeyBinding Key="Right" Command="{Binding ViewModel.MoveRightCommand}" />
                     </DataGrid.InputBindings>
                 </DataGrid>
-            </ui:Card>
 
             <!--  右側：タスク詳細（エクスパンダー）  -->
             <ui:Card

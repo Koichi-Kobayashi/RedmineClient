@@ -36,11 +36,11 @@ namespace RedmineClient.Services
                     System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11 | System.Net.SecurityProtocolType.Tls;
                 #pragma warning restore SYSLIB0014
                 
-                System.Diagnostics.Debug.WriteLine($"RedmineService: SSL証明書検証を無効化しました - {normalizedUrl}");
+
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RedmineService: SSL証明書検証の無効化に失敗: {ex.Message}");
+                // SSL証明書検証の無効化に失敗
             }
 
             var builder = new RedmineManagerOptionsBuilder();
@@ -301,34 +301,9 @@ namespace RedmineClient.Services
                     {
                         var parent = issueDict[parentId.Value];
                         parent.AddChild(issue);
-                        
-                        // デバッグログ
-                        System.Diagnostics.Debug.WriteLine($"BuildHierarchy: '{issue.Subject}' (ID: {issue.Id}) を親 '{parent.Subject}' (ID: {parent.Id}) の子として設定");
                     }
-                    else
-                    {
-                        // 親チケットが見つからない場合の警告
-                        System.Diagnostics.Debug.WriteLine($"BuildHierarchy: 警告 - '{issue.Subject}' (ID: {issue.Id}) の親ID {parentId.Value} が見つかりません");
-                    }
-                }
-                else
-                {
-                    // 親がない場合はルートレベル
-                    System.Diagnostics.Debug.WriteLine($"BuildHierarchy: '{issue.Subject}' (ID: {issue.Id}) はルートレベル（親なし）");
                 }
             }
-            
-            // 構築結果の確認ログ
-            var rootIssues = issues.Where(i => {
-                var parentId = GetParentIdFromIssue(i.Issue);
-                return !parentId.HasValue || parentId.Value == 0;
-            }).ToList();
-            var childIssues = issues.Where(i => {
-                var parentId = GetParentIdFromIssue(i.Issue);
-                return parentId.HasValue && parentId.Value > 0;
-            }).ToList();
-            
-            System.Diagnostics.Debug.WriteLine($"BuildHierarchy: 構築完了 - ルート: {rootIssues.Count}件, 子: {childIssues.Count}件");
         }
 
         /// <summary>

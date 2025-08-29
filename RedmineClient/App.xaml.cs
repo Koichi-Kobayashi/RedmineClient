@@ -107,11 +107,11 @@ namespace RedmineClient
                     System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11 | System.Net.SecurityProtocolType.Tls;
                 #pragma warning restore SYSLIB0014
                 
-                System.Diagnostics.Debug.WriteLine("SSL証明書検証を無効化しました（開発環境用）");
+
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SSL証明書検証の無効化に失敗: {ex.Message}");
+                // SSL証明書検証の無効化に失敗
             }
 
             try
@@ -141,8 +141,6 @@ namespace RedmineClient
                                 var isConnected = await redmineService.TestConnectionAsync();
                                 if (isConnected)
                                 {
-                                    System.Diagnostics.Debug.WriteLine("起動時: Redmine接続成功");
-                                    
                                     // トラッカー一覧を取得してデフォルト値を設定
                                     try
                                     {
@@ -156,7 +154,6 @@ namespace RedmineClient
                                                 // デフォルトトラッカーIDが無効な場合は、最初のトラッカーを設定
                                                 var newDefaultTrackerId = trackers[0].Id;
                                                 AppConfig.DefaultTrackerId = newDefaultTrackerId;
-                                                System.Diagnostics.Debug.WriteLine($"起動時: デフォルトトラッカーIDを更新: {newDefaultTrackerId}");
                                             }
                                             
                                             // トラッカー一覧をAppConfigに保存（SettingsViewModelで使用）
@@ -165,11 +162,10 @@ namespace RedmineClient
                                                 // TrackerをTrackerItemに変換
                                                 var trackerItems = trackers.Select(t => new TrackerItem(t)).ToList();
                                                 AppConfig.SaveTrackers(trackerItems);
-                                                System.Diagnostics.Debug.WriteLine($"起動時: トラッカー一覧を保存: {trackerItems.Count}件");
                                             }
                                             catch (Exception ex)
                                             {
-                                                System.Diagnostics.Debug.WriteLine($"起動時: トラッカー一覧の保存でエラー: {ex.Message}");
+                                                // トラッカー一覧の保存でエラー
                                             }
 
                                             // ステータス一覧を取得してAppConfigに保存
@@ -184,30 +180,24 @@ namespace RedmineClient
                                                     // IssueStatusをStatusItemに変換
                                                     var statusItems = statuses.Select(s => new StatusItem(s)).ToList();
                                                     AppConfig.SaveStatuses(statusItems);
-                                                    System.Diagnostics.Debug.WriteLine($"起動時: ステータス一覧を保存: {statusItems.Count}件");
                                                 }
                                             }
                                             catch (Exception ex)
                                             {
-                                                System.Diagnostics.Debug.WriteLine($"起動時: ステータス一覧の保存でエラー: {ex.Message}");
+                                                // ステータス一覧の保存でエラー
                                             }
                                         }
                                     }
                                     catch (Exception ex)
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"起動時: トラッカー・ステータス取得でエラー: {ex.Message}");
+                                        // トラッカー・ステータス取得でエラー
                                     }
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Debug.WriteLine("起動時: Redmine接続失敗");
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
                             // 自動Redmine接続処理でエラー
-                            System.Diagnostics.Debug.WriteLine($"起動時: Redmine接続処理でエラー: {ex.Message}");
                         }
                     }
                 }

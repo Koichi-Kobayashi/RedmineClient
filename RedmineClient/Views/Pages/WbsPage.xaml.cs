@@ -1,7 +1,9 @@
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Data;
 using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
+using RedmineClient.Helpers;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.Views.Pages
@@ -214,22 +216,25 @@ namespace RedmineClient.Views.Pages
 
                 ScheduleStartYearMonthComboBox.ItemsSource = yearMonthOptions;
 
-                // 保存された年月がある場合はそれを選択、ない場合は当月を選択
-                var savedYearMonth = AppConfig.ScheduleStartYearMonth;
-                
-                if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
-                {
-                    ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
-                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
-                    ViewModel.ScheduleStartYearMonth = savedYearMonth;
-                }
-                else
-                {
-                    var currentYearMonth = DateTime.Now.ToString("yyyy/MM");
-                    ScheduleStartYearMonthComboBox.SelectedItem = currentYearMonth;
-                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
-                    ViewModel.ScheduleStartYearMonth = currentYearMonth;
-                }
+                                 // 保存された年月がある場合はそれを選択、ない場合は当月を選択
+                 var savedYearMonth = AppConfig.ScheduleStartYearMonth;
+                 
+                 if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
+                 {
+                     ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
+                     // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                     ViewModel.ScheduleStartYearMonth = savedYearMonth;
+                 }
+                 else
+                 {
+                     var currentYearMonth = DateTime.Now.ToString("yyyy/MM");
+                     ScheduleStartYearMonthComboBox.SelectedItem = currentYearMonth;
+                     // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                     ViewModel.ScheduleStartYearMonth = currentYearMonth;
+                 }
+
+                 // 今日の日付ライン表示設定を初期化
+                 ViewModel.ShowTodayLine = AppConfig.ShowTodayLine;
             }
             catch
             {
@@ -398,17 +403,18 @@ namespace RedmineClient.Views.Pages
                     WbsDataGrid.Columns.Remove(column);
                 }
 
-                // 設定された年月の1日から開始
-                DateTime startDate;
-                if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
-                {
-                    startDate = startDate.AddDays(-startDate.Day + 1); // 月の1日に設定
-                }
-                else
-                {
-                    startDate = new DateTime(DateTime.Now.Year, 1, 1); // デフォルトは1月1日
-                }
-                var endDate = startDate.AddMonths(2).AddDays(-1); // 2か月分
+                                 // 設定された年月の1日から開始
+                 
+                 DateTime startDate;
+                 if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
+                 {
+                     startDate = startDate.AddDays(-startDate.Day + 1); // 月の1日に設定
+                 }
+                 else
+                 {
+                     startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1); // デフォルトは今月の1日
+                 }
+                 var endDate = startDate.AddMonths(2).AddDays(-1); // 2か月分表示（タスク期間をカバー）
 
                 var currentDate = startDate;
                 var columnCount = 0;
@@ -436,21 +442,84 @@ namespace RedmineClient.Views.Pages
 
                     // 日付列用のセルテンプレート
                     var cellTemplate = new DataTemplate();
-                    var factory = new FrameworkElementFactory(typeof(Border));
+                    var factory = new FrameworkElementFactory(typeof(Grid));
 
-                    factory.SetValue(Border.WidthProperty, 30.0);
-                    factory.SetValue(Border.HeightProperty, 20.0);
-                    factory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Gray);
-                    factory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
-                    factory.SetValue(Border.CornerRadiusProperty, new CornerRadius(2));
+                    // Gridの設定
+                    factory.SetValue(Grid.WidthProperty, 30.0);
+                    factory.SetValue(Grid.HeightProperty, 20.0);
 
-                    // 土曜日は青色、日曜日はピンク色
+                    // 背景用のBorder（土曜日は青色、日曜日はピンク色）
+                    var backgroundFactory = new FrameworkElementFactory(typeof(Border));
+                    backgroundFactory.SetValue(Border.WidthProperty, 30.0);
+                    backgroundFactory.SetValue(Border.HeightProperty, 20.0);
+                    backgroundFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Gray);
+                    backgroundFactory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+                    backgroundFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(2));
+                    backgroundFactory.SetValue(Grid.ZIndexProperty, 0);
+
                     var backgroundBinding = new System.Windows.Data.Binding
                     {
                         Source = currentDate,
                         Converter = new RedmineClient.Helpers.DateToBackgroundColorConverter()
                     };
-                    factory.SetValue(Border.BackgroundProperty, backgroundBinding);
+                    backgroundFactory.SetValue(Border.BackgroundProperty, backgroundBinding);
+
+                    // 今日の日付ライン表示（設定が有効な場合のみ）
+                    if (ViewModel.ShowTodayLine && currentDate.Date == DateTime.Today)
+                    {
+                        var todayLineFactory = new FrameworkElementFactory(typeof(Border));
+                        todayLineFactory.SetValue(Border.WidthProperty, 30.0);
+                        todayLineFactory.SetValue(Border.HeightProperty, 20.0);
+                        todayLineFactory.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+                        todayLineFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Red);
+                        todayLineFactory.SetValue(Border.BorderThicknessProperty, new Thickness(3));
+                        todayLineFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+                        todayLineFactory.SetValue(Grid.ZIndexProperty, 3);
+                        factory.AppendChild(todayLineFactory);
+                    }
+
+                    // タスク期間表示用のBorder（開始日から終了日まで）
+                    var taskPeriodFactory = new FrameworkElementFactory(typeof(Border));
+                    taskPeriodFactory.SetValue(Border.WidthProperty, 30.0);
+                    taskPeriodFactory.SetValue(Border.HeightProperty, 20.0);
+                    taskPeriodFactory.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+                    taskPeriodFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Blue);
+                    taskPeriodFactory.SetValue(Border.BorderThicknessProperty, new Thickness(2));
+                    taskPeriodFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+                    taskPeriodFactory.SetValue(Border.OpacityProperty, 0.8);
+                    taskPeriodFactory.SetValue(Grid.ZIndexProperty, 1);
+
+                    // タスク期間の表示/非表示を制御（MultiBindingを使用）
+                    var multiBinding = new System.Windows.Data.MultiBinding();
+                    multiBinding.Converter = new TaskPeriodMultiBindingConverter(currentDate);
+                    
+                    // 開始日（WbsItemから直接取得）
+                    var startDateBinding = new System.Windows.Data.Binding
+                    {
+                        Path = new System.Windows.PropertyPath("StartDate")
+                    };
+                    multiBinding.Bindings.Add(startDateBinding);
+                    
+                    // 終了日（WbsItemから直接取得）
+                    var endDateBinding = new System.Windows.Data.Binding
+                    {
+                        Path = new System.Windows.PropertyPath("EndDate")
+                    };
+                    multiBinding.Bindings.Add(endDateBinding);
+                    
+                    taskPeriodFactory.SetValue(Border.VisibilityProperty, multiBinding);
+
+                    // 進捗に応じた背景色の設定（WbsItemから直接取得）
+                    var progressBinding = new System.Windows.Data.Binding
+                    {
+                        Path = new System.Windows.PropertyPath("Progress"),
+                        Converter = new TaskProgressToColorConverter()
+                    };
+                    taskPeriodFactory.SetValue(Border.BackgroundProperty, progressBinding);
+
+                    // Gridに要素を追加
+                    factory.AppendChild(backgroundFactory);
+                    factory.AppendChild(taskPeriodFactory);
 
                     cellTemplate.VisualTree = factory;
                     dateColumn.CellTemplate = cellTemplate;
@@ -843,13 +912,11 @@ namespace RedmineClient.Views.Pages
                     else
                     {
                         WbsDataGrid.Focus();
-                        System.Diagnostics.Debug.WriteLine($"編集モード: リトライ上限に達したためDataGrid全体にフォーカス設定");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"編集モード: フォーカス設定中にエラー: {ex.Message}");
                 WbsDataGrid.Focus();
             }
         }
@@ -887,13 +954,11 @@ namespace RedmineClient.Views.Pages
                     {
                         // リトライ上限に達した場合はDataGrid全体にフォーカス
                         WbsDataGrid.Focus();
-                        System.Diagnostics.Debug.WriteLine($"編集モード: 行コンテナが見つからないためDataGrid全体にフォーカス設定");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"編集モード: 行フォーカス設定中にエラー: {ex.Message}");
                 WbsDataGrid.Focus();
             }
         }
@@ -912,30 +977,24 @@ namespace RedmineClient.Views.Pages
                     if (cell != null)
                     {
                         cell.Focus();
-                        System.Diagnostics.Debug.WriteLine($"編集モード: セルにフォーカス設定成功 '{ViewModel.SelectedItem?.Title ?? "null"}'");
                         return;
                     }
                 }
 
                 // セルが見つからない場合は行にフォーカス
                 row.Focus();
-                System.Diagnostics.Debug.WriteLine($"編集モード: 行にフォーカス設定成功 '{ViewModel.SelectedItem?.Title ?? "null"}'");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"編集モード: セルフォーカス設定中にエラー: {ex.Message}");
-
                 // エラーが発生した場合は行にフォーカス
                 try
                 {
                     row.Focus();
-                    System.Diagnostics.Debug.WriteLine($"編集モード: エラー後の行フォーカス設定成功 '{ViewModel.SelectedItem?.Title ?? "null"}'");
                 }
                 catch
                 {
                     // 最終手段としてDataGrid全体にフォーカス
                     WbsDataGrid.Focus();
-                    System.Diagnostics.Debug.WriteLine($"編集モード: 最終手段としてDataGrid全体にフォーカス設定");
                 }
             }
         }
@@ -947,30 +1006,25 @@ namespace RedmineClient.Views.Pages
         {
             if (e.PropertyName == nameof(ViewModel.SelectedProject))
             {
-                System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: SelectedProject変更 - 新しいプロジェクト: {(ViewModel.SelectedProject?.Name ?? "null")}");
-                
-                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
-                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
-                {
-                    System.Diagnostics.Debug.WriteLine("ViewModel_PropertyChanged: Redmineデータの自動読み込みを開始");
-                    ViewModel.LoadRedmineData();
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: Redmineデータの自動読み込みをスキップ - SelectedProject: {(ViewModel.SelectedProject?.Name ?? "null")}, IsRedmineConnected: {ViewModel.IsRedmineConnected}");
-                }
+                                 
+                 // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
+                 if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+                 {
+                     ViewModel.LoadRedmineData();
+                 }
             }
-            else if (e.PropertyName == nameof(ViewModel.AvailableProjects))
-            {
-                System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: AvailableProjects変更 - 新しいプロジェクト数: {ViewModel.AvailableProjects.Count}");
-                if (ViewModel.AvailableProjects.Count > 0)
-                {
-                    foreach (var project in ViewModel.AvailableProjects.Take(3))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged: プロジェクト - ID={project.Id}, Name={project.Name}");
-                    }
-                }
-            }
+                         else if (e.PropertyName == nameof(ViewModel.AvailableProjects))
+             {
+                 // プロジェクト一覧が更新された場合の処理
+             }
+             else if (e.PropertyName == nameof(ViewModel.ShowTodayLine))
+             {
+                 // 今日の日付ライン表示設定が変更された場合、スケジュール表を再生成
+                 if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                 {
+                     GenerateDateColumns();
+                 }
+             }
         }
 
         /// <summary>

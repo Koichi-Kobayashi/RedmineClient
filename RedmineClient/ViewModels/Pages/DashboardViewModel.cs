@@ -63,12 +63,10 @@ namespace RedmineClient.ViewModels.Pages
                 if (projects != null)
                 {
                     Projects = projects;
-                    System.Diagnostics.Debug.WriteLine($"Dashboard: {projects.Count}件のプロジェクトを取得しました");
                 }
                 else
                 {
                     Projects = new List<Project>();
-                    System.Diagnostics.Debug.WriteLine("Dashboard: プロジェクトが取得できませんでした");
                 }
 
                 // プロジェクトが選択されている場合は、そのプロジェクトのチケットを取得
@@ -80,9 +78,8 @@ namespace RedmineClient.ViewModels.Pages
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Dashboard: エラー - {ex.Message}");
-                                    Projects = new List<Project>();
-                    Issues = new List<Issue>();
+                Projects = new List<Project>();
+                Issues = new List<Issue>();
             }
         }
 
@@ -103,17 +100,14 @@ namespace RedmineClient.ViewModels.Pages
                 if (issues != null)
                 {
                     Issues = issues;
-                    System.Diagnostics.Debug.WriteLine($"Dashboard: プロジェクトID {projectId} から {issues.Count} 件のチケットを取得しました");
                 }
                 else
                 {
                     Issues = new List<Issue>();
-                    System.Diagnostics.Debug.WriteLine($"Dashboard: プロジェクトID {projectId} のチケットが取得できませんでした");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Dashboard: チケット読み込みエラー - {ex.Message}");
                 Issues = new List<Issue>();
             }
         }
