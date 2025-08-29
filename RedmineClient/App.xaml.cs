@@ -109,7 +109,7 @@ namespace RedmineClient
                 
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // SSL証明書検証の無効化に失敗
             }
@@ -163,7 +163,7 @@ namespace RedmineClient
                                                 var trackerItems = trackers.Select(t => new TrackerItem(t)).ToList();
                                                 AppConfig.SaveTrackers(trackerItems);
                                             }
-                                            catch (Exception ex)
+                                            catch (Exception)
                                             {
                                                 // トラッカー一覧の保存でエラー
                                             }
@@ -182,20 +182,20 @@ namespace RedmineClient
                                                     AppConfig.SaveStatuses(statusItems);
                                                 }
                                             }
-                                            catch (Exception ex)
+                                            catch (Exception)
                                             {
                                                 // ステータス一覧の保存でエラー
                                             }
                                         }
                                     }
-                                    catch (Exception ex)
+                                    catch (Exception)
                                     {
                                         // トラッカー・ステータス取得でエラー
                                     }
                                 }
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             // 自動Redmine接続処理でエラー
                         }

@@ -38,7 +38,7 @@ namespace RedmineClient.Services
                 
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // SSL証明書検証の無効化に失敗
             }

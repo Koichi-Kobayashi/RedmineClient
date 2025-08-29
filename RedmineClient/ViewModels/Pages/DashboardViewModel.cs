@@ -76,7 +76,7 @@ namespace RedmineClient.ViewModels.Pages
                     await LoadIssuesForProject(selectedProject.Id);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Projects = new List<Project>();
                 Issues = new List<Issue>();
@@ -106,7 +106,7 @@ namespace RedmineClient.ViewModels.Pages
                     Issues = new List<Issue>();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Issues = new List<Issue>();
             }

@@ -119,15 +119,13 @@
         </StackPanel>
 
         <!--  接続状態とエラー表示  -->
-        <!--<Grid Grid.Row="2" Margin="0,0,0,16">
+        <Grid Grid.Row="2" Margin="0,0,0,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-        -->
-        <!--  接続状態  -->
-        <!--
+            <!--  接続状態  -->
             <StackPanel Grid.Row="0" Margin="0,0,0,8" Orientation="Horizontal">
                 <Border Margin="0,0,8,0" Padding="8,4" Background="{Binding ViewModel.IsRedmineConnected, Converter={x:Static helpers:BooleanToBrushConverter.Instance}}" CornerRadius="4">
                     <ui:TextBlock HorizontalAlignment="Center" FontTypography="Caption" Foreground="White" Text="{Binding ViewModel.ConnectionStatus}" />
@@ -136,13 +134,11 @@
                 <ui:ProgressRing Width="16" Height="16" Margin="8,0,0,0" IsIndeterminate="True" Visibility="{Binding ViewModel.IsLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}" />
             </StackPanel>
 
-        -->
-        <!--  エラーメッセージ  -->
-        <!--
+            <!--  エラーメッセージ  -->
             <ui:Card Grid.Row="1" Padding="12" BorderThickness="1" Visibility="{Binding ViewModel.ErrorMessage, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
                 <ui:TextBlock FontTypography="Caption" Text="{Binding ViewModel.ErrorMessage}" TextWrapping="Wrap" />
             </ui:Card>
-        </Grid>-->
+        </Grid>
 
         <!--  フィルターと検索  -->
         <Grid Grid.Row="3" Margin="0,0,0,16">
@@ -169,7 +165,36 @@
                 <ColumnDefinition x:Name="TaskDetailColumn" Width="16" />
             </Grid.ColumnDefinitions>
 
-            <!--  左側：DataGrid  -->
+            <!--  プログレスバー（DataGridの上に表示）  -->
+            <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="1000">
+                <!--  WBSデータ読み込みプログレスバー  -->
+                <ui:Card Margin="0,0,0,16" Padding="20" BorderThickness="1" 
+                         Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
+                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel>
+                        <ui:TextBlock Margin="0,0,0,16" FontTypography="BodyStrong" FontSize="16" 
+                                     Text="{Binding ViewModel.WbsProgressMessage}" TextAlignment="Center" />
+                        <ProgressBar Value="{Binding ViewModel.WbsProgress}" Maximum="100" Height="12" 
+                                   Background="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                   Foreground="{DynamicResource SystemFillColorAccentBrush}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <!--  スケジュール表描画プログレスバー  -->
+                <ui:Card Margin="0,0,0,16" Padding="20" BorderThickness="1" 
+                         Visibility="{Binding ViewModel.IsScheduleLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
+                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel>
+                        <ui:TextBlock Margin="0,0,0,16" FontTypography="BodyStrong" FontSize="16" 
+                                     Text="{Binding ViewModel.ScheduleProgressMessage}" TextAlignment="Center" />
+                        <ProgressBar Value="{Binding ViewModel.ScheduleProgress}" Maximum="100" Height="12" 
+                                   Background="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                   Foreground="{DynamicResource SystemFillColorAccentBrush}" />
+                    </StackPanel>
+                </ui:Card>
+            </Grid>
+
+            <!--  左側：DataGrid（プログレスバーが表示されている間は非表示）  -->
             <DataGrid
                 x:Name="WbsDataGrid" 
                 Grid.Column="0"
@@ -201,7 +226,8 @@
                 VirtualizingPanel.VirtualizationMode="Recycling"
                 VirtualizingPanel.ScrollUnit="Pixel"
                 VirtualizingPanel.CacheLength="3,3"
-                VirtualizingPanel.CacheLengthUnit="Page">
+                VirtualizingPanel.CacheLengthUnit="Page"
+                Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BooleanInverseConverter.Instance}}">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
@@ -473,7 +499,8 @@
             <!--  右側：タスク詳細（エクスパンダー）  -->
             <ui:Card
                 Grid.Column="1" Width="400" Padding="20" HorizontalAlignment="Right" VerticalAlignment="Top"
-                Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                Visibility="{Binding ViewModel.IsTaskDetailVisible, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
+                Panel.ZIndex="999">
                 <ui:Card.RenderTransform>
                     <TranslateTransform x:Name="TaskDetailTransform" X="400" />
                 </ui:Card.RenderTransform>

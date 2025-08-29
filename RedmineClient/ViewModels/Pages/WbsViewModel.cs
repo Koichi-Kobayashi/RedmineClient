@@ -442,15 +442,6 @@ namespace RedmineClient.ViewModels.Pages
 
         private async void InitializeViewModel()
         {
-            // サンプルデータを読み込み（開発・テスト用）
-            await LoadSampleDataAsync();
-            
-            // 平坦化リストを初期化（UIスレッドで実行）
-            await UpdateFlattenedList();
-            
-            // スケジュール表を初期化
-            await InitializeScheduleItems();
-            
             // Redmine接続状態を確認してプロジェクトを取得
             await TestRedmineConnection();
             
@@ -459,6 +450,24 @@ namespace RedmineClient.ViewModels.Pages
             {
                 AvailableProjects = new List<Project>();
             }
+            
+            // Redmineに接続されている場合は実際のデータを読み込み、接続されていない場合はサンプルデータを読み込み
+            if (IsRedmineConnected && SelectedProject != null)
+            {
+                // 実際のRedmineデータを読み込み
+                await LoadRedmineDataAsync();
+            }
+            else
+            {
+                // サンプルデータを読み込み（開発・テスト用）
+                await LoadSampleDataAsync();
+            }
+            
+            // 平坦化リストを初期化（UIスレッドで実行）
+            await UpdateFlattenedList();
+            
+            // スケジュール表を初期化
+            await InitializeScheduleItems();
         }
 
         public virtual async Task OnNavigatedFromAsync()
@@ -733,7 +742,7 @@ namespace RedmineClient.ViewModels.Pages
             });
 
             // 完了メッセージを少し表示してからクリア
-            await Task.Delay(500);
+            await Task.Delay(1000);
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 IsWbsLoading = false;
@@ -1807,13 +1816,26 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
+                // プログレスバーを開始
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = true;
+                    WbsProgress = 0;
+                    WbsProgressMessage = "Redmineからデータを取得中...";
+                });
+
                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                 {
+                    // データ取得（20%）
                     var issues = await redmineService.GetIssuesWithHierarchyAsync(projectId).ConfigureAwait(false);
                     
-
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 20;
+                        WbsProgressMessage = "チケットデータを変換中...";
+                    });
                     
-                    // バックグラウンドスレッドでWBSアイテムの変換を実行
+                    // バックグラウンドスレッドでWBSアイテムの変換を実行（40%）
                     var wbsItems = await Task.Run(() =>
                     {
                         var tempItems = new List<WbsItem>();
@@ -1828,43 +1850,52 @@ namespace RedmineClient.ViewModels.Pages
                         return tempItems;
                     }).ConfigureAwait(false);
                     
-                                                    // UIスレッドでコレクションを更新
-                                await Application.Current.Dispatcher.InvokeAsync(() =>
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 60;
+                        WbsProgressMessage = "UIコレクションを更新中...";
+                    });
+                    
+                    // UIスレッドでコレクションを更新（80%）
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            // WBSアイテムを完全にクリア（親子関係も含めて）
+                            WbsItems.Clear();
+                            foreach (var wbsItem in wbsItems)
+                            {
+                                WbsItems.Add(wbsItem);
+                            }
+                            
+                            WbsProgress = 80;
+                            WbsProgressMessage = "平坦化リストを更新中...";
+                            
+                            // 平坦化リストを更新
+                            _ = Task.Run(async () => await UpdateFlattenedList());
+                            
+                            // Redmineデータ読み込み後、選択状態を復元
+                            if (SelectedItem != null)
+                            {
+                                // 選択されたアイテムがまだ存在するかチェック
+                                var currentSelectedItem = SelectedItem;
+                                var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
+                                if (foundItem != null)
                                 {
-                                    try
-                                    {
-                                        // WBSアイテムを完全にクリア（親子関係も含めて）
-                                        WbsItems.Clear();
-                                        foreach (var wbsItem in wbsItems)
-                                        {
-                                            WbsItems.Add(wbsItem);
-                                        }
-                                        
-                                        // 平坦化リストを更新
-                                        _ = Task.Run(async () => await UpdateFlattenedList());
-                                        
-                                        // Redmineデータ読み込み後、選択状態を復元
-                                        if (SelectedItem != null)
-                                        {
-                                            // 選択されたアイテムがまだ存在するかチェック
-                                            var currentSelectedItem = SelectedItem;
-                                            var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
-                                            if (foundItem != null)
-                                            {
-                                                SelectedItem = foundItem;
-                                                CanAddChild = foundItem.IsParentTask;
-                                            }
-                                        }
-                                        
-                                        IsRedmineDataLoaded = true;
-                                        ErrorMessage = string.Empty;
-                                        
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        ErrorMessage = $"UI更新中にエラーが発生しました: {ex.Message}";
-                                    }
-                                });
+                                    SelectedItem = foundItem;
+                                    CanAddChild = foundItem.IsParentTask;
+                                }
+                            }
+                            
+                            IsRedmineDataLoaded = true;
+                            ErrorMessage = string.Empty;
+                            
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorMessage = $"UI更新中にエラーが発生しました: {ex.Message}";
+                        }
+                    });
                 }
             }
             catch (Exception ex)
@@ -1872,6 +1903,21 @@ namespace RedmineClient.ViewModels.Pages
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     ErrorMessage = $"チケットの読み込みに失敗しました: {ex.Message}";
+                });
+            }
+            finally
+            {
+                // プログレスバーを完了
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    WbsProgress = 100;
+                    WbsProgressMessage = "データ読み込み完了";
+                    
+                    // 完了メッセージを少し表示してから非表示
+                    await Task.Delay(1000);
+                    
+                    IsWbsLoading = false;
+                    WbsProgress = 0;
                 });
             }
         }
@@ -2123,7 +2169,7 @@ namespace RedmineClient.ViewModels.Pages
                 await UpdateScheduleItemsAsync();
                 
                 // 完了メッセージを少し表示してからクリア
-                await Task.Delay(500);
+                await Task.Delay(1000);
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     IsWbsLoading = false;
@@ -2180,7 +2226,7 @@ namespace RedmineClient.ViewModels.Pages
             }
             
             // UIスレッドで一括更新（パフォーマンス向上）
-            Application.Current.Dispatcher.BeginInvoke(new Action(async () =>
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
                 FlattenedWbsItems.Clear();
                 foreach (var item in tempList)
@@ -2313,6 +2359,7 @@ namespace RedmineClient.ViewModels.Pages
                          catch (Exception ex)
                          {
                              // 親タスクの登録に失敗
+                             ErrorMessage = $"親タスク '{newItem.Title}' の登録に失敗しました: {ex.Message}";
                          }
                      }
 
@@ -2380,6 +2427,7 @@ namespace RedmineClient.ViewModels.Pages
                          catch (Exception ex)
                          {
                              // 子タスクの登録に失敗
+                             ErrorMessage = $"子タスク '{newItem.Title}' の登録に失敗しました: {ex.Message}";
                          }
                      }
 

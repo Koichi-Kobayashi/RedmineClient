@@ -915,7 +915,7 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 WbsDataGrid.Focus();
             }
@@ -957,7 +957,7 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 WbsDataGrid.Focus();
             }
@@ -984,7 +984,7 @@ namespace RedmineClient.Views.Pages
                 // セルが見つからない場合は行にフォーカス
                 row.Focus();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // エラーが発生した場合は行にフォーカス
                 try

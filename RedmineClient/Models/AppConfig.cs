@@ -286,7 +286,7 @@ namespace RedmineClient.Models
                                 // セクションの復号化
                                 section.SectionInformation.UnprotectSection();
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 // セクション復号化失敗
                             }
