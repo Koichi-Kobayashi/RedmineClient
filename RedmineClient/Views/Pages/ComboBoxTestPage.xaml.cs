@@ -20,7 +20,6 @@ namespace RedmineClient.Views.Pages
         {
             if (e.AddedItems.Count > 0 && e.AddedItems[0] is TestItem selectedItem)
             {
-                System.Diagnostics.Debug.WriteLine($"テスト: ComboBox_SelectionChanged呼び出し - {selectedItem.Name} (ID: {selectedItem.Id})");
                 ViewModel.OnItemSelectedCommand.Execute(selectedItem);
             }
         }
