@@ -28,6 +28,9 @@ namespace RedmineClient.Services
             var builder = new RedmineManagerOptionsBuilder();
             builder.WithHost(normalizedUrl);
             builder.WithApiKeyAuthentication(apiKey);
+            
+            // SSL証明書の検証はApp.xaml.csのOnStartupでグローバルに無効化済み
+            
             _redmineManager = new RedmineManager(builder);
         }
 
@@ -271,14 +274,18 @@ namespace RedmineClient.Services
                 // 方法1: 現在のユーザー情報を取得
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("TestConnectionAsync: ユーザー情報取得を試行中...");
                     var user = await GetCurrentUserAsync(cts.Token);
                     if (user != null)
                     {
+                        System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: ユーザー情報取得成功 - {user.Login}");
                         return true;
                     }
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: ユーザー情報取得でエラー - {ex.GetType().Name}: {ex.Message}");
+                    
                     // ユーザー情報取得でエラーが発生した場合の詳細ログ
                     if (ex is RedmineApiException redmineEx)
                     {
@@ -290,14 +297,18 @@ namespace RedmineClient.Services
                 // 方法2: プロジェクト一覧を取得して接続をテスト
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("TestConnectionAsync: プロジェクト一覧取得を試行中...");
                     var projects = await GetProjectsAsync(cts.Token);
                     if (projects != null && projects.Count > 0)
                     {
+                        System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: プロジェクト一覧取得成功 - {projects.Count}件");
                         return true;
                     }
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: プロジェクト一覧取得でエラー - {ex.GetType().Name}: {ex.Message}");
+                    
                     // プロジェクト一覧取得でエラーが発生した場合の詳細ログ
                     if (ex is RedmineApiException redmineEx)
                     {
@@ -306,14 +317,22 @@ namespace RedmineClient.Services
                     }
                 }
 
+                System.Diagnostics.Debug.WriteLine("TestConnectionAsync: 両方の方法で接続に失敗");
                 return false;
             }
             catch (OperationCanceledException)
             {
+                System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: タイムアウト（{_timeoutSeconds}秒）");
                 throw new RedmineApiException($"接続テストがタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (RedmineApiException)
+            {
+                // RedmineApiExceptionはそのまま再スロー
+                throw;
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: 予期しないエラー - {ex.GetType().Name}: {ex.Message}");
                 // 予期しないエラーの場合は再スロー
                 throw new RedmineApiException($"接続テストで予期しないエラー: {ex.Message}", ex);
             }

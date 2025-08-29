@@ -21,6 +21,7 @@ namespace RedmineClient.Models
         private static string _scheduleStartYearMonth = "";
         private static int? _selectedProjectId = null;
         private static int _defaultTrackerId = 1;
+        private static List<TrackerItem> _availableTrackers = new();
 
         public static string Theme
         {
@@ -72,6 +73,23 @@ namespace RedmineClient.Models
                 if (_isInitialized)
                 {
                     SetSetting("DefaultTrackerId", value.ToString());
+                }
+            }
+        }
+
+        /// <summary>
+        /// 利用可能なトラッカー一覧
+        /// </summary>
+        public static List<TrackerItem> AvailableTrackers
+        {
+            get => _availableTrackers;
+            set
+            {
+                _availableTrackers = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SaveTrackers(_availableTrackers);
                 }
             }
         }
@@ -319,10 +337,12 @@ namespace RedmineClient.Models
                     if (!string.IsNullOrEmpty(defaultTrackerId) && int.TryParse(defaultTrackerId, out int trackerId))
                     {
                         _defaultTrackerId = trackerId;
+                        System.Diagnostics.Debug.WriteLine($"AppConfig: DefaultTrackerId読み込み - 値: {trackerId}");
                     }
                     else
                     {
                         _defaultTrackerId = 1; // デフォルト値
+                        System.Diagnostics.Debug.WriteLine($"AppConfig: DefaultTrackerId読み込み - デフォルト値を使用: 1");
                     }
                 }
                 catch (Exception ex)
@@ -332,7 +352,7 @@ namespace RedmineClient.Models
                     SetDefaultValues();
                 }
                 
-                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定読み込み完了 - RedmineHost: '{RedmineHost}', ApiKey長: {ApiKey.Length}");
+                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定読み込み完了 - RedmineHost: '{RedmineHost}', ApiKey長: {ApiKey.Length}, DefaultTrackerId: {_defaultTrackerId}");
                 _isLoaded = true;
                 _isInitialized = true;
             }
@@ -355,6 +375,22 @@ namespace RedmineClient.Models
             _defaultTrackerId = 1;
             _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
             _selectedProjectId = null; // デフォルト値
+        }
+
+        /// <summary>
+        /// トラッカー一覧を保存
+        /// </summary>
+        public static void SaveTrackers(List<TrackerItem> trackers)
+        {
+            try
+            {
+                _availableTrackers = trackers ?? new List<TrackerItem>();
+                System.Diagnostics.Debug.WriteLine($"AppConfig: トラッカー一覧を保存 - {_availableTrackers.Count}件");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AppConfig: トラッカー一覧の保存でエラー: {ex.Message}");
+            }
         }
 
         /// <summary>

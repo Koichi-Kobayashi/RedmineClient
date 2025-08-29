@@ -51,7 +51,8 @@ namespace RedmineClient
                 services.AddSingleton<WindowsProviderService>();
 
                 // Main window with navigation
-                services.AddSingleton<INavigationWindow, MainWindow>();
+                services.AddSingleton<MainWindow>();
+                services.AddSingleton<INavigationWindow>(provider => provider.GetRequiredService<MainWindow>());
                 services.AddSingleton<MainWindowViewModel>();
 
                 // ページとViewModelをTransientに変更（メモリ効率向上）
@@ -59,6 +60,8 @@ namespace RedmineClient
                 services.AddTransient<SettingsViewModel>();
                 services.AddTransient<DashboardPage>();
                 services.AddTransient<DashboardViewModel>();
+                services.AddTransient<ComboBoxTestPage>();
+                services.AddTransient<ComboBoxTestViewModel>();
 
                 services.AddTransient<IWindowFactory, WindowFactory>();
 
@@ -86,8 +89,21 @@ namespace RedmineClient
         /// <summary>
         /// Occurs when the application is loading.
         /// </summary>
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
+            // SSL証明書の検証を無効化（開発環境や自己署名証明書を使用している場合）
+            // 注意: 本番環境では適切な証明書を使用してください
+            try
+            {
+                System.Net.ServicePointManager.ServerCertificateValidationCallback += 
+                    (sender, cert, chain, sslPolicyErrors) => true;
+                System.Diagnostics.Debug.WriteLine("App.OnStartup: SSL証明書検証を無効化しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"App.OnStartup: SSL証明書検証の無効化に失敗: {ex.Message}");
+            }
+
             try
             {
                 AppConfig.Load();
@@ -101,8 +117,96 @@ namespace RedmineClient
 
             try
             {
+                // アプリケーション起動時の自動Redmine接続処理（メインウィンドウ表示前に実行）
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("App.OnStartup: 自動Redmine接続処理を開始");
+                    
+                    // 設定が完了している場合のみ自動接続を実行
+                    if (!string.IsNullOrEmpty(AppConfig.RedmineHost) && !string.IsNullOrEmpty(AppConfig.ApiKey))
+                    {
+                        // 同期的に自動接続を実行（メインウィンドウ表示前に完了）
+                        try
+                        {
+                            using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                            {
+                                // 接続テスト
+                                var isConnected = await redmineService.TestConnectionAsync();
+                                if (isConnected)
+                                {
+                                    System.Diagnostics.Debug.WriteLine("App.OnStartup: 自動Redmine接続成功");
+                                    
+                                    // トラッカー一覧を取得してデフォルト値を設定
+                                    var trackers = await redmineService.GetTrackersAsync();
+                                    if (trackers != null && trackers.Count > 0)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"App.OnStartup: トラッカー一覧取得成功 - {trackers.Count}件");
+                                        
+                                        // 現在のデフォルトトラッカーIDをログ出力
+                                        System.Diagnostics.Debug.WriteLine($"App.OnStartup: 現在のデフォルトトラッカーID: {AppConfig.DefaultTrackerId}");
+                                        
+                                        // 設定されたデフォルトトラッカーIDが有効かチェック
+                                        var defaultTracker = trackers.FirstOrDefault(t => t.Id == AppConfig.DefaultTrackerId);
+                                        if (defaultTracker != null)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"App.OnStartup: デフォルトトラッカーID {AppConfig.DefaultTrackerId} は有効です - {defaultTracker.Name}");
+                                        }
+                                        else
+                                        {
+                                            // デフォルトトラッカーIDが無効な場合は、最初のトラッカーを設定
+                                            var newDefaultTrackerId = trackers[0].Id;
+                                            AppConfig.DefaultTrackerId = newDefaultTrackerId;
+                                            System.Diagnostics.Debug.WriteLine($"App.OnStartup: デフォルトトラッカーIDを{newDefaultTrackerId}に更新 ({trackers[0].Name})");
+                                        }
+                                        
+                                        // 利用可能なトラッカー一覧をログ出力
+                                        System.Diagnostics.Debug.WriteLine("App.OnStartup: 利用可能なトラッカー一覧:");
+                                        foreach (var tracker in trackers)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"  - ID: {tracker.Id}, 名前: {tracker.Name}");
+                                        }
+                                        
+                                        // トラッカー一覧をAppConfigに保存（SettingsViewModelで使用）
+                                        try
+                                        {
+                                            // TrackerをTrackerItemに変換
+                                            var trackerItems = trackers.Select(t => new TrackerItem(t)).ToList();
+                                            AppConfig.SaveTrackers(trackerItems);
+                                            System.Diagnostics.Debug.WriteLine("App.OnStartup: トラッカー一覧をAppConfigに保存完了");
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"App.OnStartup: トラッカー一覧の保存でエラー: {ex.Message}");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine("App.OnStartup: 自動Redmine接続失敗");
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"App.OnStartup: 自動Redmine接続処理でエラー: {ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("App.OnStartup: Redmine設定が不完全なため、自動接続をスキップ");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"App.OnStartup: 自動Redmine接続処理の初期化でエラー: {ex.Message}");
+                }
+                
                 // ホストを開始
                 _host.Start();
+                // メインウィンドウを表示
+                var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+                mainWindow.ShowWindow();
+                System.Diagnostics.Debug.WriteLine("App.OnStartup: メインウィンドウを表示しました");
             }
             catch (Exception ex)
             {

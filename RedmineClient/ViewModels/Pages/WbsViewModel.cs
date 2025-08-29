@@ -439,9 +439,51 @@ namespace RedmineClient.ViewModels.Pages
             {
                 IsRedmineConnected = false;
                 ConnectionStatus = "接続エラー";
-                ErrorMessage = $"接続エラー: {ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"TestRedmineConnection: エラー - {ex.Message}");
+                
+                // より詳細なエラー情報を表示
+                var errorDetails = GetDetailedErrorMessage(ex);
+                ErrorMessage = $"接続エラー: {errorDetails}";
+                
+                System.Diagnostics.Debug.WriteLine($"TestRedmineConnection: エラー - {ex.GetType().Name}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"TestRedmineConnection: スタックトレース - {ex.StackTrace}");
             }
+        }
+
+        /// <summary>
+        /// 例外の詳細なエラーメッセージを取得
+        /// </summary>
+        /// <param name="ex">例外</param>
+        /// <returns>詳細なエラーメッセージ</returns>
+        private string GetDetailedErrorMessage(Exception ex)
+        {
+            if (ex == null) return "不明なエラー";
+
+            var errorMessage = ex.Message;
+
+            // 内部例外がある場合は追加情報を表示
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" (内部エラー: {ex.InnerException.Message})";
+            }
+
+            // 特定の例外タイプに応じて詳細情報を追加
+            switch (ex)
+            {
+                case System.Security.Authentication.AuthenticationException:
+                    errorMessage += " - SSL/TLS認証エラー。証明書の問題やHTTP/HTTPSの設定を確認してください。";
+                    break;
+                case System.Net.Http.HttpRequestException:
+                    errorMessage += " - HTTPリクエストエラー。ネットワーク接続やURLの設定を確認してください。";
+                    break;
+                case System.Net.WebException:
+                    errorMessage += " - Web接続エラー。ネットワーク設定やファイアウォールを確認してください。";
+                    break;
+                case Redmine.Net.Api.Exceptions.RedmineException:
+                    errorMessage += " - Redmine APIエラー。APIキーや権限を確認してください。";
+                    break;
+            }
+
+            return errorMessage;
         }
 
         private void LoadSampleData()

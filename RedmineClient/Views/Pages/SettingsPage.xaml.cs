@@ -23,5 +23,13 @@ namespace RedmineClient.Views.Pages
             ViewModel.RedmineHost = AppConfig.RedmineHost;
             ViewModel.ApiKey = AppConfig.ApiKey;
         }
+
+        private void ComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (e.AddedItems.Count > 0 && e.AddedItems[0] is TrackerItem selectedTracker)
+            {
+                ViewModel.OnTrackerSelectedCommand.Execute(selectedTracker);
+            }
+        }
     }
 }
