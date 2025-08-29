@@ -1,9 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Data;
-using RedmineClient.Models;
-using RedmineClient.ViewModels.Pages;
 using RedmineClient.Helpers;
+using RedmineClient.ViewModels.Pages;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.Views.Pages
@@ -35,6 +33,18 @@ namespace RedmineClient.Views.Pages
 
             // プロジェクト選択変更時のイベントを登録
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+
+            // キーボードショートカットを設定
+            this.KeyDown += WbsPage_KeyDown;
+            
+            // DataGridにフォーカスを設定してキーボードイベントを受け取れるようにする
+            this.Loaded += (s, e) => 
+            {
+                WbsDataGrid.Focus();
+                // DataGridのキーボードイベントを確実に設定
+                WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
+                WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
+            };
         }
 
         /// <summary>
@@ -53,6 +63,94 @@ namespace RedmineClient.Views.Pages
             }
         }
 #pragma warning restore CS1998
+
+        /// <summary>
+        /// キーボードショートカットを処理する
+        /// </summary>
+        private void WbsPage_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Delete:
+                    // Deleteキーで選択されたアイテムを削除
+                    if (ViewModel.SelectedItem != null)
+                    {
+                        ViewModel.DeleteSelectedItemCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.F5:
+                    // F5キーでデータを更新
+                    if (ViewModel.RefreshRedmineDataCommand.CanExecute(null))
+                    {
+                        ViewModel.RefreshRedmineDataCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// DataGridのキーボードショートカットを処理する
+        /// </summary>
+        private void WbsDataGrid_KeyDown(object sender, KeyEventArgs e)
+        {
+            // デバッグ用：キーイベントが発生しているかを確認
+            System.Diagnostics.Debug.WriteLine($"DataGrid KeyDown: {e.Key}");
+            
+            switch (e.Key)
+            {
+                case Key.Delete:
+                    // Deleteキーで選択されたアイテムを削除
+                    System.Diagnostics.Debug.WriteLine("Delete key pressed in DataGrid");
+                    if (ViewModel.SelectedItem != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"SelectedItem: {ViewModel.SelectedItem.Title}");
+                        ViewModel.DeleteSelectedItemCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("No item selected");
+                    }
+                    break;
+                case Key.Enter:
+                    // Enterキーで選択されたアイテムを編集
+                    if (ViewModel.SelectedItem != null)
+                    {
+                        ViewModel.EditItemCommand.Execute(ViewModel.SelectedItem);
+                        e.Handled = true;
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// DataGridのPreviewKeyDownイベントを処理する（より確実にキーイベントをキャッチ）
+        /// </summary>
+        private void WbsDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // デバッグ用：PreviewKeyDownイベントが発生しているかを確認
+            System.Diagnostics.Debug.WriteLine($"DataGrid PreviewKeyDown: {e.Key}");
+            
+            switch (e.Key)
+            {
+                case Key.Delete:
+                    // Deleteキーで選択されたアイテムを削除
+                    System.Diagnostics.Debug.WriteLine("Delete key pressed in DataGrid PreviewKeyDown");
+                    if (ViewModel.SelectedItem != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"SelectedItem: {ViewModel.SelectedItem.Title}");
+                        ViewModel.DeleteSelectedItemCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("No item selected in PreviewKeyDown");
+                    }
+                    break;
+            }
+        }
 
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
         {
@@ -434,7 +532,7 @@ namespace RedmineClient.Views.Pages
 
                     var dateColumn = new DataGridTemplateColumn
                     {
-                        Width = 30, // 幅を少し広げて3行表示に対応
+                        Width = 40, // 幅を少し広げて3行表示に対応
                         Header = CreateThreeRowHeader(currentDate, isMonthStart),
                         IsReadOnly = true,
                         HeaderStyle = CreateDateHeaderStyle()

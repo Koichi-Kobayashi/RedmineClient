@@ -63,10 +63,19 @@
                     IsEnabled="{Binding ViewModel.CanAddChild}" />
                 <ui:Button
                     Margin="0,0,8,0" Appearance="Danger"
-                    Command="{Binding ViewModel.DeleteItemCommand}"
-                    CommandParameter="{Binding ViewModel.SelectedItem}"
-                    Content="削除" Icon="Delete"
-                    IsEnabled="{Binding ViewModel.CanAddChild}" />
+                    Command="{Binding ViewModel.DeleteSelectedItemCommand}"
+                    Content="選択項目削除" Icon="Delete"
+                    IsEnabled="{Binding ViewModel.SelectedItem, Converter={x:Static helpers:BooleanInverseConverter.Instance}}">
+                    <ui:Button.ToolTip>
+                        <ToolTip>
+                            <StackPanel>
+                                <TextBlock Text="選択されたタスクを削除します" FontWeight="Bold" />
+                                <TextBlock Text="・Deleteキーでも削除可能" />
+                                <TextBlock Text="・子タスクがある場合は確認ダイアログが表示されます" />
+                            </StackPanel>
+                        </ToolTip>
+                    </ui:Button.ToolTip>
+                </ui:Button>
 
                 <!--  設定オプション  -->
                 <StackPanel Margin="0,0,16,0" VerticalAlignment="Center" Orientation="Horizontal">
@@ -238,6 +247,7 @@
                 BorderThickness="1"
                 CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
                                  CanUserSortColumns="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All"
+                                 Focusable="True" TabIndex="0"
                 HeadersVisibility="Column"
                 ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
                 RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
@@ -256,7 +266,9 @@
                 VirtualizingPanel.ScrollUnit="Pixel"
                 VirtualizingPanel.CacheLength="3,3"
                 VirtualizingPanel.CacheLengthUnit="Page"
-                Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BooleanInverseConverter.Instance}}">
+                Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BooleanInverseConverter.Instance}}"
+                KeyDown="WbsDataGrid_KeyDown"
+                PreviewKeyDown="WbsDataGrid_PreviewKeyDown">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
@@ -265,6 +277,7 @@
                             <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
                             <Setter Property="BorderThickness" Value="0,0,1,1" />
                             <Setter Property="Padding" Value="4,2" />
+                            <Setter Property="Focusable" Value="True" />
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="DataGridCell">
@@ -306,12 +319,14 @@
                             <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
                             <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
                             <Setter Property="BorderThickness" Value="0,0,0,1" />
+                            <Setter Property="Focusable" Value="True" />
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBrush}" />
+                                    <Setter Property="Focusable" Value="True" />
                                 </Trigger>
                             </Style.Triggers>
                         </Style>

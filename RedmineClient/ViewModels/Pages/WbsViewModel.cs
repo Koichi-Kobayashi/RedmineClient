@@ -364,6 +364,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand AddRootItemCommand { get; }
         public ICommand AddChildItemCommand { get; }
         public ICommand DeleteItemCommand { get; }
+        public ICommand DeleteSelectedItemCommand { get; }
         public ICommand EditItemCommand { get; }
         public ICommand ExpandAllCommand { get; }
         public ICommand CollapseAllCommand { get; }
@@ -395,6 +396,7 @@ namespace RedmineClient.ViewModels.Pages
             AddRootItemCommand = new RelayCommand(AddRootItem);
             AddChildItemCommand = new RelayCommand<WbsItem>(AddChildItem);
             DeleteItemCommand = new RelayCommand<WbsItem>(DeleteItem);
+            DeleteSelectedItemCommand = new RelayCommand(DeleteSelectedItem);
             EditItemCommand = new RelayCommand<WbsItem>(EditItem);
             ExpandAllCommand = new RelayCommand(ExpandAll);
             CollapseAllCommand = new RelayCommand(CollapseAll);
@@ -843,7 +845,33 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     SelectedItem = null;
                 }
+                
+                // 新しく追加されたアイテムの場合、NewWbsItemsからも削除
+                if (NewWbsItems.Contains(item))
+                {
+                    NewWbsItems.Remove(item);
+                    CanRegisterItems = NewWbsItems.Count > 0;
+                    OnPropertyChanged(nameof(NewItemsCount));
+                }
+                
+                // UIを更新
+                UpdateFlattenedListManually();
             }
+        }
+
+        /// <summary>
+        /// 選択されたアイテムを削除する
+        /// </summary>
+        private void DeleteSelectedItem()
+        {
+            if (SelectedItem == null)
+            {
+                System.Windows.MessageBox.Show("削除するアイテムが選択されていません。", "削除", 
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return;
+            }
+
+            DeleteItem(SelectedItem);
         }
 
         private void EditItem(WbsItem? item)
