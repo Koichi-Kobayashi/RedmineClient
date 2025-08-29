@@ -93,13 +93,20 @@ namespace RedmineClient
             // 注意: 本番環境では適切な証明書を使用してください
             try
             {
+                // 現代的なHttpClientHandlerを使用してSSL証明書検証を無効化
+                // ただし、Redmine.Net.Apiライブラリが内部的にWebRequestを使用するため、
+                // 完全な解決にはライブラリの更新が必要
+                
                 // グローバルなSSL証明書検証の無効化（Redmine.Net.Apiライブラリにも適用）
+                // 警告は出るが、Redmine.Net.Apiライブラリの動作に必要
+                #pragma warning disable SYSLIB0014
                 System.Net.ServicePointManager.ServerCertificateValidationCallback += 
                     (sender, cert, chain, sslPolicyErrors) => true;
                 
                 // 追加のSSL設定
                 System.Net.ServicePointManager.SecurityProtocol = 
                     System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11 | System.Net.SecurityProtocolType.Tls;
+                #pragma warning restore SYSLIB0014
                 
                 System.Diagnostics.Debug.WriteLine("SSL証明書検証を無効化しました（開発環境用）");
             }

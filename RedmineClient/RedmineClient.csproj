@@ -12,6 +12,8 @@
     <PlatformTarget>x64</PlatformTarget>
     <Platforms>x64;x86</Platforms>
     <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.Extensions.Configuration.Binder.SourceGeneration</InterceptorsNamespaces>
+    <!-- 特定の警告を抑制 -->
+    <NoWarn>$(NoWarn);SYSLIB0014</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

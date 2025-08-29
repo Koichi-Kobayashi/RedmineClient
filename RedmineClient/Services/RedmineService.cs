@@ -28,11 +28,14 @@ namespace RedmineClient.Services
             // SSL証明書の検証を無効化（RedmineServiceレベルでも設定）
             try
             {
+                // 警告は出るが、Redmine.Net.Apiライブラリの動作に必要
+                #pragma warning disable SYSLIB0014
                 System.Net.ServicePointManager.ServerCertificateValidationCallback += 
                     (sender, cert, chain, sslPolicyErrors) => true;
                 
                 System.Net.ServicePointManager.SecurityProtocol = 
                     System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls11 | System.Net.SecurityProtocolType.Tls;
+                #pragma warning restore SYSLIB0014
                 
                 System.Diagnostics.Debug.WriteLine($"RedmineService: SSL証明書検証を無効化しました - {normalizedUrl}");
             }
