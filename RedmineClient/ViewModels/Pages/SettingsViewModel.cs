@@ -26,38 +26,21 @@ namespace RedmineClient.ViewModels.Pages
         private ObservableCollection<TrackerItem> _availableTrackers = new();
 
         private TrackerItem? _selectedTracker;
-        public TrackerItem? SelectedTracker
+                public TrackerItem? SelectedTracker
         {
             get => _selectedTracker;
             set
             {
-                System.Diagnostics.Debug.WriteLine($"SelectedTrackerプロパティset呼び出し: {_selectedTracker?.Name ?? "null"} -> {value?.Name ?? "null"}");
-                
                 // 参照比較ではなく、IDベースの比較を使用
                 var currentId = _selectedTracker?.Id ?? 0;
                 var newId = value?.Id ?? 0;
                 var isDifferent = currentId != newId;
-                
-                System.Diagnostics.Debug.WriteLine($"ID比較: {currentId} != {newId} = {isDifferent}");
-                
+
                 if (isDifferent)
                 {
-                    System.Diagnostics.Debug.WriteLine($"IDが異なるため更新を実行");
                     _selectedTracker = value;
-                    System.Diagnostics.Debug.WriteLine($"_selectedTrackerフィールド更新完了: {_selectedTracker?.Name ?? "null"}");
-                    
                     OnPropertyChanged(nameof(SelectedTracker));
-                    System.Diagnostics.Debug.WriteLine($"OnPropertyChanged呼び出し完了");
-                    
-                    // UI更新のデバッグ情報
-                    System.Diagnostics.Debug.WriteLine($"UI更新完了 - SelectedTracker: {_selectedTracker?.Name ?? "null"} (ID: {_selectedTracker?.Id ?? 0})");
                 }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"IDが同じため更新をスキップ");
-                }
-                
-                System.Diagnostics.Debug.WriteLine($"SelectedTrackerプロパティset完了: {_selectedTracker?.Name ?? "null"}");
             }
         }
 
@@ -65,22 +48,19 @@ namespace RedmineClient.ViewModels.Pages
 
         public async Task OnNavigatedToAsync()
         {
-            System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnNavigatedToAsync開始");
             try
             {
                 await InitializeViewModel();
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnNavigatedToAsync完了");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnNavigatedToAsyncでエラー - {ex.GetType().Name}: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnNavigatedToAsyncスタックトレース: {ex.StackTrace}");
+                // エラーが発生した場合はフォールバックトラッカーを設定
+                await SetFallbackTrackers();
             }
         }
 
         public virtual async Task OnNavigatedTo()
         {
-            System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnNavigatedTo開始");
             try
             {
                 // OnNavigatedToAsyncで既に初期化が完了している可能性があるため、重複実行を避ける
@@ -88,25 +68,20 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     await InitializeViewModel();
                 }
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnNavigatedTo完了");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnNavigatedToでエラー - {ex.GetType().Name}: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnNavigatedToスタックトレース: {ex.StackTrace}");
+                // エラーが発生した場合はフォールバックトラッカーを設定
+                await SetFallbackTrackers();
             }
         }
 
         private async Task InitializeViewModel()
         {
-            System.Diagnostics.Debug.WriteLine("SettingsViewModel: InitializeViewModel開始");
-            
             try
             {
                 // 保存された設定を読み込み
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: AppConfig.Load()呼び出し前");
                 AppConfig.Load();
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: AppConfig.Load()呼び出し完了");
                 
                 RedmineHost = AppConfig.RedmineHost;
                 ApiKey = AppConfig.ApiKey;
@@ -114,31 +89,22 @@ namespace RedmineClient.ViewModels.Pages
                 // 保存されたテーマ設定を読み込む
                 CurrentTheme = AppConfig.ApplicationTheme;
                 
-                // AppConfigの状態を確認
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: AppConfig状態確認 - RedmineHost: '{RedmineHost}', ApiKey長: {ApiKey.Length}, AvailableTrackers数: {AppConfig.AvailableTrackers.Count}");
-                
                 // アプリケーション起動時の自動トラッカー一覧取得
                 if (!string.IsNullOrEmpty(RedmineHost) && !string.IsNullOrEmpty(ApiKey))
                 {
-                    System.Diagnostics.Debug.WriteLine("SettingsViewModel: 自動トラッカー一覧取得を開始");
-                    
                     // まず、AppConfigから保存されたトラッカー一覧を確認
                     if (AppConfig.AvailableTrackers.Count > 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"SettingsViewModel: AppConfigから保存されたトラッカー一覧を読み込み - {AppConfig.AvailableTrackers.Count}件");
                         await LoadTrackersFromAppConfig();
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("SettingsViewModel: AppConfigに保存されたトラッカー一覧がないため、Redmineから取得");
                         try
                         {
                             await LoadTrackersAsync();
-                            System.Diagnostics.Debug.WriteLine("SettingsViewModel: 自動トラッカー一覧取得完了");
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            System.Diagnostics.Debug.WriteLine($"SettingsViewModel: 自動トラッカー一覧取得でエラー: {ex.Message}");
                             // エラーが発生した場合はフォールバックトラッカーを設定
                             await SetFallbackTrackers();
                         }
@@ -146,21 +112,14 @@ namespace RedmineClient.ViewModels.Pages
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine("SettingsViewModel: Redmine設定が不完全なため、自動トラッカー一覧取得をスキップ");
                     // フォールバックトラッカーを設定
                     await SetFallbackTrackers();
                 }
                 
                 AppVersion = $"RedmineClient - {GetAssemblyVersion()}";
-                
-                // 最終的な選択状態を確認
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: InitializeViewModel完了 - 最終選択状態: {SelectedTracker?.Name ?? "null"} (ID: {SelectedTracker?.Id ?? 0})");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: InitializeViewModelでエラー - {ex.GetType().Name}: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: スタックトレース: {ex.StackTrace}");
-                
                 // エラーが発生した場合はフォールバックトラッカーを設定
                 await SetFallbackTrackers();
             }
@@ -424,9 +383,6 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnSave開始");
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnSave呼び出し元スタックトレース: {Environment.StackTrace}");
-                
                 AppConfig.RedmineHost = RedmineHost;
                 AppConfig.ApiKey = ApiKey;
                 
@@ -434,20 +390,16 @@ namespace RedmineClient.ViewModels.Pages
                 if (SelectedTracker != null)
                 {
                     AppConfig.DefaultTrackerId = SelectedTracker.Id;
-                    System.Diagnostics.Debug.WriteLine($"SettingsViewModel: トラッカー設定を設定: {SelectedTracker.Name} (ID: {SelectedTracker.Id})");
                 }
                 
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: 設定を保存中...");
                 AppConfig.Save();
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: 設定保存完了");
 
                 WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = "設定を保存しました。" });
-                System.Diagnostics.Debug.WriteLine("SettingsViewModel: OnSave完了");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: OnSaveでエラー - {ex.GetType().Name}: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"SettingsViewModel: スタックトレース: {ex.StackTrace}");
+                // エラーメッセージをユーザーに表示
+                WeakReferenceMessenger.Default.Send(new SnackbarMessage { Message = $"設定の保存中にエラーが発生しました: {ex.Message}" });
             }
         }
 
@@ -456,7 +408,6 @@ namespace RedmineClient.ViewModels.Pages
             // 無限ループを防ぐ
             if (_isUpdatingTracker)
             {
-                System.Diagnostics.Debug.WriteLine($"OnTrackerSelected: 更新中のためスキップ - {selectedTracker?.Name ?? "null"}");
                 return;
             }
 
@@ -466,57 +417,44 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     _isUpdatingTracker = true;
                     
-                    System.Diagnostics.Debug.WriteLine($"OnTrackerSelected開始: {selectedTracker.Name} (ID: {selectedTracker.Id})");
-                    System.Diagnostics.Debug.WriteLine($"更新前のSelectedTracker: {SelectedTracker?.Name ?? "null"} (ID: {SelectedTracker?.Id ?? 0})");
-                    
                     // 同じトラッカーが選択されている場合は何もしない
                     if (SelectedTracker?.Id == selectedTracker.Id)
                     {
-                        System.Diagnostics.Debug.WriteLine($"同じトラッカーが選択されているためスキップ: {selectedTracker.Name}");
                         return;
                     }
                     
                     // AvailableTrackersから同じIDのTrackerオブジェクトを取得（参照問題を回避）
                     var existingTracker = AvailableTrackers.FirstOrDefault(t => t.Id == selectedTracker.Id);
-                                    if (existingTracker != null)
-                {
-                    // AvailableTrackersから同じIDのTrackerオブジェクトを取得（参照問題を回避）
-                    var trackerFromCollection = AvailableTrackers.FirstOrDefault(t => t.Id == selectedTracker.Id);
-                    if (trackerFromCollection != null)
+                    if (existingTracker != null)
                     {
-                        SelectedTracker = trackerFromCollection;
-                        System.Diagnostics.Debug.WriteLine($"コレクションからTrackerオブジェクトを取得: {trackerFromCollection.Name} (ID: {trackerFromCollection.Id})");
+                        // AvailableTrackersから同じIDのTrackerオブジェクトを取得（参照問題を回避）
+                        var trackerFromCollection = AvailableTrackers.FirstOrDefault(t => t.Id == selectedTracker.Id);
+                        if (trackerFromCollection != null)
+                        {
+                            SelectedTracker = trackerFromCollection;
+                        }
+                        else
+                        {
+                            SelectedTracker = existingTracker;
+                        }
                     }
                     else
                     {
-                        SelectedTracker = existingTracker;
-                        System.Diagnostics.Debug.WriteLine($"既存のTrackerオブジェクトを使用: {existingTracker.Name} (ID: {existingTracker.Id})");
+                        // 見つからない場合は元のオブジェクトを使用
+                        SelectedTracker = selectedTracker;
                     }
-                }
-                else
-                {
-                    // 見つからない場合は元のオブジェクトを使用
-                    SelectedTracker = selectedTracker;
-                    System.Diagnostics.Debug.WriteLine($"元のTrackerオブジェクトを使用: {selectedTracker.Name} (ID: {selectedTracker.Id})");
-                }
-                    
-                    System.Diagnostics.Debug.WriteLine($"更新後のSelectedTracker: {SelectedTracker?.Name ?? "null"} (ID: {SelectedTracker?.Id ?? 0})");
                     
                     // 設定を保存
                     AppConfig.DefaultTrackerId = selectedTracker.Id;
                     AppConfig.Save();
                     
-                    System.Diagnostics.Debug.WriteLine($"トラッカーを選択しました: {selectedTracker.Name} (ID: {selectedTracker.Id})");
-                    
-                                    // 強制的にUIを更新（AvailableTrackersコレクションをリフレッシュ）
-                var currentTrackers = AvailableTrackers.ToList();
-                AvailableTrackers.Clear();
-                foreach (var tracker in currentTrackers)
-                {
-                    AvailableTrackers.Add(tracker);
-                }
-                
-                System.Diagnostics.Debug.WriteLine($"強制UI更新完了 - AvailableTrackers数: {AvailableTrackers.Count}, SelectedTracker: {SelectedTracker?.Name ?? "null"}");
+                    // 強制的にUIを更新（AvailableTrackersコレクションをリフレッシュ）
+                    var currentTrackers = AvailableTrackers.ToList();
+                    AvailableTrackers.Clear();
+                    foreach (var tracker in currentTrackers)
+                    {
+                        AvailableTrackers.Add(tracker);
+                    }
                 }
                 finally
                 {
