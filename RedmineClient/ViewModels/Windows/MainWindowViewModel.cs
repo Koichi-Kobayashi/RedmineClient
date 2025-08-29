@@ -31,12 +31,7 @@ namespace RedmineClient.ViewModels.Windows
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Diagram24 },
                 TargetPageType = typeof(Views.Pages.WbsPage)
             },
-            new NavigationViewItem()
-            {
-                Content = "コンボボックステスト",
-                Icon = new SymbolIcon { Symbol = SymbolRegular.Beaker24 },
-                TargetPageType = typeof(Views.Pages.ComboBoxTestPage)
-            }
+
         };
 
         [ObservableProperty]

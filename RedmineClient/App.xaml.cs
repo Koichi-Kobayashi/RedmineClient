@@ -60,8 +60,6 @@ namespace RedmineClient
                 services.AddTransient<SettingsViewModel>();
                 services.AddTransient<DashboardPage>();
                 services.AddTransient<DashboardViewModel>();
-                services.AddTransient<ComboBoxTestPage>();
-                services.AddTransient<ComboBoxTestViewModel>();
 
                 services.AddTransient<IWindowFactory, WindowFactory>();
 
