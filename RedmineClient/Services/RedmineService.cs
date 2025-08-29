@@ -9,7 +9,6 @@ namespace RedmineClient.Services
     {
         private readonly RedmineManager _redmineManager;
         private readonly int _timeoutSeconds = 30; // 30秒のタイムアウト
-        private bool nullableIntValue;
 
         public RedmineService(string baseUrl, string apiKey)
         {
@@ -320,8 +319,14 @@ namespace RedmineClient.Services
             }
             
             // 構築結果の確認ログ
-            var rootIssues = issues.Where(i => !GetParentIdFromIssue(i.Issue).HasValue || GetParentIdFromIssue(i.Issue).Value == 0).ToList();
-            var childIssues = issues.Where(i => GetParentIdFromIssue(i.Issue).HasValue && GetParentIdFromIssue(i.Issue).Value > 0).ToList();
+            var rootIssues = issues.Where(i => {
+                var parentId = GetParentIdFromIssue(i.Issue);
+                return !parentId.HasValue || parentId.Value == 0;
+            }).ToList();
+            var childIssues = issues.Where(i => {
+                var parentId = GetParentIdFromIssue(i.Issue);
+                return parentId.HasValue && parentId.Value > 0;
+            }).ToList();
             
             System.Diagnostics.Debug.WriteLine($"BuildHierarchy: 構築完了 - ルート: {rootIssues.Count}件, 子: {childIssues.Count}件");
         }

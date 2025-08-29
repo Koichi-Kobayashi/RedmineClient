@@ -8,7 +8,6 @@ namespace RedmineClient.Models
     /// </summary>
     public class HierarchicalIssue
     {
-        private bool nullableIntValue;
 
         /// <summary>
         /// 元のIssueオブジェクト

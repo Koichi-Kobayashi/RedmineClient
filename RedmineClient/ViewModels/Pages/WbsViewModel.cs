@@ -1686,7 +1686,7 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// チケット階層の整合性をチェック
         /// </summary>
-        private void ValidateIssueHierarchy(HierarchicalIssue issue, HashSet<int> visitedIds = null)
+        private void ValidateIssueHierarchy(HierarchicalIssue issue, HashSet<int>? visitedIds = null)
         {
             if (visitedIds == null)
                 visitedIds = new HashSet<int>();
@@ -1720,7 +1720,7 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// RedmineチケットをWBSアイテムに変換（内部実装、重複チェック付き）
         /// </summary>
-        private WbsItem ConvertRedmineIssueToWbsItemInternal(HierarchicalIssue issue, Dictionary<int, WbsItem> convertedItems, HashSet<int> parentChain = null)
+        private WbsItem? ConvertRedmineIssueToWbsItemInternal(HierarchicalIssue issue, Dictionary<int, WbsItem> convertedItems, HashSet<int>? parentChain = null)
         {
             // 循環参照を防ぐための親チェーン
             if (parentChain == null)
