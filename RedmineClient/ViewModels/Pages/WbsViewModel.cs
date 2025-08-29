@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Redmine.Net.Api.Types;
-using RedmineClient.Models;
 using RedmineClient.Services;
 using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Windows;
@@ -11,12 +10,13 @@ namespace RedmineClient.ViewModels.Pages
 {
     public partial class WbsViewModel : ObservableObject, INavigationAware
     {
-
-
-            [ObservableProperty]
-    private ObservableCollection<WbsItem> _wbsItems = new();
+        /// <summary>
+        /// WBSアイテムのリスト
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<WbsItem> _wbsItems = new();
     
-            /// <summary>
+        /// <summary>
         /// 階層構造を平坦化したアイテムリスト（DataGrid表示用）
         /// </summary>
         [ObservableProperty]
@@ -27,6 +27,42 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         [ObservableProperty]
         private ObservableCollection<ScheduleItem> _scheduleItems = new();
+
+        /// <summary>
+        /// スケジュール表の描画中かどうか
+        /// </summary>
+        [ObservableProperty]
+        private bool _isScheduleLoading = false;
+
+        /// <summary>
+        /// スケジュール表の描画進捗（0-100）
+        /// </summary>
+        [ObservableProperty]
+        private double _scheduleProgress = 0;
+
+        /// <summary>
+        /// スケジュール表の描画進捗メッセージ
+        /// </summary>
+        [ObservableProperty]
+        private string _scheduleProgressMessage = "スケジュール表を描画中...";
+
+        /// <summary>
+        /// WBSデータの読み込み中かどうか
+        /// </summary>
+        [ObservableProperty]
+        private bool _isWbsLoading = false;
+
+        /// <summary>
+        /// WBSデータの読み込み進捗（0-100）
+        /// </summary>
+        [ObservableProperty]
+        private double _wbsProgress = 0;
+
+        /// <summary>
+        /// WBSデータの読み込み進捗メッセージ
+        /// </summary>
+        [ObservableProperty]
+        private string _wbsProgressMessage = "WBSデータを読み込み中...";
 
         [ObservableProperty]
         private WbsItem? _selectedItem;
@@ -182,7 +218,7 @@ namespace RedmineClient.ViewModels.Pages
                                         // 平坦化リストを更新（チケットがある場合のみ）
                                         if (wbsItems.Count > 0)
                                         {
-                                            UpdateFlattenedList();
+                                            _ = Task.Run(async () => await UpdateFlattenedList());
                                         }
                                         else
                                         {
@@ -240,7 +276,7 @@ namespace RedmineClient.ViewModels.Pages
                 AppConfig.SelectedProjectId = null;
                 AppConfig.Save();
                 WbsItems.Clear();
-                UpdateFlattenedList();
+                                         _ = Task.Run(async () => await UpdateFlattenedList());
                 IsRedmineDataLoaded = false;
                 ErrorMessage = string.Empty;
             }
@@ -406,11 +442,14 @@ namespace RedmineClient.ViewModels.Pages
 
         private async void InitializeViewModel()
         {
-            // 平坦化リストを初期化
-            UpdateFlattenedList();
+            // サンプルデータを読み込み（開発・テスト用）
+            await LoadSampleDataAsync();
+            
+            // 平坦化リストを初期化（UIスレッドで実行）
+            await UpdateFlattenedList();
             
             // スケジュール表を初期化
-            InitializeScheduleItems();
+            await InitializeScheduleItems();
             
             // Redmine接続状態を確認してプロジェクトを取得
             await TestRedmineConnection();
@@ -533,22 +572,31 @@ namespace RedmineClient.ViewModels.Pages
             return errorMessage;
         }
 
-        private void LoadSampleData()
+        private async Task LoadSampleDataAsync()
         {
-            // UI更新を一括で行うため、一時的にコレクションを作成
-            var tempItems = new List<WbsItem>();
-            
-            var project = new WbsItem
+            try
             {
-                Id = "PROJ-001",
-                Title = "Redmineクライアントアプリ開発",
-                Description = "WPFを使用したRedmineクライアントアプリケーションの開発",
-                StartDate = DateTime.Today,
-                EndDate = DateTime.Today.AddMonths(3),
-                Status = "進行中",
-                Priority = "高",
-                Assignee = "開発チーム"
-            };
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = true;
+                    WbsProgress = 0;
+                    WbsProgressMessage = "サンプルデータを読み込み中...";
+                });
+
+                // UI更新を一括で行うため、一時的にコレクションを作成
+                var tempItems = new List<WbsItem>();
+                
+                var project = new WbsItem
+                {
+                    Id = "PROJ-001",
+                    Title = "Redmineクライアントアプリ開発",
+                    Description = "WPFを使用したRedmineクライアントアプリケーションの開発",
+                    StartDate = DateTime.Today,
+                    EndDate = DateTime.Today.AddMonths(3),
+                    Status = "進行中",
+                    Priority = "高",
+                    Assignee = "開発チーム"
+                };
 
             var planning = new WbsItem
             {
@@ -666,8 +714,42 @@ namespace RedmineClient.ViewModels.Pages
             project.AddChild(testing);
             project.AddChild(deployment);
 
+            // 進捗を更新
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WbsProgress = 50;
+                WbsProgressMessage = "サンプルデータの階層構造を構築中...";
+            });
+
+            // UIの応答性を保つために少し待機
+            await Task.Delay(10);
+
             // サンプルデータを追加
-            WbsItems.Add(project);
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WbsItems.Add(project);
+                WbsProgress = 100;
+                WbsProgressMessage = "サンプルデータの読み込みが完了しました";
+            });
+
+            // 完了メッセージを少し表示してからクリア
+            await Task.Delay(500);
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                IsWbsLoading = false;
+                WbsProgress = 0;
+                WbsProgressMessage = string.Empty;
+            });
+        }
+        catch (Exception ex)
+        {
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                IsWbsLoading = false;
+                WbsProgress = 0;
+                WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
+            });
+        }
         }
 
 
@@ -1073,20 +1155,69 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// 階層構造を平坦化したリストを更新
         /// </summary>
-        private void UpdateFlattenedList()
+        private async Task UpdateFlattenedList()
         {
-            FlattenedWbsItems.Clear();
-            
-            // 重複チェック用のHashSet
-            var addedItems = new HashSet<WbsItem>();
-            
-            foreach (var rootItem in WbsItems)
+            try
             {
-                AddItemToFlattened(rootItem, addedItems);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = true;
+                    WbsProgress = 0;
+                    WbsProgressMessage = "WBSリストを更新中...";
+                });
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    FlattenedWbsItems.Clear();
+                    
+                    // 重複チェック用のHashSet
+                    var addedItems = new HashSet<WbsItem>();
+                    
+                    var totalItems = WbsItems.Count;
+                    var processedItems = 0;
+                    
+                    foreach (var rootItem in WbsItems)
+                    {
+                        AddItemToFlattened(rootItem, addedItems);
+                        processedItems++;
+                        
+                        // 進捗を更新（10アイテムごと）
+                        if (processedItems % 10 == 0 || processedItems == totalItems)
+                        {
+                            var progress = (double)processedItems / totalItems * 50; // 50%まで
+                            WbsProgress = progress;
+                            WbsProgressMessage = $"WBSリストを更新中... {processedItems}/{totalItems}";
+                        }
+                    }
+                });
+                
+                // スケジュール表も更新（非同期版を使用）
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 100;
+                    WbsProgressMessage = "WBSリストの更新が完了しました";
+                });
+                
+                await UpdateScheduleItemsAsync();
+                
+                // 完了メッセージを少し表示してからクリア
+                await Task.Delay(500);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = false;
+                    WbsProgress = 0;
+                    WbsProgressMessage = string.Empty;
+                });
             }
-            
-            // スケジュール表も更新
-            UpdateScheduleItems();
+            catch (Exception ex)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = false;
+                    WbsProgress = 0;
+                    WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
+                });
+            }
         }
 
         /// <summary>
@@ -1100,15 +1231,24 @@ namespace RedmineClient.ViewModels.Pages
                 return;
             }
             
-            FlattenedWbsItems.Add(item);
-            addedItems.Add(item);
-            
-            if (item.IsExpanded && item.HasChildren)
+            // UIスレッドで実行されていることを確認
+            if (Application.Current.Dispatcher.CheckAccess())
             {
-                foreach (var child in item.Children)
+                FlattenedWbsItems.Add(item);
+                addedItems.Add(item);
+                
+                if (item.IsExpanded && item.HasChildren)
                 {
-                    AddItemToFlattened(child, addedItems);
+                    foreach (var child in item.Children)
+                    {
+                        AddItemToFlattened(child, addedItems);
+                    }
                 }
+            }
+            else
+            {
+                // UIスレッドでない場合は、UIスレッドで実行
+                Application.Current.Dispatcher.Invoke(() => AddItemToFlattened(item, addedItems));
             }
         }
 
@@ -1206,41 +1346,115 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// スケジュール表を初期化する
         /// </summary>
-        private void InitializeScheduleItems()
+        private async Task InitializeScheduleItems()
         {
-            ScheduleItems.Clear();
-            
-            var startDate = DateTime.Today;
-            var endDate = DateTime.Today.AddMonths(2); // 2か月先まで
-            
-            // 週単位でグループ化して表示
-            var currentDate = startDate;
-            while (currentDate <= endDate)
+            try
             {
-                // 週の開始日（月曜日）を取得
-                var weekStart = currentDate;
-                while (weekStart.DayOfWeek != System.DayOfWeek.Monday)
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    weekStart = weekStart.AddDays(-1);
-                }
+                    IsScheduleLoading = true;
+                    ScheduleProgress = 0;
+                    ScheduleProgressMessage = "スケジュール表を初期化中...";
+                });
+
+                ScheduleItems.Clear();
                 
-                // 週の終了日（日曜日）を取得
-                var weekEnd = weekStart.AddDays(6);
+                var startDate = DateTime.Today;
+                var endDate = DateTime.Today.AddMonths(2); // 2か月先まで
                 
-                // 週の各日を追加
-                for (var date = weekStart; date <= weekEnd && date <= endDate; date = date.AddDays(1))
+                // 週単位でグループ化して表示
+                var currentDate = startDate;
+                var totalDays = 0;
+                var processedDays = 0;
+                
+                // まず総日数を計算
+                var tempDate = startDate;
+                while (tempDate <= endDate)
                 {
-                    var scheduleItem = new ScheduleItem
+                    var weekStart = tempDate;
+                    while (weekStart.DayOfWeek != System.DayOfWeek.Monday)
                     {
-                        Date = date,
-                        TaskTitle = GetTaskTitleForDate(date)
-                    };
+                        weekStart = weekStart.AddDays(-1);
+                    }
                     
-                    ScheduleItems.Add(scheduleItem);
+                    var weekEnd = weekStart.AddDays(6);
+                    
+                    for (var date = weekStart; date <= weekEnd && date <= endDate; date = date.AddDays(1))
+                    {
+                        totalDays++;
+                    }
+                    
+                    tempDate = weekEnd.AddDays(1);
                 }
                 
-                // 次の週に移動
-                currentDate = weekEnd.AddDays(1);
+                // 実際の初期化処理
+                currentDate = startDate;
+                while (currentDate <= endDate)
+                {
+                    // 週の開始日（月曜日）を取得
+                    var weekStart = currentDate;
+                    while (weekStart.DayOfWeek != System.DayOfWeek.Monday)
+                    {
+                        weekStart = weekStart.AddDays(-1);
+                    }
+                    
+                    // 週の終了日（日曜日）を取得
+                    var weekEnd = weekStart.AddDays(6);
+                    
+                    // 週の各日を追加
+                    for (var date = weekStart; date <= weekEnd && date <= endDate; date = date.AddDays(1))
+                    {
+                        var scheduleItem = new ScheduleItem
+                        {
+                            Date = date,
+                            TaskTitle = GetTaskTitleForDate(date)
+                        };
+                        
+                        ScheduleItems.Add(scheduleItem);
+                        processedDays++;
+                        
+                        // 進捗を更新（10日ごと）
+                        if (processedDays % 10 == 0 || processedDays == totalDays)
+                        {
+                            var progress = (double)processedDays / totalDays * 100;
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                ScheduleProgress = progress;
+                                ScheduleProgressMessage = $"スケジュール表を初期化中... {processedDays}/{totalDays}";
+                            });
+                            
+                            // UIの応答性を保つために少し待機
+                            await Task.Delay(1);
+                        }
+                    }
+                    
+                    // 次の週に移動
+                    currentDate = weekEnd.AddDays(1);
+                }
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ScheduleProgress = 100;
+                    ScheduleProgressMessage = "スケジュール表の初期化が完了しました";
+                    IsScheduleLoading = false;
+                });
+
+                // 完了メッセージを少し表示してからクリア
+                await Task.Delay(1000);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ScheduleProgress = 0;
+                    ScheduleProgressMessage = string.Empty;
+                });
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsScheduleLoading = false;
+                    ScheduleProgress = 0;
+                    ScheduleProgressMessage = $"エラーが発生しました: {ex.Message}";
+                });
             }
         }
 
@@ -1291,6 +1505,74 @@ namespace RedmineClient.ViewModels.Pages
 
         /// <summary>
         /// スケジュール表のタスク情報を更新する
+        /// </summary>
+        private async Task UpdateScheduleItemsAsync()
+        {
+            try
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsScheduleLoading = true;
+                    ScheduleProgress = 0;
+                    ScheduleProgressMessage = "スケジュール表を描画中...";
+                });
+
+                var totalItems = ScheduleItems.Count;
+                var processedItems = 0;
+
+                // バッチ処理で進捗を更新
+                var batchSize = Math.Max(1, totalItems / 20); // 20回に分けて進捗を更新
+
+                for (int i = 0; i < totalItems; i++)
+                {
+                    var scheduleItem = ScheduleItems[i];
+                    scheduleItem.TaskTitle = GetTaskTitleForDate(scheduleItem.Date);
+
+                    processedItems++;
+                    
+                    // バッチサイズごとに進捗を更新
+                    if (processedItems % batchSize == 0 || processedItems == totalItems)
+                    {
+                        var progress = (double)processedItems / totalItems * 100;
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            ScheduleProgress = progress;
+                            ScheduleProgressMessage = $"スケジュール表を描画中... {processedItems}/{totalItems}";
+                        });
+
+                        // UIの応答性を保つために少し待機
+                        await Task.Delay(1);
+                    }
+                }
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ScheduleProgress = 100;
+                    ScheduleProgressMessage = "スケジュール表の描画が完了しました";
+                    IsScheduleLoading = false;
+                });
+
+                // 完了メッセージを少し表示してからクリア
+                await Task.Delay(1000);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ScheduleProgress = 0;
+                    ScheduleProgressMessage = string.Empty;
+                });
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsScheduleLoading = false;
+                    ScheduleProgress = 0;
+                    ScheduleProgressMessage = $"エラーが発生しました: {ex.Message}";
+                });
+            }
+        }
+
+        /// <summary>
+        /// スケジュール表のタスク情報を更新する（同期版）
         /// </summary>
         private void UpdateScheduleItems()
         {
@@ -1473,7 +1755,7 @@ namespace RedmineClient.ViewModels.Pages
                     }
                     
                     // 平坦化リストを更新
-                    UpdateFlattenedList();
+                    _ = Task.Run(async () => await UpdateFlattenedList());
                     
                     // Redmineデータ読み込み後、選択状態を復元
                     if (SelectedItem != null)
@@ -1559,7 +1841,7 @@ namespace RedmineClient.ViewModels.Pages
                                         }
                                         
                                         // 平坦化リストを更新
-                                        UpdateFlattenedList();
+                                        _ = Task.Run(async () => await UpdateFlattenedList());
                                         
                                         // Redmineデータ読み込み後、選択状態を復元
                                         if (SelectedItem != null)
@@ -1796,18 +2078,68 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// 階層構造を平坦化したリストを更新（無限ループを避けるため）
         /// </summary>
-        private void UpdateFlattenedListSafely()
+        private async Task UpdateFlattenedListSafely()
         {
-            FlattenedWbsItems.Clear();
-            
-            // 重複チェック用のHashSet
-            var addedItems = new HashSet<WbsItem>();
-            
-            foreach (var rootItem in WbsItems)
+            try
             {
-                AddItemToFlattened(rootItem, addedItems);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = true;
+                    WbsProgress = 0;
+                    WbsProgressMessage = "WBSリストを安全に更新中...";
+                });
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    FlattenedWbsItems.Clear();
+                    
+                    // 重複チェック用のHashSet
+                    var addedItems = new HashSet<WbsItem>();
+                    
+                    var totalItems = WbsItems.Count;
+                    var processedItems = 0;
+                    
+                    foreach (var rootItem in WbsItems)
+                    {
+                        AddItemToFlattened(rootItem, addedItems);
+                        processedItems++;
+                        
+                        // 進捗を更新（10アイテムごと）
+                        if (processedItems % 10 == 0 || processedItems == totalItems)
+                        {
+                            var progress = (double)processedItems / totalItems * 50; // 50%まで
+                            WbsProgress = progress;
+                            WbsProgressMessage = $"WBSリストを安全に更新中... {processedItems}/{totalItems}";
+                        }
+                    }
+                });
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 100;
+                    WbsProgressMessage = "WBSリストの安全な更新が完了しました";
+                });
+                
+                await UpdateScheduleItemsAsync();
+                
+                // 完了メッセージを少し表示してからクリア
+                await Task.Delay(500);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = false;
+                    WbsProgress = 0;
+                    WbsProgressMessage = string.Empty;
+                });
             }
-            UpdateScheduleItems();
+            catch (Exception ex)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = false;
+                    WbsProgress = 0;
+                    WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
+                });
+            }
         }
 
         /// <summary>
@@ -1848,7 +2180,7 @@ namespace RedmineClient.ViewModels.Pages
             }
             
             // UIスレッドで一括更新（パフォーマンス向上）
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            Application.Current.Dispatcher.BeginInvoke(new Action(async () =>
             {
                 FlattenedWbsItems.Clear();
                 foreach (var item in tempList)
@@ -1861,6 +2193,9 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     SelectedItem = currentSelectedItem;
                 }
+                
+                // スケジュール表も更新（非同期版を使用）
+                _ = Task.Run(async () => await UpdateScheduleItemsAsync());
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
         
@@ -2058,7 +2393,7 @@ namespace RedmineClient.ViewModels.Pages
                          
                          CanRegisterItems = NewWbsItems.Count > 0;
                          OnPropertyChanged(nameof(NewItemsCount));
-                         UpdateFlattenedList();
+                         _ = Task.Run(async () => await UpdateFlattenedList());
                          
                          ErrorMessage = $"{successCount} 件のチケットを登録しました。";
                      }
@@ -2103,8 +2438,8 @@ namespace RedmineClient.ViewModels.Pages
                     WbsItems.Add(wbsItem);
                 }
                 
-                // 平坦化リストを更新
-                UpdateFlattenedList();
+                                    // 平坦化リストを更新
+                    _ = Task.Run(async () => await UpdateFlattenedList());
             }
             catch (Exception ex)
             {
