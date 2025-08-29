@@ -235,6 +235,13 @@ namespace RedmineClient.Models
 
         public void AddChild(WbsItem child)
         {
+            // 重複チェック：同じIDの子アイテムが既に存在する場合は追加しない
+            if (Children.Any(existingChild => existingChild.Id == child.Id))
+            {
+                System.Diagnostics.Debug.WriteLine($"WbsItem.AddChild: 重複をスキップ - 子アイテム '{child.Title}' (ID: {child.Id}) は既に親アイテム '{Title}' (ID: {Id}) に存在します");
+                return;
+            }
+            
             child.Parent = this;
             Children.Add(child);
             OnPropertyChanged(nameof(HasChildren));
@@ -243,6 +250,9 @@ namespace RedmineClient.Models
             
             // 子アイテムが追加された後、親タスクを展開状態にする
             IsExpanded = true;
+            
+            // デバッグログ：親子関係の設定を確認
+            System.Diagnostics.Debug.WriteLine($"WbsItem.AddChild: 子アイテム '{child.Title}' (ID: {child.Id}) を親アイテム '{Title}' (ID: {Id}) に追加しました");
         }
 
         public void RemoveChild(WbsItem child)

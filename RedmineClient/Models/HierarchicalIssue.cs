@@ -1,5 +1,4 @@
 using Redmine.Net.Api.Types;
-using System.Collections.Generic;
 
 namespace RedmineClient.Models
 {
@@ -9,6 +8,8 @@ namespace RedmineClient.Models
     /// </summary>
     public class HierarchicalIssue
     {
+        private bool nullableIntValue;
+
         /// <summary>
         /// 元のIssueオブジェクト
         /// </summary>
@@ -35,6 +36,35 @@ namespace RedmineClient.Models
         public float? EstimatedHours => Issue.EstimatedHours;
         public DateTime? CreatedOn => Issue.CreatedOn;
         public DateTime? UpdatedOn => Issue.UpdatedOn;
+
+        /// <summary>
+        /// 親チケットのID（リフレクションで取得）
+        /// </summary>
+        public int? ParentId
+        {
+            get
+            {
+                try
+                {
+                    var parentIdProperty = Issue.GetType().GetProperty("ParentId");
+                    if (parentIdProperty != null)
+                    {
+                        var value = parentIdProperty.GetValue(Issue);
+                        if (value is int intValue)
+                            return intValue;
+                        if (value is int nullableIntValue)
+                            return nullableIntValue;
+                        if (value is int?)
+                            return (int?)value;
+                    }
+                    return null;
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
 
         /// <summary>
         /// コンストラクタ

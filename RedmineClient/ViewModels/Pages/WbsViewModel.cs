@@ -93,6 +93,13 @@ namespace RedmineClient.ViewModels.Pages
                 // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                 if (IsRedmineConnected)
                 {
+                    // 重複実行を防ぐためのフラグ
+                    if (_isLoadingRedmineData)
+                    {
+                        System.Diagnostics.Debug.WriteLine("OnSelectedProjectChanged: 既にデータ読み込み中のため、重複実行をスキップしました");
+                        return;
+                    }
+                    
                     // より安全な非同期実行（UIスレッドをブロックしない）
                     System.Diagnostics.Debug.WriteLine("OnSelectedProjectChanged: Redmineデータの自動読み込みを開始");
                     
@@ -101,8 +108,16 @@ namespace RedmineClient.ViewModels.Pages
                     {
                         try
                         {
+                            _isLoadingRedmineData = true;
+                            
                             // UIスレッドでの処理を避けるため、直接RedmineServiceを使用
                             await Task.Delay(100); // 短い遅延
+                            
+                            // 既存のアイテムの親子関係をクリア
+                            foreach (var existingItem in WbsItems)
+                            {
+                                existingItem.Children.Clear();
+                            }
                             
                             using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                             {
@@ -138,10 +153,15 @@ namespace RedmineClient.ViewModels.Pages
                                 var wbsItems = await Task.Run(() =>
                                 {
                                     var tempItems = new List<WbsItem>();
-                                    foreach (var issue in issues)
+                                    // ルートレベルのチケットのみを処理
+                                    var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
+                                    System.Diagnostics.Debug.WriteLine($"OnSelectedProjectChanged: ルートレベルのチケット数: {rootIssues.Count}");
+                                    
+                                    foreach (var rootIssue in rootIssues)
                                     {
-                                        var wbsItem = ConvertRedmineIssueToWbsItem(issue);
+                                        var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
                                         tempItems.Add(wbsItem);
+                                        System.Diagnostics.Debug.WriteLine($"OnSelectedProjectChanged: ルートアイテム '{wbsItem.Title}' (ID: {wbsItem.Id}) を変換しました");
                                     }
                                     return tempItems;
                                 }).ConfigureAwait(false);
@@ -151,7 +171,7 @@ namespace RedmineClient.ViewModels.Pages
                                 {
                                     try
                                     {
-                                        // WBSアイテムを更新
+                                        // WBSアイテムを完全にクリア（親子関係も含めて）
                                         WbsItems.Clear();
                                         foreach (var wbsItem in wbsItems)
                                         {
@@ -166,6 +186,19 @@ namespace RedmineClient.ViewModels.Pages
                                         else
                                         {
                                             FlattenedWbsItems.Clear();
+                                        }
+                                        
+                                        // Redmineデータ読み込み後、選択状態を復元
+                                        if (SelectedItem != null)
+                                        {
+                                            // 選択されたアイテムがまだ存在するかチェック
+                                            var currentSelectedItem = SelectedItem;
+                                            var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
+                                            if (foundItem != null)
+                                            {
+                                                SelectedItem = foundItem;
+                                                CanAddChild = foundItem.IsParentTask;
+                                            }
                                         }
                                         
                                         // 状態を更新
@@ -191,6 +224,10 @@ namespace RedmineClient.ViewModels.Pages
                                 ErrorMessage = $"チケットの読み込みに失敗しました: {ex.Message}";
                             });
                         }
+                        finally
+                        {
+                            _isLoadingRedmineData = false;
+                        }
                     });
                 }
                 else
@@ -198,6 +235,17 @@ namespace RedmineClient.ViewModels.Pages
                     // 接続されていない場合は接続テストを実行
                     _ = TestRedmineConnection();
                 }
+            }
+            else
+            {
+                // プロジェクト選択がクリアされた場合
+                AppConfig.SelectedProjectId = null;
+                AppConfig.Save();
+                WbsItems.Clear();
+                UpdateFlattenedList();
+                IsRedmineDataLoaded = false;
+                ErrorMessage = string.Empty;
+                System.Diagnostics.Debug.WriteLine("OnSelectedProjectChanged: プロジェクト選択がクリアされました。");
             }
         }
 
@@ -264,6 +312,11 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         [ObservableProperty]
         private bool _isRegistering = false;
+
+        /// <summary>
+        /// Redmineデータ読み込み中かどうか（重複実行防止用）
+        /// </summary>
+        private bool _isLoadingRedmineData = false;
 
         /// <summary>
         /// 登録ボタンのコマンド
@@ -716,6 +769,9 @@ namespace RedmineClient.ViewModels.Pages
             // デフォルト設定を適用
             ApplyDefaultSettings(newItem);
 
+            // デバッグログ：IDの設定を確認
+            System.Diagnostics.Debug.WriteLine($"CreateWbsItemTemplate: 新しいアイテムを作成しました - Title: {title}, ID: {newItem.Id}, Parent: {parent?.Title ?? "なし"}");
+
             return newItem;
         }
 
@@ -1061,27 +1117,41 @@ namespace RedmineClient.ViewModels.Pages
         {
             FlattenedWbsItems.Clear();
             
+            // 重複チェック用のHashSet
+            var addedItems = new HashSet<WbsItem>();
+            
             foreach (var rootItem in WbsItems)
             {
-                AddItemToFlattened(rootItem);
+                AddItemToFlattened(rootItem, addedItems);
             }
+            
+            // デバッグログ：結果の確認
+            System.Diagnostics.Debug.WriteLine($"UpdateFlattenedList: 平坦化完了 - 総アイテム数: {FlattenedWbsItems.Count}, 重複チェック済み");
             
             // スケジュール表も更新
             UpdateScheduleItems();
         }
 
         /// <summary>
-        /// アイテムと（展開されている場合）その子アイテムを平坦化リストに追加
+        /// アイテムと（展開されている場合）その子アイテムを平坦化リストに追加（重複チェック付き）
         /// </summary>
-        private void AddItemToFlattened(WbsItem item)
+        private void AddItemToFlattened(WbsItem item, HashSet<WbsItem> addedItems)
         {
+            // 重複チェック
+            if (addedItems.Contains(item))
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateFlattenedList: 重複アイテムをスキップしました: {item.Title} (ID: {item.Id})");
+                return;
+            }
+            
             FlattenedWbsItems.Add(item);
+            addedItems.Add(item);
             
             if (item.IsExpanded && item.HasChildren)
             {
                 foreach (var child in item.Children)
                 {
-                    AddItemToFlattened(child);
+                    AddItemToFlattened(child, addedItems);
                 }
             }
         }
@@ -1448,13 +1518,18 @@ namespace RedmineClient.ViewModels.Pages
                     // デバッグ用ログ
                     System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: プロジェクトID {projectId} から {issues.Count} 件のチケットを取得しました");
                     
-                    // WBSアイテムに変換
+                    // WBSアイテムを完全にクリア（親子関係も含めて）
                     WbsItems.Clear();
-                    foreach (var issue in issues)
+                    
+                    // ルートレベルのチケットのみを処理
+                    var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
+                    System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: ルートレベルのチケット数: {rootIssues.Count}");
+                    
+                    foreach (var rootIssue in rootIssues)
                     {
-                        var wbsItem = ConvertRedmineIssueToWbsItem(issue);
+                        var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
                         WbsItems.Add(wbsItem);
-                        System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: チケット '{issue.Subject ?? "無題"}' (ID: {issue.Id}) をWBSアイテムに変換しました");
+                        System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: ルートアイテム '{wbsItem.Title}' (ID: {wbsItem.Id}) を追加しました");
                     }
                     
                     // 平坦化リストを更新
@@ -1519,58 +1594,70 @@ namespace RedmineClient.ViewModels.Pages
                     // デバッグ用ログ
                     System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: プロジェクトID {projectId} から {issues.Count} 件のチケットを取得しました");
                     
+                    // 全チケットの構造をデバッグ出力
+                    System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: 全チケット {issues.Count} 件の構造を確認:");
+                    foreach (var issue in issues)
+                    {
+                        var parentInfo = issue.Parent != null ? issue.Parent.Id.ToString() : "なし";
+                        System.Diagnostics.Debug.WriteLine($"  - '{issue.Subject}' (ID: {issue.Id}): Parent={parentInfo}, Children={issue.Children?.Count ?? 0}件");
+                    }
+                    
                     // バックグラウンドスレッドでWBSアイテムの変換を実行
                     var wbsItems = await Task.Run(() =>
                     {
                         var tempItems = new List<WbsItem>();
-                        foreach (var issue in issues)
+                        // ルートレベルのチケットのみを処理
+                        var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
+                        System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: ルートレベルのチケット数: {rootIssues.Count}");
+                        
+                        foreach (var rootIssue in rootIssues)
                         {
-                            var wbsItem = ConvertRedmineIssueToWbsItem(issue);
+                            var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
                             tempItems.Add(wbsItem);
-                            System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: チケット '{issue.Subject ?? "無題"}' (ID: {issue.Id}) をWBSアイテムに変換しました");
+                            System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: ルートアイテム '{wbsItem.Title}' (ID: {wbsItem.Id}) を変換しました");
                         }
                         return tempItems;
                     }).ConfigureAwait(false);
                     
-                    // UIスレッドでコレクションを更新
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        try
-                        {
-                            // WBSアイテムに変換
-                            WbsItems.Clear();
-                            foreach (var wbsItem in wbsItems)
-                            {
-                                WbsItems.Add(wbsItem);
-                            }
-                            
-                            // 平坦化リストを更新
-                            UpdateFlattenedList();
-                            
-                            // Redmineデータ読み込み後、選択状態を復元
-                            if (SelectedItem != null)
-                            {
-                                // 選択されたアイテムがまだ存在するかチェック
-                                var currentSelectedItem = SelectedItem;
-                                var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
-                                if (foundItem != null)
+                                                    // UIスレッドでコレクションを更新
+                                await Application.Current.Dispatcher.InvokeAsync(() =>
                                 {
-                                    SelectedItem = foundItem;
-                                    CanAddChild = foundItem.IsParentTask;
-                                }
-                            }
-                            
-                            IsRedmineDataLoaded = true;
-                            ErrorMessage = string.Empty;
-                            
-                            System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: 完了。WBSアイテム数: {WbsItems.Count}");
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: UI更新中にエラー - {ex.Message}");
-                            ErrorMessage = $"UI更新中にエラーが発生しました: {ex.Message}";
-                        }
-                    });
+                                    try
+                                    {
+                                        // WBSアイテムを完全にクリア（親子関係も含めて）
+                                        WbsItems.Clear();
+                                        foreach (var wbsItem in wbsItems)
+                                        {
+                                            WbsItems.Add(wbsItem);
+                                        }
+                                        
+                                        // 平坦化リストを更新
+                                        UpdateFlattenedList();
+                                        
+                                        // Redmineデータ読み込み後、選択状態を復元
+                                        if (SelectedItem != null)
+                                        {
+                                            // 選択されたアイテムがまだ存在するかチェック
+                                            var currentSelectedItem = SelectedItem;
+                                            var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
+                                            if (foundItem != null)
+                                            {
+                                                SelectedItem = foundItem;
+                                                CanAddChild = foundItem.IsParentTask;
+                                            }
+                                        }
+                                        
+                                        IsRedmineDataLoaded = true;
+                                        ErrorMessage = string.Empty;
+                                        
+                                        System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: 完了。WBSアイテム数: {WbsItems.Count}");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: UI更新中にエラー - {ex.Message}");
+                                        ErrorMessage = $"UI更新中にエラーが発生しました: {ex.Message}";
+                                    }
+                                });
                 }
             }
             catch (Exception ex)
@@ -1583,11 +1670,97 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        /// <summary>
+                /// <summary>
         /// RedmineチケットをWBSアイテムに変換
         /// </summary>
         private WbsItem ConvertRedmineIssueToWbsItem(HierarchicalIssue issue)
         {
+            var convertedItems = new Dictionary<int, WbsItem>();
+            
+            // データの整合性を事前チェック
+            ValidateIssueHierarchy(issue);
+            
+            return ConvertRedmineIssueToWbsItemInternal(issue, convertedItems);
+        }
+        
+        /// <summary>
+        /// チケット階層の整合性をチェック
+        /// </summary>
+        private void ValidateIssueHierarchy(HierarchicalIssue issue, HashSet<int> visitedIds = null)
+        {
+            if (visitedIds == null)
+                visitedIds = new HashSet<int>();
+            
+            if (visitedIds.Contains(issue.Id))
+            {
+                System.Diagnostics.Debug.WriteLine($"ValidateIssueHierarchy: 循環参照を検出！ID {issue.Id} ('{issue.Subject}') が既に訪問済みです");
+                return;
+            }
+            
+            visitedIds.Add(issue.Id);
+            
+            // 子チケットの整合性チェック
+            if (issue.Children != null)
+            {
+                foreach (var child in issue.Children)
+                {
+                    // 子チケットの親が正しく設定されているかチェック
+                    if (child.Parent == null || child.Parent.Id != issue.Id)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"ValidateIssueHierarchy: 親子関係の不整合を検出！子チケットID {child.Id} ('{child.Subject}') の親が正しく設定されていません");
+                    }
+                    
+                    ValidateIssueHierarchy(child, visitedIds);
+                }
+            }
+            
+            visitedIds.Remove(issue.Id);
+        }
+        
+        /// <summary>
+        /// RedmineチケットをWBSアイテムに変換（内部実装、重複チェック付き）
+        /// </summary>
+        private WbsItem ConvertRedmineIssueToWbsItemInternal(HierarchicalIssue issue, Dictionary<int, WbsItem> convertedItems, HashSet<int> parentChain = null)
+        {
+            // 循環参照を防ぐための親チェーン
+            if (parentChain == null)
+                parentChain = new HashSet<int>();
+            
+            // 循環参照チェック
+            if (parentChain.Contains(issue.Id))
+            {
+                System.Diagnostics.Debug.WriteLine($"ConvertRedmineIssueToWbsItem: 循環参照を検出！ID {issue.Id} は既に親チェーンに存在します");
+                return null; // 循環参照の場合はnullを返す
+            }
+            
+            // 既に変換済みのアイテムがある場合は再利用
+            if (convertedItems.ContainsKey(issue.Id))
+            {
+                var existingItem = convertedItems[issue.Id];
+                System.Diagnostics.Debug.WriteLine($"ConvertRedmineIssueToWbsItem: 既存アイテムを再利用: '{issue.Subject}' (ID: {issue.Id})");
+                
+                // 既存アイテムの子アイテムをクリアしてから再設定
+                existingItem.Children.Clear();
+                
+                // 親チェーンに追加
+                parentChain.Add(issue.Id);
+                
+                // 子チケットを再帰的に変換して設定
+                foreach (var childIssue in issue.Children)
+                {
+                    var childWbsItem = ConvertRedmineIssueToWbsItemInternal(childIssue, convertedItems, parentChain);
+                    if (childWbsItem != null) // nullチェック
+                    {
+                        existingItem.AddChild(childWbsItem);
+                    }
+                }
+                
+                // 親チェーンから削除
+                parentChain.Remove(issue.Id);
+                
+                return existingItem;
+            }
+
             var wbsItem = new WbsItem
             {
                 Id = issue.Id.ToString(),
@@ -1609,12 +1782,38 @@ namespace RedmineClient.ViewModels.Pages
                 RedmineUrl = $"{AppConfig.RedmineHost}/issues/{issue.Id}"
             };
 
-            // 子チケットを再帰的に変換
-            foreach (var childIssue in issue.Children)
+            // 変換済みアイテムとして記録
+            convertedItems[issue.Id] = wbsItem;
+            
+            System.Diagnostics.Debug.WriteLine($"ConvertRedmineIssueToWbsItem: 新しいアイテムを作成: '{issue.Subject}' (ID: {issue.Id}) - 子チケット数: {issue.Children?.Count ?? 0}");
+
+            // 親チェーンに追加
+            parentChain.Add(issue.Id);
+            
+            // 子チケットがある場合のみ親子関係を設定
+            if (issue.Children != null && issue.Children.Count > 0)
             {
-                var childWbsItem = ConvertRedmineIssueToWbsItem(childIssue);
-                wbsItem.AddChild(childWbsItem);
+                System.Diagnostics.Debug.WriteLine($"ConvertRedmineIssueToWbsItem: '{issue.Subject}' (ID: {issue.Id}) に子チケット {issue.Children.Count} 件を追加");
+                foreach (var childIssue in issue.Children)
+                {
+                    var childWbsItem = ConvertRedmineIssueToWbsItemInternal(childIssue, convertedItems, parentChain);
+                    if (childWbsItem != null) // nullチェック
+                    {
+                        wbsItem.AddChild(childWbsItem);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"ConvertRedmineIssueToWbsItem: 子チケット '{childIssue.Subject}' (ID: {childIssue.Id}) の変換に失敗（循環参照の可能性）");
+                    }
+                }
             }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"ConvertRedmineIssueToWbsItem: '{issue.Subject}' (ID: {issue.Id}) は子チケットなし（ルートレベルまたはリーフ）");
+            }
+            
+            // 親チェーンから削除
+            parentChain.Remove(issue.Id);
 
             return wbsItem;
         }
@@ -1690,9 +1889,13 @@ namespace RedmineClient.ViewModels.Pages
         private void UpdateFlattenedListSafely()
         {
             FlattenedWbsItems.Clear();
+            
+            // 重複チェック用のHashSet
+            var addedItems = new HashSet<WbsItem>();
+            
             foreach (var rootItem in WbsItems)
             {
-                AddItemToFlattened(rootItem);
+                AddItemToFlattened(rootItem, addedItems);
             }
             UpdateScheduleItems();
         }
@@ -1752,10 +1955,17 @@ namespace RedmineClient.ViewModels.Pages
         }
         
         /// <summary>
-        /// 最適化された平坦化処理（メモリ効率向上）
+        /// 最適化された平坦化処理（メモリ効率向上、重複チェック付き）
         /// </summary>
         private void AddItemToFlattenedOptimized(WbsItem item, List<WbsItem> targetList)
         {
+            // 重複チェック
+            if (targetList.Contains(item))
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateFlattenedListManually: 重複アイテムをスキップしました: {item.Title} (ID: {item.Id})");
+                return;
+            }
+            
             targetList.Add(item);
             
             if (item.IsExpanded && item.HasChildren)
@@ -1976,6 +2186,55 @@ namespace RedmineClient.ViewModels.Pages
                  IsRegistering = false;
              }
          }
+
+        /// <summary>
+        /// Redmineからチケットを読み込む（同期版）
+        /// </summary>
+        private void LoadRedmineIssues()
+        {
+            if (!IsRedmineConnected || SelectedProject == null)
+                return;
+
+            try
+            {
+                var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+                var issues = redmineService.GetIssuesWithHierarchyAsync(SelectedProject.Id).GetAwaiter().GetResult();
+                
+                System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: プロジェクトID {SelectedProject.Id} から {issues.Count} 件のチケットを取得しました");
+
+                // 既存のアイテムを完全にクリア
+                WbsItems.Clear();
+                
+                // 全チケットの構造をデバッグ出力
+                System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: 全チケット {issues.Count} 件の構造を確認:");
+                foreach (var issue in issues)
+                {
+                    var parentInfo = issue.Parent != null ? issue.Parent.Id.ToString() : "なし";
+                    System.Diagnostics.Debug.WriteLine($"  - '{issue.Subject}' (ID: {issue.Id}): Parent={parentInfo}, Children={issue.Children?.Count ?? 0}件");
+                }
+                
+                // ルートレベルのチケットのみを処理
+                var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
+                System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: ルートレベルのチケット数: {rootIssues.Count}");
+                
+                foreach (var rootIssue in rootIssues)
+                {
+                    var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
+                    WbsItems.Add(wbsItem);
+                    System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: ルートアイテム '{wbsItem.Title}' (ID: {wbsItem.Id}) を追加しました");
+                }
+                
+                // 平坦化リストを更新
+                UpdateFlattenedList();
+                
+                System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: 完了。WBSアイテム数: {WbsItems.Count}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadRedmineIssues: エラー - {ex.Message}");
+                ErrorMessage = $"チケットの読み込み中にエラーが発生しました: {ex.Message}";
+            }
+        }
     }
 }
 

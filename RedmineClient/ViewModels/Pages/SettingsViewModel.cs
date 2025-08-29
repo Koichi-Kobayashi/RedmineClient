@@ -1,8 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using Redmine.Net.Api.Types;
-using RedmineClient.Models;
 using Wpf.Ui.Abstractions.Controls;
 using Wpf.Ui.Appearance;
 
@@ -308,6 +306,9 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        // 修正内容: RedmineServiceのGetStatusesAsync()は存在しないため、GetIssueStatusesAsync()に置き換えます。
+        // 1. LoadStatusesAsyncメソッド内の該当箇所を修正
+
         private async Task LoadStatusesAsync()
         {
             try
@@ -315,8 +316,8 @@ namespace RedmineClient.ViewModels.Pages
                 if (!string.IsNullOrEmpty(RedmineHost) && !string.IsNullOrEmpty(ApiKey))
                 {
                     using var redmineService = new RedmineClient.Services.RedmineService(RedmineHost, ApiKey);
-                    var statuses = await redmineService.GetStatusesAsync();
-                    
+                    var statuses = await redmineService.GetIssueStatusesAsync();
+
                     // UIスレッドで実行
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {

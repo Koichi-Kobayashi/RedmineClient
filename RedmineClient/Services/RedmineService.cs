@@ -2,7 +2,6 @@ using System.Collections.Specialized;
 using Redmine.Net.Api;
 using Redmine.Net.Api.Net;
 using Redmine.Net.Api.Types;
-using RedmineClient.Models;
 
 namespace RedmineClient.Services
 {
@@ -10,6 +9,7 @@ namespace RedmineClient.Services
     {
         private readonly RedmineManager _redmineManager;
         private readonly int _timeoutSeconds = 30; // 30秒のタイムアウト
+        private bool nullableIntValue;
 
         public RedmineService(string baseUrl, string apiKey)
         {
@@ -246,6 +246,42 @@ namespace RedmineClient.Services
         }
 
         /// <summary>
+        /// IssueオブジェクトからParentIdを取得（リフレクション使用）
+        /// </summary>
+        /// <param name="issue">Issueオブジェクト</param>
+        /// <returns>ParentId（取得できない場合はnull）</returns>
+        private int? GetParentIdFromIssue(Issue issue)
+        {
+            try
+            {
+                // 複数のプロパティ名を試行
+                var propertyNames = new[] { "ParentId", "parent_id", "Parent", "parent" };
+
+                foreach (var propertyName in propertyNames)
+                {
+                    var property = issue.GetType().GetProperty(propertyName);
+                    if (property != null)
+                    {
+                        var value = property.GetValue(issue);
+                        if (value is int intValue)
+                            return intValue;
+                        // 修正: int?型の値はobjectとして返されるため、直接キャストしてnull判定
+                        if (property.PropertyType == typeof(int?))
+                            return (int?)value;
+                        if (value is IdentifiableName identifiableName && identifiableName.Id > 0)
+                            return identifiableName.Id;
+                    }
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// 階層構造を構築
         /// </summary>
         /// <param name="issues">チケットのリスト</param>
@@ -257,22 +293,37 @@ namespace RedmineClient.Services
             // 各チケットの親子関係を設定
             foreach (var issue in issues)
             {
-                // Redmine APIから親子関係を取得する必要があります
-                // 現在は親子関係なしで処理します
-                // TODO: Redmine APIからparent_idまたはrelationsを使用して階層構造を構築
+                // リフレクションでParentIdを取得
+                var parentId = GetParentIdFromIssue(issue.Issue);
                 
-                // 一時的に、IDの順序で階層構造を模擬（実際の実装では削除）
-                // これはテスト用の仮実装です
-                if (issue.Id > 1 && issue.Id % 2 == 0)
+                if (parentId.HasValue && parentId.Value > 0)
                 {
-                    var parentId = issue.Id / 2;
-                    if (issueDict.ContainsKey(parentId))
+                    if (issueDict.ContainsKey(parentId.Value))
                     {
-                        var parent = issueDict[parentId];
+                        var parent = issueDict[parentId.Value];
                         parent.AddChild(issue);
+                        
+                        // デバッグログ
+                        System.Diagnostics.Debug.WriteLine($"BuildHierarchy: '{issue.Subject}' (ID: {issue.Id}) を親 '{parent.Subject}' (ID: {parent.Id}) の子として設定");
+                    }
+                    else
+                    {
+                        // 親チケットが見つからない場合の警告
+                        System.Diagnostics.Debug.WriteLine($"BuildHierarchy: 警告 - '{issue.Subject}' (ID: {issue.Id}) の親ID {parentId.Value} が見つかりません");
                     }
                 }
+                else
+                {
+                    // 親がない場合はルートレベル
+                    System.Diagnostics.Debug.WriteLine($"BuildHierarchy: '{issue.Subject}' (ID: {issue.Id}) はルートレベル（親なし）");
+                }
             }
+            
+            // 構築結果の確認ログ
+            var rootIssues = issues.Where(i => !GetParentIdFromIssue(i.Issue).HasValue || GetParentIdFromIssue(i.Issue).Value == 0).ToList();
+            var childIssues = issues.Where(i => GetParentIdFromIssue(i.Issue).HasValue && GetParentIdFromIssue(i.Issue).Value > 0).ToList();
+            
+            System.Diagnostics.Debug.WriteLine($"BuildHierarchy: 構築完了 - ルート: {rootIssues.Count}件, 子: {childIssues.Count}件");
         }
 
         /// <summary>
@@ -367,7 +418,7 @@ namespace RedmineClient.Services
         /// <summary>
         /// ステータス一覧を取得（非同期版）
         /// </summary>
-        public async Task<List<IssueStatus>> GetStatusesAsync(CancellationToken cancellationToken = default)
+        public async Task<List<IssueStatus>> GetIssueStatusesAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -388,8 +439,29 @@ namespace RedmineClient.Services
         }
 
         /// <summary>
-        /// チケットを作成（非同期版）
+        /// 優先度一覧を取得（非同期版）
         /// </summary>
+        public async Task<List<IssuePriority>> GetIssuePrioritiesAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                var priorities = await Task.Run(() => _redmineManager.Get<IssuePriority>(), cts.Token);
+                return priorities ?? new List<IssuePriority>();
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"優先度一覧の取得がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"優先度一覧の取得に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        // 修正: RedmineManagerにはCreateIssueメソッドが存在しないため、Create<T>を使用する
         public async Task<int> CreateIssueAsync(Issue issue, CancellationToken cancellationToken = default)
         {
             try
@@ -397,82 +469,9 @@ namespace RedmineClient.Services
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
 
-                // 必須パラメータを確実に設定
-                var newIssue = new Issue
-                {
-                    Subject = issue.Subject ?? "無題のタスク",
-                    Description = issue.Description ?? "",
-                    StartDate = issue.StartDate,
-                    DueDate = issue.DueDate,
-                    DoneRatio = 0
-                };
-
-                // Issueクラスの利用可能なプロパティをデバッグ出力
-                System.Diagnostics.Debug.WriteLine("CreateIssueAsync: Issueクラスの利用可能なプロパティ:");
-                foreach (var prop in typeof(Issue).GetProperties())
-                {
-                    System.Diagnostics.Debug.WriteLine($"  {prop.Name}: {prop.PropertyType.Name} (CanWrite: {prop.CanWrite})");
-                }
-
-                // プロジェクトを設定（Projectオブジェクトを使用）
-                if (issue.Project != null)
-                {
-                    newIssue.Project = issue.Project;
-                    System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: Projectを設定しました: {issue.Project.Id}");
-                }
-                else
-                {
-                                    // Projectオブジェクトが設定されていない場合は、新しいProjectオブジェクトを作成
-                var project = new Project();
-                // Idプロパティをリフレクションで設定
-                var projectIdProperty = typeof(Project).GetProperty("Id");
-                if (projectIdProperty?.CanWrite == true)
-                {
-                    projectIdProperty.SetValue(project, 1); // デフォルトプロジェクトID
-                }
-                newIssue.Project = project;
-                System.Diagnostics.Debug.WriteLine("CreateIssueAsync: デフォルトProjectを設定しました");
-                }
-
-                // トラッカーを設定（Trackerオブジェクトを使用）
-                var tracker = new Tracker();
-                // Idプロパティをリフレクションで設定
-                var trackerIdProperty = typeof(Tracker).GetProperty("Id");
-                if (trackerIdProperty?.CanWrite == true)
-                {
-                    trackerIdProperty.SetValue(tracker, AppConfig.DefaultTrackerId);
-                }
-                newIssue.Tracker = tracker;
-                System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: Trackerを設定しました: {AppConfig.DefaultTrackerId}");
-
-                // ステータスを設定（IssueStatusオブジェクトを使用）
-                var status = new IssueStatus();
-                // Idプロパティをリフレクションで設定
-                var statusIdProperty = typeof(IssueStatus).GetProperty("Id");
-                if (statusIdProperty?.CanWrite == true)
-                {
-                    statusIdProperty.SetValue(status, AppConfig.DefaultStatusId);
-                }
-                newIssue.Status = status;
-                System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: Statusを設定しました: {AppConfig.DefaultStatusId}");
-
-                // 優先度を設定（IssuePriorityオブジェクトを使用）
-                var priority = new IssuePriority();
-                // Idプロパティをリフレクションで設定
-                var priorityIdProperty = typeof(IssuePriority).GetProperty("Id");
-                if (priorityIdProperty?.CanWrite == true)
-                {
-                    priorityIdProperty.SetValue(priority, 2); // デフォルト: 2 = 中
-                }
-                newIssue.Priority = priority;
-                System.Diagnostics.Debug.WriteLine("CreateIssueAsync: Priorityを設定しました: 2");
-
-                // 設定された値を確認
-                System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: 最終設定値 - Project: {newIssue.Project?.Id}, Tracker: {newIssue.Tracker?.Id}, Status: {newIssue.Status?.Id}, Priority: {newIssue.Priority?.Id}");
-
-                // 新しいAPIを使用してチケットを作成
-                var createdIssue = await Task.Run(() => _redmineManager.Create(newIssue), cts.Token);
-                return createdIssue.Id;
+                // RedmineManager.Create<Issue>(issue) を使用
+                var createdIssue = await Task.Run(() => _redmineManager.Create<Issue>(issue), cts.Token);
+                return createdIssue?.Id ?? 0;
             }
             catch (OperationCanceledException)
             {
@@ -494,34 +493,8 @@ namespace RedmineClient.Services
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
 
-                var existingIssue = await Task.Run(() => _redmineManager.Get<Issue>(issue.Id.ToString()), cts.Token);
-                if (existingIssue == null)
-                {
-                    throw new RedmineApiException($"チケットID {issue.Id} が見つかりません。");
-                }
-
-                existingIssue.Subject = issue.Subject;
-                existingIssue.Description = issue.Description;
-                existingIssue.StartDate = issue.StartDate;
-                existingIssue.DueDate = issue.DueDate;
-                
-                // EstimatedHoursプロパティをリフレクションで設定
-                var estimatedHoursProperty = typeof(Issue).GetProperty("EstimatedHours");
-                if (estimatedHoursProperty?.CanWrite == true)
-                {
-                    estimatedHoursProperty.SetValue(existingIssue, (float?)issue.EstimatedHours);
-                }
-
-                // DoneRatioプロパティをリフレクションで設定
-                var doneRatioProperty = typeof(Issue).GetProperty("DoneRatio");
-                if (doneRatioProperty?.CanWrite == true)
-                {
-                    doneRatioProperty.SetValue(existingIssue, (float?)issue.DoneRatio);
-                }
-
-#pragma warning disable CS0618 // 旧形式のAPIを使用（互換性のため）
-                await Task.Run(() => _redmineManager.UpdateObject<Issue>(existingIssue.Id.ToString(), existingIssue), cts.Token);
-#pragma warning restore CS0618
+                // 修正: RedmineManager.Update<T> を使用
+                await Task.Run(() => _redmineManager.Update<Issue>(issue.Id.ToString(), issue), cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -543,9 +516,8 @@ namespace RedmineClient.Services
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
 
-#pragma warning disable CS0618 // 旧形式のAPIを使用（互換性のため）
-                await Task.Run(() => _redmineManager.DeleteObject<Issue>(issueId.ToString()), cts.Token);
-#pragma warning restore CS0618
+                // 修正: RedmineManager.Delete<T> を使用
+                await Task.Run(() => _redmineManager.Delete<Issue>(issueId.ToString()), cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -555,109 +527,6 @@ namespace RedmineClient.Services
             {
                 throw new RedmineApiException($"チケットの削除に失敗しました: {ex.Message}", ex);
             }
-        }
-
-        /// <summary>
-        /// トラッカー一覧を取得
-        /// </summary>
-        public List<Tracker> GetTrackers()
-        {
-            try
-            {
-                var trackers = _redmineManager.Get<Tracker>();
-                return trackers ?? new List<Tracker>();
-            }
-            catch (Exception ex)
-            {
-                throw new RedmineApiException($"トラッカー一覧の取得に失敗しました: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// ステータス一覧を取得
-        /// </summary>
-        public List<IssueStatus> GetIssueStatuses()
-        {
-            try
-            {
-                var statuses = _redmineManager.Get<IssueStatus>();
-                return statuses ?? new List<IssueStatus>();
-            }
-            catch (Exception ex)
-            {
-                throw new RedmineApiException($"ステータス一覧の取得に失敗しました: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// 優先度一覧を取得
-        /// </summary>
-        public List<IssuePriority> GetIssuePriorities()
-        {
-            try
-            {
-                var priorities = _redmineManager.Get<IssuePriority>();
-                return priorities ?? new List<IssuePriority>();
-            }
-            catch (Exception ex)
-            {
-                throw new RedmineApiException($"優先度一覧の取得に失敗しました: {ex.Message}", ex);
-            }
-        }
-
-        // 後方互換性のための同期的なメソッド（非推奨）
-        [Obsolete("非同期版のGetProjectsAsyncを使用してください")]
-        public List<Project> GetProjects()
-        {
-            return GetProjectsAsync().GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のGetIssuesAsyncを使用してください")]
-        public List<Issue> GetIssues(int projectId, int? limit = null, int? offset = null)
-        {
-            return GetIssuesAsync(projectId, limit, offset).GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のGetIssueAsyncを使用してください")]
-        public Issue? GetIssue(int issueId)
-        {
-            return GetIssueAsync(issueId).GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のGetCurrentUserAsyncを使用してください")]
-        public RedmineUser? GetCurrentUser()
-        {
-            return GetCurrentUserAsync().GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のGetIssuesWithHierarchyAsyncを使用してください")]
-        public List<HierarchicalIssue> GetIssuesWithHierarchy(int projectId)
-        {
-            return GetIssuesWithHierarchyAsync(projectId).GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のTestConnectionAsyncを使用してください")]
-        public bool TestConnection()
-        {
-            return TestConnectionAsync().GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のCreateIssueAsyncを使用してください")]
-        public int CreateIssue(Issue issue)
-        {
-            return CreateIssueAsync(issue).GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のUpdateIssueAsyncを使用してください")]
-        public void UpdateIssue(Issue issue)
-        {
-            UpdateIssueAsync(issue).GetAwaiter().GetResult();
-        }
-
-        [Obsolete("非同期版のDeleteIssueAsyncを使用してください")]
-        public void DeleteIssue(int issueId)
-        {
-            DeleteIssueAsync(issueId).GetAwaiter().GetResult();
         }
 
         public void Dispose()
@@ -674,8 +543,6 @@ namespace RedmineClient.Services
         public RedmineApiException(string message) : base(message) { }
         public RedmineApiException(string message, Exception innerException) : base(message, innerException) { }
     }
-
-
 
     // Redmineデータモデル
     public class RedmineProject
@@ -710,8 +577,6 @@ namespace RedmineClient.Services
         public RedmineIssue Parent { get; set; }
         public List<RedmineIssue> Children { get; set; } = new();
     }
-
-
 
     public class RedmineUser
     {

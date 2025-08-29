@@ -2,7 +2,6 @@
 using System.Windows.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using RedmineClient.Models;
 using RedmineClient.Services;
 using RedmineClient.ViewModels.Pages;
 using RedmineClient.ViewModels.Windows;
@@ -176,7 +175,10 @@ namespace RedmineClient
                                             // ステータス一覧を取得してAppConfigに保存
                                             try
                                             {
-                                                var statuses = await redmineService.GetStatusesAsync();
+                                                // 修正内容: RedmineServiceにGetStatusesAsyncが存在しないため、GetIssueStatusesAsyncに置き換え
+                                                // 変更前: var statuses = await redmineService.GetStatusesAsync();
+                                                // 変更後: var statuses = await redmineService.GetIssueStatusesAsync();
+                                                var statuses = await redmineService.GetIssueStatusesAsync();
                                                 if (statuses != null && statuses.Count > 0)
                                                 {
                                                     // IssueStatusをStatusItemに変換
