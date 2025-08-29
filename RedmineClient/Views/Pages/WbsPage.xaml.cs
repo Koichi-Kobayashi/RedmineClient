@@ -58,12 +58,10 @@ namespace RedmineClient.Views.Pages
             InitializeYearMonthOptions();
 
             // プロジェクト選択の初期化
-            System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: プロジェクト選択初期化開始 - AvailableProjects数={ViewModel.AvailableProjects.Count}");
             
             // Redmineに接続してプロジェクトを取得
             if (ViewModel.AvailableProjects.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: AvailableProjectsが空のため、Redmineからプロジェクトを取得");
                 try
                 {
                     // Redmine接続テストを実行してプロジェクトを取得（非同期で実行）
@@ -72,25 +70,16 @@ namespace RedmineClient.Views.Pages
                         try
                         {
                             await ViewModel.TestRedmineConnection();
-                            System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: Redmine接続テスト完了");
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: Redmine接続テストに失敗: {ex.Message}");
+                            // Redmine接続テストに失敗
                         }
                     });
                 }
-                catch (Exception ex)
+                catch
                 {
-                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: Redmine接続テストの開始に失敗: {ex.Message}");
-                }
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: AvailableProjects数={ViewModel.AvailableProjects.Count}");
-                foreach (var project in ViewModel.AvailableProjects.Take(3))
-                {
-                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: プロジェクト - ID={project.Id}, Name={project.Name}");
+                    // Redmine接続テストの開始に失敗
                 }
             }
 
@@ -99,18 +88,12 @@ namespace RedmineClient.Views.Pages
             {
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: チケット一覧の自動取得を開始");
                     ViewModel.LoadRedmineData();
-                    System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: チケット一覧の自動取得が完了");
                 }
-                catch (Exception ex)
+                catch
                 {
-                    System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded: チケット一覧の自動取得に失敗: {ex.Message}");
+                    // チケット一覧の自動取得に失敗
                 }
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("WbsPage_InitialLoaded: プロジェクトが選択されていないか、Redmineに接続されていないため、チケット一覧の自動取得をスキップ");
             }
 
             // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
@@ -125,7 +108,6 @@ namespace RedmineClient.Views.Pages
 
         private void WbsPage_DataGridLoaded(object sender, RoutedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("WbsPage_DataGridLoaded: DataGridが読み込まれました");
             GenerateDateColumns();
         }
 
@@ -134,8 +116,6 @@ namespace RedmineClient.Views.Pages
             // 設定が変更されたらスケジュール表を再生成
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
             {
-                System.Diagnostics.Debug.WriteLine("ScheduleStartYearMonthComboBox_SelectionChanged: スケジュール開始年月が変更されました");
-                
                 // 選択された年月をViewModelに設定
                 if (ScheduleStartYearMonthComboBox.SelectedItem is string selectedYearMonth)
                 {
@@ -167,13 +147,9 @@ namespace RedmineClient.Views.Pages
 
         public Task OnNavigatedToAsync()
         {
-            System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 開始");
-
             // 日付列の生成も遅延実行で試行
-            System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 日付列の生成を遅延実行で試行");
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                System.Diagnostics.Debug.WriteLine("OnNavigatedToAsync: 遅延実行で日付列の生成を開始");
                 GenerateDateColumns();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
 
@@ -205,9 +181,9 @@ namespace RedmineClient.Views.Pages
                     AppConfig.Save();
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"スケジュール開始年月の保存に失敗: {ex.Message}");
+                // スケジュール開始年月の保存に失敗
             }
         }
 
@@ -414,8 +390,6 @@ namespace RedmineClient.Views.Pages
         {
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && WbsDataGrid.IsInitialized)
             {
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                System.Diagnostics.Debug.WriteLine("GenerateDateColumns: 開始");
 
                 // 既存のスケジュール列を削除
                 var existingColumns = WbsDataGrid.Columns.Where(c => c.Header is StackPanel || c.Header is System.Windows.Controls.TextBlock).ToList();
@@ -436,16 +410,12 @@ namespace RedmineClient.Views.Pages
                 }
                 var endDate = startDate.AddMonths(2).AddDays(-1); // 2か月分
 
-                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 日付範囲 {startDate:yyyy/MM/dd} から {endDate:yyyy/MM/dd}");
-
                 var currentDate = startDate;
                 var columnCount = 0;
                 var lastMonth = -1;
 
                 // 固定列の数を取得（タスク名、ID、説明、開始日、終了日、進捗、ステータス、優先度、担当者）
                 var fixedColumnCount = 9;
-
-                var columnCreationStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
                 while (currentDate <= endDate)
                 {
@@ -490,19 +460,6 @@ namespace RedmineClient.Views.Pages
                     columnCount++;
                     currentDate = currentDate.AddDays(1);
                 }
-
-                columnCreationStopwatch.Stop();
-                var columnCreationTime = columnCreationStopwatch.Elapsed;
-                
-                stopwatch.Stop();
-                var executionTime = stopwatch.Elapsed;
-                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 完了。{columnCount}個の日付列を追加しました。現在の総列数: {WbsDataGrid.Columns.Count}");
-                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 列作成時間: {columnCreationTime.TotalMilliseconds:F2}ms ({columnCreationTime.TotalSeconds:F3}秒)");
-                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: 全体実行時間: {executionTime.TotalMilliseconds:F2}ms ({executionTime.TotalSeconds:F3}秒)");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"GenerateDateColumns: DataGridが準備できていません。IsLoaded: {WbsDataGrid?.IsLoaded}, IsInitialized: {WbsDataGrid?.IsInitialized}");
             }
         }
 
@@ -598,10 +555,9 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                // 例外をキャッチしてログ出力
-                System.Diagnostics.Debug.WriteLine($"DateTextBox キーイベント処理中に例外: {ex.Message}");
+                // 例外をキャッチ
             }
         }
 
@@ -639,9 +595,9 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"フィールド移動中にエラー: {ex.Message}");
+                // フィールド移動中にエラー
             }
         }
 
@@ -689,9 +645,9 @@ namespace RedmineClient.Views.Pages
                     dateTextBox.Text = today.ToString("yyyy/MM/dd");
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"日付調整中にエラー: {ex.Message}");
+                // 日付調整中にエラー
             }
         }
 
@@ -762,9 +718,9 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"DateTextBox KeyUp処理中にエラー: {ex.Message}");
+                // DateTextBox KeyUp処理中にエラー
             }
         }
 
@@ -788,9 +744,9 @@ namespace RedmineClient.Views.Pages
                     DescriptionTextBox?.Focus();
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"タイトルフィールド キーイベント処理中に例外: {ex.Message}");
+                // タイトルフィールド キーイベント処理中に例外
             }
         }
 
@@ -811,14 +767,12 @@ namespace RedmineClient.Views.Pages
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("追加後編集モード: タイトルフィールドが見つかりません");
                         // フォールバック：DataGridにフォーカス
                         SetDataGridFocus();
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    System.Diagnostics.Debug.WriteLine($"追加後編集モード: タイトルフィールドフォーカス設定中にエラー: {ex.Message}");
                     // エラーが発生した場合はDataGridにフォーカス
                     SetDataGridFocus();
                 }
@@ -845,7 +799,6 @@ namespace RedmineClient.Views.Pages
             if (WbsDataGrid == null || ViewModel.SelectedItem == null)
             {
                 WbsDataGrid?.Focus();
-                System.Diagnostics.Debug.WriteLine($"編集モード: 基本条件不満足のためDataGrid全体にフォーカス設定");
                 return;
             }
 
