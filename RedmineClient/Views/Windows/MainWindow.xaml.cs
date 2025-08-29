@@ -59,11 +59,10 @@ namespace RedmineClient.Views.Windows
                 {
                     // WBSページにナビゲート
                     RootNavigation.Navigate(typeof(Views.Pages.WbsPage));
-                    System.Diagnostics.Debug.WriteLine("初期ページとしてWBSページを設定しました");
                 }
-                catch (Exception ex)
+                catch
                 {
-                    System.Diagnostics.Debug.WriteLine($"初期ページ設定中にエラー: {ex.Message}");
+                    // 初期ページ設定中にエラー
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
@@ -110,9 +109,9 @@ namespace RedmineClient.Views.Windows
                     WindowState = windowState;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"ウィンドウサイズの復元に失敗: {ex.Message}");
+                // ウィンドウサイズの復元に失敗
             }
         }
 

@@ -87,11 +87,8 @@ namespace RedmineClient.Services
                 
                 if (issues == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"GetIssues: プロジェクトID {projectId} のチケットがnullでした");
                     return new List<Issue>();
                 }
-                
-                System.Diagnostics.Debug.WriteLine($"GetIssues: プロジェクトID {projectId} から {issues.Count} 件のチケットを取得しました");
                 
                 return issues;
             }
@@ -274,18 +271,14 @@ namespace RedmineClient.Services
                 // 方法1: 現在のユーザー情報を取得
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("TestConnectionAsync: ユーザー情報取得を試行中...");
                     var user = await GetCurrentUserAsync(cts.Token);
                     if (user != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: ユーザー情報取得成功 - {user.Login}");
                         return true;
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: ユーザー情報取得でエラー - {ex.GetType().Name}: {ex.Message}");
-                    
                     // ユーザー情報取得でエラーが発生した場合の詳細ログ
                     if (ex is RedmineApiException redmineEx)
                     {
@@ -297,18 +290,14 @@ namespace RedmineClient.Services
                 // 方法2: プロジェクト一覧を取得して接続をテスト
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("TestConnectionAsync: プロジェクト一覧取得を試行中...");
                     var projects = await GetProjectsAsync(cts.Token);
                     if (projects != null && projects.Count > 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: プロジェクト一覧取得成功 - {projects.Count}件");
                         return true;
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: プロジェクト一覧取得でエラー - {ex.GetType().Name}: {ex.Message}");
-                    
                     // プロジェクト一覧取得でエラーが発生した場合の詳細ログ
                     if (ex is RedmineApiException redmineEx)
                     {
@@ -317,12 +306,10 @@ namespace RedmineClient.Services
                     }
                 }
 
-                System.Diagnostics.Debug.WriteLine("TestConnectionAsync: 両方の方法で接続に失敗");
                 return false;
             }
             catch (OperationCanceledException)
             {
-                System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: タイムアウト（{_timeoutSeconds}秒）");
                 throw new RedmineApiException($"接続テストがタイムアウトしました（{_timeoutSeconds}秒）");
             }
             catch (RedmineApiException)
@@ -332,7 +319,6 @@ namespace RedmineClient.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"TestConnectionAsync: 予期しないエラー - {ex.GetType().Name}: {ex.Message}");
                 // 予期しないエラーの場合は再スロー
                 throw new RedmineApiException($"接続テストで予期しないエラー: {ex.Message}", ex);
             }
@@ -387,7 +373,6 @@ namespace RedmineClient.Services
                 {
                     var projectId = issue.Project?.Id ?? 0;
                     projectIdProperty.SetValue(newIssue, projectId);
-                    System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: ProjectIdを設定しました: {projectId}");
                 }
 
                 // トラッカーIDを設定（設定ファイルから読み込み）
@@ -396,7 +381,6 @@ namespace RedmineClient.Services
                 {
                     var trackerId = AppConfig.DefaultTrackerId;
                     trackerIdProperty.SetValue(newIssue, trackerId);
-                    System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: TrackerIdを設定しました: {trackerId}");
                 }
 
                 // ステータスIDを設定（デフォルト: 1 = 新規）
@@ -404,7 +388,6 @@ namespace RedmineClient.Services
                 if (statusIdProperty?.CanWrite == true)
                 {
                     statusIdProperty.SetValue(newIssue, 1);
-                    System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: StatusIdを設定しました: 1");
                 }
 
                 // 優先度IDを設定（デフォルト: 2 = 中）
@@ -412,12 +395,7 @@ namespace RedmineClient.Services
                 if (priorityIdProperty?.CanWrite == true)
                 {
                     priorityIdProperty.SetValue(newIssue, 2);
-                    System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: PriorityIdを設定しました: 2");
                 }
-
-
-
-                System.Diagnostics.Debug.WriteLine($"CreateIssueAsync: チケット作成開始 - Subject: {newIssue.Subject}, ProjectId: {issue.Project?.Id ?? 0}");
 
                 // 新しいAPIを使用してチケットを作成
                 var createdIssue = await Task.Run(() => _redmineManager.Create(newIssue), cts.Token);

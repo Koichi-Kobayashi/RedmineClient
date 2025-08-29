@@ -143,15 +143,11 @@ namespace RedmineClient.Models
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("AppConfig: 設定保存開始");
-                
                 // app.configの読み込み
                 var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイル読み込み結果 - config: {(config != null ? "成功" : "失敗")}");
                 
                 if (config == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイルがnull、保存をスキップ");
                     return;
                 }
 
@@ -175,13 +171,11 @@ namespace RedmineClient.Models
                 SetSettingsItem(config, "SelectedProjectId", _selectedProjectId?.ToString() ?? "");
                 SetSettingsItem(config, "DefaultTrackerId", DefaultTrackerId.ToString());
                 
-                System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイルを保存中...");
                 config.Save();
-                System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイル保存完了");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定保存中にエラー - {ex.GetType().Name}: {ex.Message}");
+                // 設定保存中にエラー
             }
         }
 
@@ -214,26 +208,18 @@ namespace RedmineClient.Models
                 
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("AppConfig: 設定読み込み開始");
-                    
                     // app.configの読み込み
                     var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイル読み込み結果 - config: {(config != null ? "成功" : "失敗")}");
                     
                     if (config == null)
                     {
-                        System.Diagnostics.Debug.WriteLine("AppConfig: 設定ファイルがnull、デフォルト値を使用");
                         SetDefaultValues();
                         _isLoaded = true;
                         return;
                     }
-                    
-                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイルパス: {config.FilePath}");
-                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定ファイル存在: {System.IO.File.Exists(config.FilePath)}");
 
                     // 暗号化するセクションの取得
                     var section = config.GetSection("appSettings") as AppSettingsSection;
-                    System.Diagnostics.Debug.WriteLine($"AppConfig: appSettingsセクション取得 - section: {(section != null ? "成功" : "失敗")}");
                     
                     if (section != null)
                     {
@@ -252,20 +238,12 @@ namespace RedmineClient.Models
                             }
                         }
                     }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("AppConfig: appSettingsセクションが見つかりません");
-                    }
-
-                    System.Diagnostics.Debug.WriteLine("AppConfig: ConfigurationManager.AppSettingsから値を読み込み開始");
                     
                     var redmineHost = ConfigurationManager.AppSettings["RedmineHost"];
                     RedmineHost = string.IsNullOrEmpty(redmineHost) != true ? redmineHost : "";
-                    System.Diagnostics.Debug.WriteLine($"AppConfig: RedmineHost読み込み - 値: '{RedmineHost}'");
 
                     var apiKey = ConfigurationManager.AppSettings["ApiKey"];
                     ApiKey = string.IsNullOrEmpty(apiKey) != true ? apiKey : "";
-                    System.Diagnostics.Debug.WriteLine($"AppConfig: ApiKey読み込み - 値: '{ApiKey}' (長さ: {ApiKey.Length})");
 
                     var windowWidth = ConfigurationManager.AppSettings["WindowWidth"];
                     if (double.TryParse(windowWidth, out double width))
@@ -337,22 +315,18 @@ namespace RedmineClient.Models
                     if (!string.IsNullOrEmpty(defaultTrackerId) && int.TryParse(defaultTrackerId, out int trackerId))
                     {
                         _defaultTrackerId = trackerId;
-                        System.Diagnostics.Debug.WriteLine($"AppConfig: DefaultTrackerId読み込み - 値: {trackerId}");
                     }
                     else
                     {
                         _defaultTrackerId = 1; // デフォルト値
-                        System.Diagnostics.Debug.WriteLine($"AppConfig: DefaultTrackerId読み込み - デフォルト値を使用: 1");
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    System.Diagnostics.Debug.WriteLine($"AppConfig: 設定読み込み中にエラー - {ex.GetType().Name}: {ex.Message}");
                     // エラーが発生した場合はデフォルト値を使用
                     SetDefaultValues();
                 }
                 
-                System.Diagnostics.Debug.WriteLine($"AppConfig: 設定読み込み完了 - RedmineHost: '{RedmineHost}', ApiKey長: {ApiKey.Length}, DefaultTrackerId: {_defaultTrackerId}");
                 _isLoaded = true;
                 _isInitialized = true;
             }
@@ -385,11 +359,10 @@ namespace RedmineClient.Models
             try
             {
                 _availableTrackers = trackers ?? new List<TrackerItem>();
-                System.Diagnostics.Debug.WriteLine($"AppConfig: トラッカー一覧を保存 - {_availableTrackers.Count}件");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"AppConfig: トラッカー一覧の保存でエラー: {ex.Message}");
+                // トラッカー一覧の保存でエラー
             }
         }
 
