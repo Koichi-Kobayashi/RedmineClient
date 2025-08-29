@@ -435,39 +435,104 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        public virtual void OnNavigatedTo()
+        public virtual async void OnNavigatedTo()
         {
-            InitializeViewModel();
+            await InitializeViewModel();
         }
 
-        private async void InitializeViewModel()
+        private async Task InitializeViewModel()
         {
-            // Redmine接続状態を確認してプロジェクトを取得
-            await TestRedmineConnection();
-            
-            // プロジェクト選択の初期化
-            if (AvailableProjects.Count == 0)
+            // 即座にプログレスバーを表示（初期化開始）
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                AvailableProjects = new List<Project>();
-            }
-            
-            // Redmineに接続されている場合は実際のデータを読み込み、接続されていない場合はサンプルデータを読み込み
-            if (IsRedmineConnected && SelectedProject != null)
+                IsWbsLoading = true;
+                WbsProgress = 0;
+                WbsProgressMessage = "初期化中...";
+            });
+
+            try
             {
-                // 実際のRedmineデータを読み込み
-                await LoadRedmineDataAsync();
+                // Redmine接続状態を確認してプロジェクトを取得
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 10;
+                    WbsProgressMessage = "Redmine接続を確認中...";
+                });
+                await TestRedmineConnection();
+                
+                // プロジェクト選択の初期化
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 20;
+                    WbsProgressMessage = "プロジェクト情報を初期化中...";
+                });
+                if (AvailableProjects.Count == 0)
+                {
+                    AvailableProjects = new List<Project>();
+                }
+                
+                // Redmineに接続されている場合は実際のデータを読み込み
+                if (IsRedmineConnected && SelectedProject != null)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 30;
+                        WbsProgressMessage = "Redmineデータを読み込み中...";
+                    });
+                    // 実際のRedmineデータを読み込み
+                    await LoadRedmineDataAsync();
+                }
+                else if (!IsRedmineConnected)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 40;
+                        WbsProgressMessage = "接続状態を確認中...";
+                    });
+                    // Redmineに接続されていない場合のメッセージ
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        ErrorMessage = "Redmineに接続されていません。設定画面で接続情報を設定してください。";
+                        WbsItems.Clear();
+                        FlattenedWbsItems.Clear();
+                    });
+                }
+                
+                // 平坦化リストを初期化（UIスレッドで実行）
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 70;
+                    WbsProgressMessage = "WBSリストを初期化中...";
+                });
+                await UpdateFlattenedList();
+                
+                // スケジュール表を初期化
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 90;
+                    WbsProgressMessage = "スケジュール表を初期化中...";
+                });
+                await InitializeScheduleItems();
+                
+                // 完了
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 100;
+                    WbsProgressMessage = "初期化完了";
+                });
+                
+                // 完了メッセージを少し表示してから非表示
+                await Task.Delay(500);
             }
-            else
+            finally
             {
-                // サンプルデータを読み込み（開発・テスト用）
-                await LoadSampleDataAsync();
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    IsWbsLoading = false;
+                    WbsProgress = 0;
+                    WbsProgressMessage = string.Empty;
+                });
             }
-            
-            // 平坦化リストを初期化（UIスレッドで実行）
-            await UpdateFlattenedList();
-            
-            // スケジュール表を初期化
-            await InitializeScheduleItems();
         }
 
         public virtual async Task OnNavigatedFromAsync()
@@ -581,185 +646,7 @@ namespace RedmineClient.ViewModels.Pages
             return errorMessage;
         }
 
-        private async Task LoadSampleDataAsync()
-        {
-            try
-            {
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    IsWbsLoading = true;
-                    WbsProgress = 0;
-                    WbsProgressMessage = "サンプルデータを読み込み中...";
-                });
 
-                // UI更新を一括で行うため、一時的にコレクションを作成
-                var tempItems = new List<WbsItem>();
-                
-                var project = new WbsItem
-                {
-                    Id = "PROJ-001",
-                    Title = "Redmineクライアントアプリ開発",
-                    Description = "WPFを使用したRedmineクライアントアプリケーションの開発",
-                    StartDate = DateTime.Today,
-                    EndDate = DateTime.Today.AddMonths(3),
-                    Status = "進行中",
-                    Priority = "高",
-                    Assignee = "開発チーム"
-                };
-
-            var planning = new WbsItem
-            {
-                Id = "TASK-001",
-                Title = "要件定義・設計",
-                Description = "アプリケーションの要件定義と基本設計",
-                StartDate = DateTime.Today,
-                EndDate = DateTime.Today.AddDays(14),
-                Status = "完了",
-                Progress = 100,
-                Priority = "高",
-                Assignee = "プロジェクトマネージャー"
-            };
-
-            var development = new WbsItem
-            {
-                Id = "TASK-002",
-                Title = "開発・実装",
-                Description = "WPFアプリケーションの開発と実装",
-                StartDate = DateTime.Today.AddDays(15),
-                EndDate = DateTime.Today.AddDays(60),
-                Status = "進行中",
-                Progress = 45,
-                Priority = "高",
-                Assignee = "開発者"
-            };
-
-            var testing = new WbsItem
-            {
-                Id = "TASK-003",
-                Title = "テスト・検証",
-                Description = "アプリケーションのテストと品質検証",
-                StartDate = DateTime.Today.AddDays(61),
-                EndDate = DateTime.Today.AddDays(75),
-                Status = "未着手",
-                Progress = 0,
-                Priority = "中",
-                Assignee = "テスター"
-            };
-
-            var deployment = new WbsItem
-            {
-                Id = "TASK-004",
-                Title = "リリース・展開",
-                Description = "アプリケーションのリリースと展開",
-                StartDate = DateTime.Today.AddDays(76),
-                EndDate = DateTime.Today.AddDays(90),
-                Status = "未着手",
-                Progress = 0,
-                Priority = "中",
-                Assignee = "運用チーム"
-            };
-
-            // サブタスクの追加
-            var uiDesign = new WbsItem
-            {
-                Id = "TASK-001-1",
-                Title = "UI/UX設計",
-                Description = "ユーザーインターフェースとユーザーエクスペリエンスの設計",
-                StartDate = DateTime.Today,
-                EndDate = DateTime.Today.AddDays(7),
-                Status = "完了",
-                Progress = 100,
-                Priority = "高",
-                Assignee = "UIデザイナー"
-            };
-
-            var architecture = new WbsItem
-            {
-                Id = "TASK-001-2",
-                Title = "アーキテクチャ設計",
-                Description = "システムアーキテクチャとデータベース設計",
-                StartDate = DateTime.Today.AddDays(8),
-                EndDate = DateTime.Today.AddDays(14),
-                Status = "完了",
-                Progress = 100,
-                Priority = "高",
-                Assignee = "アーキテクト"
-            };
-
-            var coreDev = new WbsItem
-            {
-                Id = "TASK-002-1",
-                Title = "コア機能開発",
-                Description = "Redmine API連携と基本機能の実装",
-                StartDate = DateTime.Today.AddDays(15),
-                EndDate = DateTime.Today.AddDays(40),
-                Status = "進行中",
-                Progress = 60,
-                Priority = "高",
-                Assignee = "開発者A"
-            };
-
-            var wbsDev = new WbsItem
-            {
-                Id = "TASK-002-2",
-                Title = "WBS機能開発",
-                Description = "Work Breakdown Structure機能の実装",
-                StartDate = DateTime.Today.AddDays(25),
-                EndDate = DateTime.Today.AddDays(60),
-                Status = "進行中",
-                Progress = 30,
-                Priority = "高",
-                Assignee = "開発者B"
-            };
-
-            // 階層構造の構築
-            planning.AddChild(uiDesign);
-            planning.AddChild(architecture);
-            development.AddChild(coreDev);
-            development.AddChild(wbsDev);
-
-            project.AddChild(planning);
-            project.AddChild(development);
-            project.AddChild(testing);
-            project.AddChild(deployment);
-
-            // 進捗を更新
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                WbsProgress = 50;
-                WbsProgressMessage = "サンプルデータの階層構造を構築中...";
-            });
-
-            // UIの応答性を保つために少し待機
-            await Task.Delay(10);
-
-            // サンプルデータを追加
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                WbsItems.Add(project);
-                WbsProgress = 100;
-                WbsProgressMessage = "サンプルデータの読み込みが完了しました";
-            });
-
-            // 完了メッセージを少し表示してからクリア
-            await Task.Delay(1000);
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                IsWbsLoading = false;
-                WbsProgress = 0;
-                WbsProgressMessage = string.Empty;
-            });
-        }
-        catch (Exception ex)
-        {
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                IsWbsLoading = false;
-                WbsProgress = 0;
-                WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
-            });
-        }
-        }
 
 
 
@@ -1674,9 +1561,12 @@ namespace RedmineClient.ViewModels.Pages
 
             try
             {
-                // UIスレッドでの状態更新を最小限に
+                // プログレスバーを表示
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
+                    IsWbsLoading = true;
+                    WbsProgress = 0;
+                    WbsProgressMessage = "Redmineデータを読み込み中...";
                     IsLoading = true;
                     ErrorMessage = string.Empty;
                 });
@@ -1824,6 +1714,9 @@ namespace RedmineClient.ViewModels.Pages
                     WbsProgressMessage = "Redmineからデータを取得中...";
                 });
 
+                // プログレスバーの表示を確実にするために少し待機
+                await Task.Delay(50);
+
                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                 {
                     // データ取得（20%）
@@ -1914,7 +1807,7 @@ namespace RedmineClient.ViewModels.Pages
                     WbsProgressMessage = "データ読み込み完了";
                     
                     // 完了メッセージを少し表示してから非表示
-                    await Task.Delay(1000);
+                    await Task.Delay(500);
                     
                     IsWbsLoading = false;
                     WbsProgress = 0;

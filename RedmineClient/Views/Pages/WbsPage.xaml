@@ -166,32 +166,61 @@
             </Grid.ColumnDefinitions>
 
             <!--  プログレスバー（DataGridの上に表示）  -->
-            <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="1000">
+            <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="1000" 
+                  VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!--  グレーの半透明オーバーレイ（WBS読み込み時）  -->
+                <Rectangle Fill="#80000000" 
+                           Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
+                           Panel.ZIndex="999" />
+                
+                <!--  グレーの半透明オーバーレイ（スケジュール表描画時）  -->
+                <Rectangle Fill="#80000000" 
+                           Visibility="{Binding ViewModel.IsScheduleLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
+                           Panel.ZIndex="999" />
+                
                 <!--  WBSデータ読み込みプログレスバー  -->
-                <ui:Card Margin="0,0,0,16" Padding="20" BorderThickness="1" 
-                         Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
-                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                <Border Margin="0,0,0,16" Padding="24" BorderThickness="0" 
+                        Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        Panel.ZIndex="1000">
                     <StackPanel>
-                        <ui:TextBlock Margin="0,0,0,16" FontTypography="BodyStrong" FontSize="16" 
-                                     Text="{Binding ViewModel.WbsProgressMessage}" TextAlignment="Center" />
-                        <ProgressBar Value="{Binding ViewModel.WbsProgress}" Maximum="100" Height="12" 
-                                   Background="{DynamicResource SubtleFillColorTertiaryBrush}"
-                                   Foreground="{DynamicResource SystemFillColorAccentBrush}" />
+                        <ui:TextBlock Margin="0,0,0,20" FontTypography="BodyStrong" FontSize="18" 
+                                     Text="{Binding ViewModel.WbsProgressMessage}" TextAlignment="Center" 
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Border Height="16" Background="{DynamicResource SubtleFillColorTertiaryBrush}" 
+                                CornerRadius="8" BorderThickness="0">
+                            <Border Width="{Binding ViewModel.WbsProgress, Converter={x:Static helpers:ProgressToWidthConverter.Instance}}" 
+                                    HorizontalAlignment="Left" Background="{DynamicResource SystemFillColorAccentBrush}" 
+                                    CornerRadius="8" />
+                        </Border>
+                        <ui:TextBlock Margin="0,8,0,0" FontTypography="Caption" FontSize="12" 
+                                     Text="{Binding ViewModel.WbsProgress, StringFormat='{}{0:F0}%'}" 
+                                     TextAlignment="Center" 
+                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
-                </ui:Card>
+                </Border>
 
                 <!--  スケジュール表描画プログレスバー  -->
-                <ui:Card Margin="0,0,0,16" Padding="20" BorderThickness="1" 
-                         Visibility="{Binding ViewModel.IsScheduleLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
-                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                <Border Margin="0,0,0,16" Padding="24" BorderThickness="0" 
+                        Visibility="{Binding ViewModel.IsScheduleLoading, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        Panel.ZIndex="1000">
                     <StackPanel>
-                        <ui:TextBlock Margin="0,0,0,16" FontTypography="BodyStrong" FontSize="16" 
-                                     Text="{Binding ViewModel.ScheduleProgressMessage}" TextAlignment="Center" />
-                        <ProgressBar Value="{Binding ViewModel.ScheduleProgress}" Maximum="100" Height="12" 
-                                   Background="{DynamicResource SubtleFillColorTertiaryBrush}"
-                                   Foreground="{DynamicResource SystemFillColorAccentBrush}" />
+                        <ui:TextBlock Margin="0,0,0,20" FontTypography="BodyStrong" FontSize="18" 
+                                     Text="{Binding ViewModel.ScheduleProgressMessage}" TextAlignment="Center" 
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Border Height="16" Background="{DynamicResource SubtleFillColorTertiaryBrush}" 
+                                CornerRadius="8" BorderThickness="0">
+                            <Border Width="{Binding ViewModel.ScheduleProgress, Converter={x:Static helpers:ProgressToWidthConverter.Instance}}" 
+                                    HorizontalAlignment="Left" Background="{DynamicResource SystemFillColorAccentBrush}" 
+                                    CornerRadius="8" />
+                        </Border>
+                        <ui:TextBlock Margin="0,8,0,0" FontTypography="Caption" FontSize="12" 
+                                     Text="{Binding ViewModel.ScheduleProgress, StringFormat='{}{0:F0}%'}" 
+                                     TextAlignment="Center" 
+                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
-                </ui:Card>
+                </Border>
             </Grid>
 
             <!--  左側：DataGrid（プログレスバーが表示されている間は非表示）  -->
