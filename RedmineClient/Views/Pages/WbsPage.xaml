@@ -183,25 +183,25 @@
                 BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
                 BorderThickness="1"
                 CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
-                CanUserSortColumns="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="Horizontal"
+                                 CanUserSortColumns="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All"
                 HeadersVisibility="Column"
                 ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
                 RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                 RowHeaderWidth="0" 
                 ScrollViewer.CanContentScroll="True" 
                 ScrollViewer.HorizontalScrollBarVisibility="Auto" 
-                ScrollViewer.VerticalScrollBarVisibility="Visible"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
                 ScrollViewer.IsDeferredScrollingEnabled="False"
                 ScrollViewer.PanningMode="Both"
                 SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
                 SelectionMode="Single" 
                 SelectionUnit="FullRow" 
-                VirtualizingPanel.IsContainerVirtualizable="False" 
-                VirtualizingPanel.IsVirtualizing="False" 
-                VirtualizingPanel.VirtualizationMode="Standard"
+                VirtualizingPanel.IsContainerVirtualizable="True" 
+                VirtualizingPanel.IsVirtualizing="True" 
+                VirtualizingPanel.VirtualizationMode="Recycling"
                 VirtualizingPanel.ScrollUnit="Pixel"
-                VirtualizingPanel.CacheLength="1,1"
-                VirtualizingPanel.CacheLengthUnit="Item">
+                VirtualizingPanel.CacheLength="3,3"
+                VirtualizingPanel.CacheLengthUnit="Page">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
@@ -209,16 +209,44 @@
                             <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
                             <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
                             <Setter Property="BorderThickness" Value="0,0,1,1" />
-                            <Setter Property="Padding" Value="8,4" />
+                            <Setter Property="Padding" Value="4,2" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridCell">
+                                        <Border Background="{TemplateBinding Background}" 
+                                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                Padding="{TemplateBinding Padding}"
+                                                Margin="0,0,0,0"
+                                                ClipToBounds="False">
+                                            <ContentPresenter />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
-                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
-                            <Setter Property="BorderThickness" Value="0,0,1,1" />
-                            <Setter Property="Padding" Value="8,4" />
-                            <Setter Property="FontWeight" Value="SemiBold" />
-                        </Style>
+                                                 <Style TargetType="DataGridColumnHeader">
+                             <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                             <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                             <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                             <Setter Property="BorderThickness" Value="0,0,1,1" />
+                             <Setter Property="Padding" Value="8,4" />
+                             <Setter Property="FontWeight" Value="SemiBold" />
+                             <Setter Property="Template">
+                                 <Setter.Value>
+                                     <ControlTemplate TargetType="DataGridColumnHeader">
+                                         <Border Background="{TemplateBinding Background}" 
+                                                 BorderBrush="{TemplateBinding BorderBrush}" 
+                                                 BorderThickness="{TemplateBinding BorderThickness}"
+                                                 Padding="{TemplateBinding Padding}"
+                                                 Margin="0,0,0,0"
+                                                 ClipToBounds="False">
+                                             <ContentPresenter />
+                                         </Border>
+                                     </ControlTemplate>
+                                 </Setter.Value>
+                             </Setter>
+                         </Style>
                         <Style TargetType="DataGridRow">
                             <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
                             <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
@@ -352,17 +380,42 @@
                         <!--  終了日列  -->
                         <DataGridTextColumn Width="100" Binding="{Binding EndDate, StringFormat=yyyy/MM/dd}" Header="終了日" IsReadOnly="True" />
 
-                        <!--  進捗列  -->
-                        <DataGridTemplateColumn Width="120" Header="進捗" IsReadOnly="True">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <ui:TextBlock MinWidth="40" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
-                                        <ui:ProgressRing Width="16" Height="16" Margin="4,0,0,0" Progress="{Binding TotalProgress}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
+                                                 <!--  進捗列  -->
+                         <DataGridTemplateColumn Width="150" Header="進捗" IsReadOnly="True">
+                             <DataGridTemplateColumn.CellTemplate>
+                                 <DataTemplate>
+                                     <Grid>
+                                         <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="*" />
+                                             <ColumnDefinition Width="Auto" />
+                                         </Grid.ColumnDefinitions>
+                                         
+                                         <!--  プログレスバー  -->
+                                         <Border Grid.Column="0" 
+                                                 Height="16" 
+                                                 Margin="0,0,8,0"
+                                                 Background="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                                 BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                                 BorderThickness="1"
+                                                 CornerRadius="2">
+                                             <Border Width="{Binding TotalProgress, Converter={x:Static helpers:ProgressToWidthConverter.Instance}}"
+                                                     HorizontalAlignment="Left"
+                                                     Background="{Binding TotalProgress, Converter={x:Static helpers:ProgressToColorConverter.Instance}}"
+                                                     CornerRadius="1" />
+                                         </Border>
+                                         
+                                         <!--  進捗テキスト  -->
+                                         <ui:TextBlock Grid.Column="1" 
+                                                      MinWidth="40" 
+                                                      VerticalAlignment="Center" 
+                                                      FontSize="10"
+                                                      FontWeight="SemiBold"
+                                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}" 
+                                                      Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
+                                     </Grid>
+                                 </DataTemplate>
+                             </DataGridTemplateColumn.CellTemplate>
+                         </DataGridTemplateColumn>
 
                         <!--  ステータス列  -->
                         <DataGridTemplateColumn Width="80" Header="ステータス" IsReadOnly="True">
