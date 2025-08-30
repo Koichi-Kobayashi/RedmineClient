@@ -20,11 +20,19 @@ namespace RedmineClient.Helpers
         {
             if (value is DateTime date)
             {
-                // 祝日は赤色（日曜日と同じ）
-                if (HolidayService.IsHoliday(date))
-                    return Brushes.LightPink;
+                try
+                {
+                    // 祝日は赤色（日曜日と同じ）
+                    if (HolidayService.IsHoliday(date))
+                        return Brushes.LightPink;
+                }
+                catch (Exception)
+                {
+                    // 祝日判定でエラーが発生した場合は無視して続行
+                }
+                
                 // 土曜日は薄いシアン色
-                else if (date.DayOfWeek == DayOfWeek.Saturday)
+                if (date.DayOfWeek == DayOfWeek.Saturday)
                     return Brushes.LightCyan;
                 // 日曜日はピンク色
                 else if (date.DayOfWeek == DayOfWeek.Sunday)

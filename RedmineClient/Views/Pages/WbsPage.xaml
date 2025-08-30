@@ -354,16 +354,16 @@
                                                 <ui:MenuItem.Icon>
                                                     <ui:SymbolIcon Symbol="Link16" />
                                                 </ui:MenuItem.Icon>
-                                                <ui:MenuItem Header="先行タスクを削除" Command="{Binding DataContext.ViewModel.RemoveDependencyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                    <ui:MenuItem.Icon>
-                                                        <ui:SymbolIcon Symbol="ArrowUp16" />
-                                                    </ui:MenuItem.Icon>
-                                                </ui:MenuItem>
-                                                <ui:MenuItem Header="後続タスクを削除" Command="{Binding DataContext.ViewModel.RemoveDependencyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                    <ui:MenuItem.Icon>
-                                                        <ui:SymbolIcon Symbol="ArrowDown16" />
-                                                    </ui:MenuItem.Icon>
-                                                </ui:MenuItem>
+                                                                                            <ui:MenuItem Header="先行タスクを削除" Command="{Binding ViewModel.RemovePredecessorCommand}" CommandParameter="{Binding}" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                <ui:MenuItem.Icon>
+                                                    <ui:SymbolIcon Symbol="ArrowUp16" />
+                                                </ui:MenuItem.Icon>
+                                            </ui:MenuItem>
+                                            <ui:MenuItem Header="後続タスクを削除" Command="{Binding ViewModel.RemoveSuccessorCommand}" CommandParameter="{Binding}" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                <ui:MenuItem.Icon>
+                                                    <ui:SymbolIcon Symbol="ArrowDown16" />
+                                                </ui:MenuItem.Icon>
+                                            </ui:MenuItem>
                                             </ui:MenuItem>
                                             <Separator />
                                             <ui:MenuItem Header="削除">

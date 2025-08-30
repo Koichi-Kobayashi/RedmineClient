@@ -487,6 +487,8 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand SettingsCommand { get; }
         public ICommand CreateNewIssueCommand { get; }
         public ICommand RemoveDependencyCommand { get; }
+        public ICommand RemovePredecessorCommand { get; }
+        public ICommand RemoveSuccessorCommand { get; }
 
         public WbsViewModel()
         {
@@ -528,6 +530,8 @@ namespace RedmineClient.ViewModels.Pages
             CreateNewIssueCommand = new RelayCommand(CreateNewIssue);
             RegisterItemsCommand = new RelayCommand(RegisterItems);
             RemoveDependencyCommand = new RelayCommand<WbsItem?>(RemoveDependency);
+            RemovePredecessorCommand = new RelayCommand<WbsItem?>(RemovePredecessor);
+            RemoveSuccessorCommand = new RelayCommand<WbsItem?>(RemoveSuccessor);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -768,9 +772,6 @@ namespace RedmineClient.ViewModels.Pages
             // パフォーマンス向上のため、一括更新
             WbsItems.Add(newItem);
             
-            // ステータス変更の監視を開始
-            MonitorStatusChanges(newItem);
-            
             // 新しく追加されたアイテムをNewWbsItemsリストに追加
             NewWbsItems.Add(newItem);
             CanRegisterItems = true;
@@ -800,9 +801,6 @@ namespace RedmineClient.ViewModels.Pages
             
             // 親タスクに追加
             parent.AddChild(newItem);
-            
-            // ステータス変更の監視を開始
-            MonitorStatusChanges(newItem);
             
             // 新しく追加されたアイテムをNewWbsItemsリストに追加
             NewWbsItems.Add(newItem);
@@ -905,9 +903,6 @@ namespace RedmineClient.ViewModels.Pages
             foreach (var item in newItems)
             {
                 parent.AddChild(item);
-                
-                // ステータス変更の監視を開始
-                MonitorStatusChanges(item);
             }
 
             // 新しく追加されたアイテムをNewWbsItemsリストに追加
@@ -1437,13 +1432,13 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// 先行・後続の関係性を設定する（ドラッグ&ドロップ用）
         /// </summary>
-        /// <param name="sourceItem">先行タスクとして設定するタスク</param>
-        /// <param name="targetItem">後続タスクとして設定するタスク</param>
-        /// <param name="isPredecessor">先行関係として設定する場合はtrue、後続関係の場合はfalse</param>
+        /// <param name="sourceItem">ドラッグ元のタスク</param>
+        /// <param name="targetItem">ドロップ先のタスク</param>
+        /// <param name="isPredecessor">先行関係として設定する場合はtrue、双方向関係の場合はfalse</param>
         /// <remarks>
         /// ドラッグ&ドロップで先行・後続の関係性を設定します。
-        /// sourceItemがtargetItemの先行タスクになります（targetItemはsourceItemが完了しないと着手できない）。
         /// 循環参照が発生する場合は設定を拒否します。
+        /// タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになり、タスクAがタスクBの後続タスクになります。
         /// </remarks>
         public void SetDependency(WbsItem sourceItem, WbsItem targetItem, bool isPredecessor)
         {
@@ -1459,9 +1454,12 @@ namespace RedmineClient.ViewModels.Pages
                 }
                 else
                 {
-                    // 後続関係を設定（sourceItemがtargetItemの後続タスクになる）
-                    sourceItem.AddSuccessor(targetItem);
-                    System.Diagnostics.Debug.WriteLine($"後続関係設定完了: '{sourceItem.Title}' → '{targetItem.Title}'");
+                    // 双方向の関係を設定
+                    // sourceItemの先行がtargetItemになる
+                    sourceItem.AddPredecessor(targetItem);
+                    // targetItemの後続がsourceItemになる
+                    targetItem.AddSuccessor(sourceItem);
+                    System.Diagnostics.Debug.WriteLine($"双方向関係設定完了: '{targetItem.Title}' → '{sourceItem.Title}' (先行), '{sourceItem.Title}' → '{targetItem.Title}' (後続)");
                 }
 
                 // UIを更新
@@ -1506,128 +1504,6 @@ namespace RedmineClient.ViewModels.Pages
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"依存関係削除エラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 先行タスクの完了状態をチェックし、必要に応じて後続タスクの開始日を調整する
-        /// </summary>
-        /// <param name="predecessor">完了した先行タスク</param>
-        public void CheckPredecessorCompletion(WbsItem predecessor)
-        {
-            if (predecessor?.Status != "完了") return;
-
-            try
-            {
-                // この先行タスクを待っている後続タスクをすべて取得
-                var waitingSuccessors = predecessor.Successors
-                    .Where(s => s.IsWaitingForPredecessors)
-                    .ToList();
-
-                foreach (var successor in waitingSuccessors)
-                {
-                    // 先行タスクがすべて完了したかチェック
-                    if (successor.ArePredecessorsCompleted)
-                    {
-                        // 先行タスクが完了した場合、後続タスクの開始日を調整
-                        AdjustSuccessorStartDate(successor);
-                        
-                        System.Diagnostics.Debug.WriteLine($"先行タスク完了により後続タスク '{successor.Title}' の開始日を調整しました");
-                    }
-                }
-
-                // UIを更新
-                OnPropertyChanged(nameof(FlattenedWbsItems));
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"先行タスク完了チェックエラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 後続タスクの開始日を先行タスクの完了日に合わせて調整する
-        /// </summary>
-        /// <param name="successor">調整対象の後続タスク</param>
-        private void AdjustSuccessorStartDate(WbsItem successor)
-        {
-            if (successor == null || !successor.HasPredecessors) return;
-
-            try
-            {
-                // 先行タスクの完了日の最大値を取得
-                var maxCompletionDate = successor.Predecessors
-                    .Where(p => p.Status == "完了")
-                    .Select(p => p.EndDate)
-                    .DefaultIfEmpty(DateTime.Today)
-                    .Max();
-
-                // 後続タスクの開始日を調整（先行タスク完了日の翌日から開始）
-                var newStartDate = maxCompletionDate.AddDays(1);
-                
-                // 現在の開始日より後になる場合のみ調整
-                if (newStartDate > successor.StartDate)
-                {
-                    var duration = successor.EndDate - successor.StartDate;
-                    successor.StartDate = newStartDate;
-                    successor.EndDate = newStartDate.Add(duration);
-                    
-                    System.Diagnostics.Debug.WriteLine($"後続タスク '{successor.Title}' の開始日を {newStartDate:yyyy/MM/dd} に調整しました");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"後続タスク開始日調整エラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// WBSアイテムのステータス変更イベントを監視し、先行タスクの完了状態をチェックする
-        /// </summary>
-        /// <param name="wbsItem">監視対象のWBSアイテム</param>
-        public void MonitorStatusChanges(WbsItem wbsItem)
-        {
-            if (wbsItem == null) return;
-
-            try
-            {
-                // 既存のイベントハンドラーを削除（重複を防ぐ）
-                wbsItem.StatusChanged -= OnWbsItemStatusChanged;
-                
-                // 新しいイベントハンドラーを追加
-                wbsItem.StatusChanged += OnWbsItemStatusChanged;
-                
-                System.Diagnostics.Debug.WriteLine($"ステータス変更監視開始: '{wbsItem.Title}'");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"ステータス変更監視設定エラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// WBSアイテムのステータス変更イベントハンドラー
-        /// </summary>
-        /// <param name="sender">イベント送信元</param>
-        /// <param name="e">ステータス変更イベントの引数</param>
-        private void OnWbsItemStatusChanged(object? sender, WbsItem.StatusChangedEventArgs e)
-        {
-            if (sender is WbsItem wbsItem)
-            {
-                try
-                {
-                    System.Diagnostics.Debug.WriteLine($"ステータス変更検知: '{wbsItem.Title}' {e.OldStatus} → {e.NewStatus}");
-                    
-                    // ステータスが「完了」に変更された場合、先行タスクの完了状態をチェック
-                    if (e.NewStatus == "完了")
-                    {
-                        CheckPredecessorCompletion(wbsItem);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"ステータス変更処理エラー: {ex.Message}");
-                }
             }
         }
 
@@ -2924,6 +2800,60 @@ namespace RedmineClient.ViewModels.Pages
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"アプリケーション終了時の保存処理でエラーが発生: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 選択されたアイテムの先行タスクを削除する
+        /// </summary>
+        /// <param name="selectedItem">先行タスクを削除するタスク</param>
+        public void RemovePredecessor(WbsItem? selectedItem)
+        {
+            if (selectedItem == null) return;
+
+            try
+            {
+                // 先行タスクをすべて削除
+                var predecessorsToRemove = selectedItem.Predecessors.ToList();
+                foreach (var predecessor in predecessorsToRemove)
+                {
+                    selectedItem.RemovePredecessor(predecessor);
+                }
+
+                // UIを更新
+                OnPropertyChanged(nameof(FlattenedWbsItems));
+                System.Diagnostics.Debug.WriteLine($"先行タスク削除完了: '{selectedItem.Title}' の先行タスクをすべて削除しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"先行タスク削除エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 選択されたアイテムの後続タスクを削除する
+        /// </summary>
+        /// <param name="selectedItem">後続タスクを削除するタスク</param>
+        public void RemoveSuccessor(WbsItem? selectedItem)
+        {
+            if (selectedItem == null) return;
+
+            try
+            {
+                // 後続タスクをすべて削除
+                var successorsToRemove = selectedItem.Successors.ToList();
+                foreach (var successor in successorsToRemove)
+                {
+                    selectedItem.RemoveSuccessor(successor);
+                }
+
+                // UIを更新
+                OnPropertyChanged(nameof(FlattenedWbsItems));
+                System.Diagnostics.Debug.WriteLine($"後続タスク削除完了: '{selectedItem.Title}' の後続タスクをすべて削除しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"後続タスク削除エラー: {ex.Message}");
             }
         }
 

@@ -19,11 +19,19 @@ namespace RedmineClient.Helpers
         {
             if (value is DateTime date)
             {
-                // 祝日は透明度を下げる（日付の背景色を優先）
-                if (HolidayService.IsHoliday(date))
-                    return 0.3;
+                try
+                {
+                    // 祝日は透明度を下げる（日付の背景色を優先）
+                    if (HolidayService.IsHoliday(date))
+                        return 0.3;
+                }
+                catch (Exception)
+                {
+                    // 祝日判定でエラーが発生した場合は無視して続行
+                }
+                
                 // 土曜日は透明度を下げる（日付の背景色を優先）
-                else if (date.DayOfWeek == DayOfWeek.Saturday)
+                if (date.DayOfWeek == DayOfWeek.Saturday)
                     return 0.3;
                 // 日曜日は透明度を下げる（日付の背景色を優先）
                 else if (date.DayOfWeek == DayOfWeek.Sunday)

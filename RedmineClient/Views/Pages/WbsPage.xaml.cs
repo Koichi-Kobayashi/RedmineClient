@@ -1,5 +1,4 @@
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using RedmineClient.Helpers;
@@ -1471,25 +1470,9 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void DataGridRow_Drop(object sender, DragEventArgs e)
         {
-            try
-            {
-                if (e.Data.GetDataPresent(typeof(WbsItem)))
-                {
-                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
-                    if (sourceItem != null && sender is DataGridRow targetRow && targetRow.DataContext is WbsItem targetItem)
-                    {
-                        // 同じ階層レベルで同じ親を持つタスク間での順番変更のみ許可
-                        if (sourceItem.Level == targetItem.Level && sourceItem.Parent == targetItem.Parent)
-                        {
-                            ViewModel.ReorderTask(sourceItem, targetItem);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"DataGrid行ドロップ処理エラー: {ex.Message}");
-            }
+            // 重複実行を防ぐため、ここでは処理しない
+            // WbsDataGrid_Dropで一元処理される
+            e.Handled = true;
         }
 
         /// <summary>
@@ -1522,25 +1505,9 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void TaskBorder_Drop(object sender, DragEventArgs e)
         {
-            try
-            {
-                if (e.Data.GetDataPresent(typeof(WbsItem)))
-                {
-                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
-                    if (sourceItem != null && sender is Border targetBorder && targetBorder.DataContext is WbsItem targetItem)
-                    {
-                        // 同じ階層レベルで同じ親を持つタスク間での順番変更のみ許可
-                        if (sourceItem.Level == targetItem.Level && sourceItem.Parent == targetItem.Parent)
-                        {
-                            ViewModel.ReorderTask(sourceItem, targetItem);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"タスク境界ドロップ処理エラー: {ex.Message}");
-            }
+            // 重複実行を防ぐため、ここでは処理しない
+            // WbsDataGrid_Dropで一元処理される
+            e.Handled = true;
         }
 
         /// <summary>
@@ -1676,160 +1643,19 @@ namespace RedmineClient.Views.Pages
                         if (sourceItem == targetItem) return;
 
                         // 先行・後続の関係性を設定
-                        // ドロップ先のタスクが先行タスクになる（targetItemがsourceItemの先行タスクになる）
-                        ViewModel.SetDependency(targetItem, sourceItem, true);
+                        // タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになる
+                        ViewModel.SetDependency(sourceItem, targetItem, false);
                         
-                        // 先行・後続列の表示を更新
-                        UpdateDependencyColumnDisplay(targetItem);
+                        // 背景色をリセット
+                        border.Background = System.Windows.Media.Brushes.Transparent;
+                        border.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                        border.BorderThickness = new Thickness(1);
                     }
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"依存関係ドロップ処理エラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 先行・後続列の表示を更新
-        /// </summary>
-        /// <param name="wbsItem">表示を更新するWBSアイテム</param>
-        private void UpdateDependencyColumnDisplay(WbsItem wbsItem)
-        {
-            try
-            {
-                // 先行・後続列のセルを検索して更新
-                var dependencyCell = FindDependencyCell(wbsItem);
-                if (dependencyCell != null)
-                {
-                    // 先行タスクのチケット番号を表示
-                    var ticketNumbers = wbsItem.PredecessorTicketNumbers;
-                    if (!string.IsNullOrEmpty(ticketNumbers))
-                    {
-                        // 先行タスクがある場合、チケット番号を表示
-                        dependencyCell.Text = $"先行: {ticketNumbers}";
-                        dependencyCell.ToolTip = wbsItem.PredecessorTooltipText;
-                        
-                        // 先行タスクの完了状態に応じて色を変更
-                        if (wbsItem.IsWaitingForPredecessors)
-                        {
-                            dependencyCell.Foreground = System.Windows.Media.Brushes.Orange;
-                            dependencyCell.FontWeight = FontWeights.Bold;
-                        }
-                        else
-                        {
-                            dependencyCell.Foreground = System.Windows.Media.Brushes.Green;
-                            dependencyCell.FontWeight = FontWeights.Normal;
-                        }
-                    }
-                    else
-                    {
-                        // 先行タスクがない場合
-                        dependencyCell.Text = "D&D";
-                        dependencyCell.ToolTip = "タスクをドラッグ&ドロップして先行・後続関係を設定";
-                        dependencyCell.Foreground = System.Windows.Media.Brushes.Gray;
-                        dependencyCell.FontWeight = FontWeights.Normal;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"依存関係列表示更新エラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 指定されたWBSアイテムの先行・後続列のセルを検索
-        /// </summary>
-        /// <param name="wbsItem">検索対象のWBSアイテム</param>
-        /// <returns>先行・後続列のTextBlock、見つからない場合はnull</returns>
-        private TextBlock? FindDependencyCell(WbsItem wbsItem)
-        {
-            try
-            {
-                // WbsDataGridから該当する行を検索
-                foreach (var item in WbsDataGrid.Items)
-                {
-                    if (item is WbsItem itemData && itemData == wbsItem)
-                    {
-                        // 行のコンテナを取得
-                        var rowContainer = WbsDataGrid.ItemContainerGenerator.ContainerFromItem(item) as DataGridRow;
-                        if (rowContainer != null)
-                        {
-                            // 先行・後続列（列インデックス8）のセルを取得
-                            var cell = GetCell(rowContainer, 8);
-                            if (cell != null)
-                            {
-                                // セル内のTextBlockを検索
-                                var textBlock = FindVisualChild<TextBlock>(cell);
-                                return textBlock;
-                            }
-                        }
-                    }
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"依存関係セル検索エラー: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// 指定された行と列のセルを取得
-        /// </summary>
-        /// <param name="row">行コンテナ</param>
-        /// <param name="columnIndex">列インデックス</param>
-        /// <returns>セル、見つからない場合はnull</returns>
-        private DataGridCell? GetCell(DataGridRow row, int columnIndex)
-        {
-            try
-            {
-                if (row != null)
-                {
-                    var presenter = FindVisualChild<DataGridCellsPresenter>(row);
-                    if (presenter != null)
-                    {
-                        var cell = presenter.ItemContainerGenerator.ContainerFromIndex(columnIndex) as DataGridCell;
-                        return cell;
-                    }
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"セル取得エラー: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// 指定された型の子要素を検索
-        /// </summary>
-        /// <typeparam name="T">検索する型</typeparam>
-        /// <param name="parent">親要素</param>
-        /// <returns>見つかった子要素、見つからない場合はnull</returns>
-        private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
-        {
-            try
-            {
-                for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-                {
-                    var child = VisualTreeHelper.GetChild(parent, i);
-                    if (child is T result)
-                        return result;
-
-                    var descendant = FindVisualChild<T>(child);
-                    if (descendant != null)
-                        return descendant;
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"子要素検索エラー: {ex.Message}");
-                return null;
             }
         }
 
