@@ -1438,7 +1438,6 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     // 先行関係を設定（sourceItemがtargetItemの先行タスクになる）
                     targetItem.AddPredecessor(sourceItem);
-                    System.Diagnostics.Debug.WriteLine($"先行関係設定完了: '{sourceItem.Title}' → '{targetItem.Title}'");
                 }
                 else
                 {
@@ -1447,7 +1446,6 @@ namespace RedmineClient.ViewModels.Pages
                     sourceItem.AddPredecessor(targetItem);
                     // targetItemの後続がsourceItemになる
                     targetItem.AddSuccessor(sourceItem);
-                    System.Diagnostics.Debug.WriteLine($"双方向関係設定完了: '{targetItem.Title}' → '{sourceItem.Title}' (先行), '{sourceItem.Title}' → '{targetItem.Title}' (後続)");
                 }
 
                 // UIを更新
