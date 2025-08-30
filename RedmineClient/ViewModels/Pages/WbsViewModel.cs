@@ -98,9 +98,91 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// ガントチャート表示するかどうか
         /// </summary>
+        [ObservableProperty]
+        private bool _isGanttChartVisible = false;
 
+        /// <summary>
+        /// 日付変更の監視を有効にするかどうか
+        /// </summary>
+        [ObservableProperty]
+        private bool _isDateChangeWatchingEnabled = false;
 
+        /// <summary>
+        /// 日付変更の監視を開始する
+        /// </summary>
+        public void StartDateChangeWatching()
+        {
+            IsDateChangeWatchingEnabled = true;
+        }
 
+        /// <summary>
+        /// 日付変更の監視を停止する
+        /// </summary>
+        public void StopDateChangeWatching()
+        {
+            IsDateChangeWatchingEnabled = false;
+        }
+
+        /// <summary>
+        /// 日付変更時の更新処理を実行する
+        /// </summary>
+        /// <param name="task">変更されたタスク</param>
+        /// <param name="oldStartDate">変更前の開始日</param>
+        /// <param name="oldEndDate">変更前の終了日</param>
+        public async Task UpdateTaskScheduleAsync(WbsItem task, DateTime oldStartDate, DateTime oldEndDate)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"=== UpdateTaskScheduleAsync開始 ===");
+                System.Diagnostics.Debug.WriteLine($"タスク: {task.Title}");
+                System.Diagnostics.Debug.WriteLine($"IsDateChangeWatchingEnabled: {IsDateChangeWatchingEnabled}");
+                
+                if (!IsDateChangeWatchingEnabled)
+                {
+                    System.Diagnostics.Debug.WriteLine("日付変更の監視が無効のため、処理を終了します");
+                    return;
+                }
+
+                // 新規登録時は更新処理を実行しない
+                if (int.TryParse(task.Id, out int taskId) && taskId <= 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"新規タスクのため更新処理をスキップ: ID={taskId}");
+                    return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' のスケジュール更新処理を開始: {oldStartDate:yyyy/MM/dd} - {oldEndDate:yyyy/MM/dd} → {task.StartDate:yyyy/MM/dd} - {task.EndDate:yyyy/MM/dd}");
+
+                // Redmineの接続状態とプロジェクト選択状態をログ出力
+                System.Diagnostics.Debug.WriteLine($"Redmine接続状態: {IsRedmineConnected}");
+                System.Diagnostics.Debug.WriteLine($"選択されたプロジェクト: {SelectedProject?.Name ?? "なし"}");
+                System.Diagnostics.Debug.WriteLine($"タスクのRedmineチケットID: {task.RedmineIssueId?.ToString() ?? "なし"}");
+
+                // Redmineに更新を送信
+                if (IsRedmineConnected && SelectedProject != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Redmineへの更新処理を開始します");
+                    await UpdateRedmineIssueAsync(task, oldStartDate, oldEndDate);
+                    // 更新が成功したら未保存フラグをクリア
+                    task.HasUnsavedChanges = false;
+                    System.Diagnostics.Debug.WriteLine("Redmineへの更新処理が完了しました");
+                }
+                else
+                {
+                    // Redmineに接続されていない場合は未保存フラグを設定
+                    System.Diagnostics.Debug.WriteLine("Redmineに接続されていないか、プロジェクトが選択されていないため、未保存フラグを設定します");
+                    task.HasUnsavedChanges = true;
+                }
+
+                // スケジュール表を再生成
+                await RefreshScheduleAsync();
+
+                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' のスケジュール更新処理が完了しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"タスクスケジュール更新処理エラー: {ex.Message}");
+            }
+        }
 
         partial void OnSelectedItemChanged(WbsItem? value)
         {
@@ -530,6 +612,9 @@ namespace RedmineClient.ViewModels.Pages
                 
                 // 完了メッセージを少し表示してから非表示
                 await Task.Delay(500);
+                
+                // 日付変更の監視を開始
+                StartDateChangeWatching();
             }
             finally
             {
@@ -2412,6 +2497,132 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        /// <summary>
+        /// Redmineのチケットを更新する
+        /// </summary>
+        /// <param name="task">更新するタスク</param>
+        /// <param name="oldStartDate">変更前の開始日</param>
+        /// <param name="oldEndDate">変更前の終了日</param>
+        private async Task UpdateRedmineIssueAsync(WbsItem task, DateTime oldStartDate, DateTime oldEndDate)
+        {
+            try
+            {
+                if (task.RedmineIssueId.HasValue)
+                {
+                    using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                    {
+                        var issue = await redmineService.GetIssueAsync(task.RedmineIssueId.Value);
+                        if (issue != null)
+                        {
+                            // 変更された日付のみを更新
+                            bool hasChanges = false;
+                            
+                            if (task.StartDate != oldStartDate)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"開始日を更新: {oldStartDate:yyyy/MM/dd} → {task.StartDate:yyyy/MM/dd}");
+                                issue.StartDate = task.StartDate;
+                                hasChanges = true;
+                            }
+                            
+                            if (task.EndDate != oldEndDate)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"終了日を更新: {oldEndDate:yyyy/MM/dd} → {task.EndDate:yyyy/MM/dd}");
+                                issue.DueDate = task.EndDate;
+                                hasChanges = true;
+                            }
+                            
+                            if (hasChanges)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Redmineチケット {task.RedmineIssueId} を更新中...");
+                                await redmineService.UpdateIssueAsync(issue);
+                                System.Diagnostics.Debug.WriteLine($"Redmineチケット {task.RedmineIssueId} の更新が完了しました");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine("変更された日付がないため、Redmineの更新をスキップします");
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Redmineチケット {task.RedmineIssueId} が見つかりません");
+                        }
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' にRedmineチケットIDが設定されていません");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Redmineチケット更新エラー: {ex.Message}");
+                throw; // エラーを上位に伝播させる
+            }
+        }
+
+        /// <summary>
+        /// スケジュール表を再生成する
+        /// </summary>
+        private async Task RefreshScheduleAsync()
+        {
+            try
+            {
+                await InitializeScheduleItems();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"スケジュール表再生成エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// アプリケーション終了時の保存処理
+        /// </summary>
+        public async Task SavePendingChangesAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("アプリケーション終了時の保存処理を開始...");
+                
+                // 日付変更の監視を停止
+                StopDateChangeWatching();
+                
+                // 未保存の変更がある場合は保存処理を実行
+                if (IsRedmineConnected && SelectedProject != null)
+                {
+                    var tasksWithChanges = FlattenedWbsItems
+                        .Where(item => item.HasUnsavedChanges)
+                        .ToList();
+                    
+                    if (tasksWithChanges.Any())
+                    {
+                        System.Diagnostics.Debug.WriteLine($"{tasksWithChanges.Count}件の未保存変更を保存中...");
+                        
+                        foreach (var task in tasksWithChanges)
+                        {
+                            try
+                            {
+                                // 現在の日付を使用して更新（変更前の日付は不明なため）
+                                await UpdateRedmineIssueAsync(task, task.StartDate, task.EndDate);
+                                task.HasUnsavedChanges = false;
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' の保存に失敗: {ex.Message}");
+                            }
+                        }
+                        
+                        System.Diagnostics.Debug.WriteLine("未保存変更の保存が完了しました");
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine("アプリケーション終了時の保存処理が完了しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"アプリケーション終了時の保存処理でエラーが発生: {ex.Message}");
+            }
+        }
 
     }
 }

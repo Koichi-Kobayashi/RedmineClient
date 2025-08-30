@@ -372,7 +372,10 @@
                                            IsTodayHighlighted="True"
                                            DisplayDateStart="1900-01-01"
                                            DisplayDateEnd="2100-12-31"
-                                           SelectedDateFormat="Short" />
+                                           SelectedDateFormat="Short"
+                                           SelectedDateChanged="DatePicker_SelectedDateChanged"
+                                           GotFocus="DatePicker_GotFocus"
+                                           Tag="StartDate" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
@@ -393,7 +396,10 @@
                                            IsTodayHighlighted="True"
                                            DisplayDateStart="1900-01-01"
                                            DisplayDateEnd="2100-12-31"
-                                           SelectedDateFormat="Short" />
+                                           SelectedDateFormat="Short"
+                                           SelectedDateChanged="DatePicker_SelectedDateChanged"
+                                           GotFocus="DatePicker_GotFocus"
+                                           Tag="EndDate" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
@@ -532,11 +538,12 @@
                                     <!--  開始日  -->
                                     <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="開始日" />
                                     <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                FirstDayOfWeek="Monday"
-                                                IsTodayHighlighted="True"
-                                                DisplayDateStart="1900-01-01"
-                                                DisplayDateEnd="2100-12-31"
-                                                SelectedDateFormat="Short" />
+                                               FirstDayOfWeek="Monday"
+                                               IsTodayHighlighted="True"
+                                               DisplayDateStart="1900-01-01"
+                                               DisplayDateEnd="2100-12-31"
+                                               SelectedDateFormat="Short"
+                                               SelectedDateChanged="DatePicker_SelectedDateChanged" />
 
                                     <!--  終了日  -->
                                     <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
@@ -545,7 +552,8 @@
                                                 IsTodayHighlighted="True"
                                                 DisplayDateStart="1900-01-01"
                                                 DisplayDateEnd="2100-12-31"
-                                                SelectedDateFormat="Short" />
+                                                SelectedDateFormat="Short"
+                                                SelectedDateChanged="DatePicker_SelectedDateChanged" />
                                 </StackPanel>
                             </Expander>
 

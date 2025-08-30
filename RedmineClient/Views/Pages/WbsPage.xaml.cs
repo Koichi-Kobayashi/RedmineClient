@@ -14,6 +14,12 @@ namespace RedmineClient.Views.Pages
     {
         public WbsViewModel ViewModel { get; }
 
+        static WbsPage()
+        {
+            // 静的コンストラクタでDatePickerのプリロードを実行
+            Task.Run(StaticPreloadDatePickersAsync);
+        }
+
         public WbsPage(WbsViewModel viewModel)
         {
             ViewModel = viewModel;
@@ -29,11 +35,25 @@ namespace RedmineClient.Views.Pages
             // DataGridのLoadedイベントでも日付列の生成を試行
             this.Loaded += WbsPage_DataGridLoaded;
 
-            // 祝日データを初期化（非同期で実行）
-            _ = Task.Run(() => InitializeHolidayDataAsync());
+            // 祝日データを初期化（非同期で実行、エラーが発生しても続行）
+            _ = Task.Run(async () => 
+            {
+                try
+                {
+                    await InitializeHolidayDataAsync();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー（無視して続行）: {ex.Message}");
+                }
+            });
 
             // プロジェクト選択変更時のイベントを登録
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            
+            // 日付変更の監視を有効化
+            ViewModel.StartDateChangeWatching();
+            System.Diagnostics.Debug.WriteLine("日付変更の監視を有効化しました");
 
             // キーボードショートカットを設定
             this.KeyDown += WbsPage_KeyDown;
@@ -46,24 +66,29 @@ namespace RedmineClient.Views.Pages
                 WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
                 WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
             };
+            
+            // アプリケーション終了時の処理を追加
+            Application.Current.MainWindow.Closing += MainWindow_Closing;
+            
+            // DatePickerのプリロードを開始
+            _ = Task.Run(async () => await PreloadDatePickersAsync());
         }
 
         /// <summary>
         /// 祝日データを初期化する
         /// </summary>
-#pragma warning disable CS1998 // 非同期メソッドには await 演算子が必要（実際には使用している）
         private async Task InitializeHolidayDataAsync()
         {
             try
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                // 祝日データの初期化に失敗
+                // 祝日データの初期化に失敗しても処理を続行
+                System.Diagnostics.Debug.WriteLine($"祝日データの初期化でエラーが発生しましたが、処理を続行します: {ex.Message}");
             }
         }
-#pragma warning restore CS1998
 
 
 
@@ -242,9 +267,10 @@ namespace RedmineClient.Views.Pages
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                // 祝日データの再初期化に失敗
+                // 祝日データの再初期化に失敗しても処理を続行
+                System.Diagnostics.Debug.WriteLine($"祝日データの再初期化でエラーが発生しましたが、処理を続行します: {ex.Message}");
             }
         }
 
@@ -1071,6 +1097,287 @@ namespace RedmineClient.Views.Pages
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"スケジュール変更イベント処理エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 静的DatePickerのプリロードを実行する
+        /// </summary>
+        private static Task StaticPreloadDatePickersAsync()
+        {
+            return Task.Run(async () =>
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("静的DatePickerのプリロードを開始...");
+                    
+                    // アプリケーションが起動していない場合は待機
+                    while (Application.Current == null)
+                    {
+                        await Task.Delay(100);
+                    }
+                    
+                    // UIスレッドでDatePickerの初期化を実行
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            // 基本的なDatePickerを初期化してカレンダーコンポーネントをプリロード
+                            var datePicker = new DatePicker
+                            {
+                                SelectedDate = DateTime.Today,
+                                FirstDayOfWeek = DayOfWeek.Monday,
+                                IsTodayHighlighted = true,
+                                SelectedDateFormat = DatePickerFormat.Short
+                            };
+                            
+                            // カレンダーを表示してプリロード
+                            datePicker.IsDropDownOpen = true;
+                            
+                            // 少し待ってから閉じる
+                            Task.Delay(150).ContinueWith(_ =>
+                            {
+                                if (Application.Current != null)
+                                {
+                                    Application.Current.Dispatcher.Invoke(() =>
+                                    {
+                                        datePicker.IsDropDownOpen = false;
+                                    });
+                                }
+                            });
+                            
+                            System.Diagnostics.Debug.WriteLine("静的DatePickerのプリロードが完了しました");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"静的DatePickerプリロード中にエラーが発生: {ex.Message}");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"静的DatePickerプリロードでエラーが発生: {ex.Message}");
+                }
+            });
+        }
+
+        /// <summary>
+        /// DatePickerのプリロードを実行する
+        /// </summary>
+        private Task PreloadDatePickersAsync()
+        {
+            return Task.Run(async () =>
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("DatePickerのプリロードを開始...");
+                    
+                    // UIスレッドでDatePickerの初期化を実行
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            // 複数のDatePickerをプリロードして、カレンダーコンポーネントを初期化
+                            var datePickers = new List<DatePicker>();
+                            
+                            // 現在の日付、前月、翌月の日付でプリロード
+                            var dates = new[]
+                            {
+                                DateTime.Today,
+                                DateTime.Today.AddMonths(-1),
+                                DateTime.Today.AddMonths(1)
+                            };
+                            
+                            foreach (var date in dates)
+                            {
+                                var datePicker = new DatePicker
+                                {
+                                    SelectedDate = date,
+                                    FirstDayOfWeek = DayOfWeek.Monday,
+                                    IsTodayHighlighted = true,
+                                    DisplayDateStart = new DateTime(1900, 1, 1),
+                                    DisplayDateEnd = new DateTime(2100, 12, 31),
+                                    SelectedDateFormat = DatePickerFormat.Short
+                                };
+                                
+                                datePickers.Add(datePicker);
+                            }
+                            
+                            // カレンダーを表示してプリロード
+                            foreach (var datePicker in datePickers)
+                            {
+                                datePicker.IsDropDownOpen = true;
+                            }
+                            
+                            // 少し待ってから閉じる
+                            Task.Delay(200).ContinueWith(_ =>
+                            {
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    foreach (var datePicker in datePickers)
+                                    {
+                                        datePicker.IsDropDownOpen = false;
+                                    }
+                                });
+                            });
+                            
+                            System.Diagnostics.Debug.WriteLine($"DatePickerのプリロードが完了しました（{datePickers.Count}個）");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"DatePickerプリロード中にエラーが発生: {ex.Message}");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"DatePickerプリロードでエラーが発生: {ex.Message}");
+                }
+            });
+        }
+
+        /// <summary>
+        /// アプリケーション終了時の処理
+        /// </summary>
+        private async void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            try
+            {
+                // 未保存の変更がある場合は保存処理を実行
+                if (ViewModel != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("アプリケーション終了時の保存処理を実行中...");
+                    
+                    // 未保存の変更を保存
+                    await ViewModel.SavePendingChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"アプリケーション終了時の保存処理エラー: {ex.Message}");
+            }
+        }
+
+        // 日付変更前の値を保存する辞書
+        private readonly Dictionary<DatePicker, (DateTime StartDate, DateTime EndDate)> _dateChangeCache = new();
+
+        /// <summary>
+        /// DatePickerがフォーカスを取得した時の処理
+        /// </summary>
+        private void DatePicker_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is DatePicker datePicker && datePicker.DataContext is WbsItem task)
+            {
+                // 現在の日付値をキャッシュに保存
+                _dateChangeCache[datePicker] = (task.StartDate, task.EndDate);
+                System.Diagnostics.Debug.WriteLine($"DatePickerフォーカス取得: {task.Title} - 開始日: {task.StartDate:yyyy/MM/dd}, 終了日: {task.EndDate:yyyy/MM/dd}");
+            }
+        }
+
+        /// <summary>
+        /// DatePickerの日付変更イベントを処理する
+        /// </summary>
+        /// <param name="sender">イベントの送信元</param>
+        /// <param name="e">イベント引数</param>
+        private async void DatePicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                if (sender is DatePicker datePicker && datePicker.DataContext is WbsItem task)
+                {
+                    System.Diagnostics.Debug.WriteLine($"DatePicker日付変更イベントが発生: タスク '{task.Title}'");
+                    
+                    // 新規登録時は更新処理を実行しない
+                    if (int.TryParse(task.Id, out int idValue) && idValue <= 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"新規タスクのため更新処理をスキップ: {task.Title}");
+                        return;
+                    }
+
+                                                                // 日付が変更された場合のみ処理
+                    if (datePicker.SelectedDate.HasValue)
+                    {
+                        var newDate = datePicker.SelectedDate.Value;
+                        
+                        // キャッシュから変更前の値を取得
+                        var oldValues = _dateChangeCache.GetValueOrDefault(datePicker, (task.StartDate, task.EndDate));
+                        var oldStartDate = oldValues.StartDate;
+                        var oldEndDate = oldValues.EndDate;
+
+                        System.Diagnostics.Debug.WriteLine($"=== 日付変更詳細情報 ===");
+                        System.Diagnostics.Debug.WriteLine($"タスク: {task.Title}");
+                        System.Diagnostics.Debug.WriteLine($"新しい日付: {newDate:yyyy/MM/dd}");
+                        System.Diagnostics.Debug.WriteLine($"変更前の開始日: {oldStartDate:yyyy/MM/dd}");
+                        System.Diagnostics.Debug.WriteLine($"変更前の終了日: {oldEndDate:yyyy/MM/dd}");
+                        System.Diagnostics.Debug.WriteLine($"現在の開始日: {task.StartDate:yyyy/MM/dd}");
+                        System.Diagnostics.Debug.WriteLine($"現在の終了日: {task.EndDate:yyyy/MM/dd}");
+                        System.Diagnostics.Debug.WriteLine($"DatePickerのTag: {datePicker.Tag}");
+                        System.Diagnostics.Debug.WriteLine($"========================");
+
+                        // タグを使用して列を識別
+                        string? columnType = datePicker.Tag?.ToString();
+                        System.Diagnostics.Debug.WriteLine($"列タイプ: {columnType}");
+                        
+                        // 日付変更の検出と処理
+                        bool dateChanged = false;
+                        DateTime originalStartDate = oldStartDate;
+                        DateTime originalEndDate = oldEndDate;
+
+                        if (columnType == "StartDate")
+                        {
+                            if (newDate != oldStartDate)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"開始日が変更されました: {oldStartDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
+                                originalStartDate = oldStartDate;
+                                task.StartDate = newDate;
+                                dateChanged = true;
+                            }
+                        }
+                        else if (columnType == "EndDate")
+                        {
+                            if (newDate != oldEndDate)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"終了日が変更されました: {oldEndDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
+                                originalEndDate = oldEndDate;
+                                task.EndDate = newDate;
+                                dateChanged = true;
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"警告: 列タイプが識別できません: {columnType}");
+                        }
+
+                        // 日付が変更された場合のみ更新処理を実行
+                        if (dateChanged)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"更新処理を開始: {task.Title}");
+                            System.Diagnostics.Debug.WriteLine($"変更前: {originalStartDate:yyyy/MM/dd} - {originalEndDate:yyyy/MM/dd}");
+                            System.Diagnostics.Debug.WriteLine($"変更後: {task.StartDate:yyyy/MM/dd} - {task.EndDate:yyyy/MM/dd}");
+                            
+                            System.Diagnostics.Debug.WriteLine($"ViewModel.UpdateTaskScheduleAsyncを呼び出します...");
+                            System.Diagnostics.Debug.WriteLine($"ViewModel: {ViewModel != null}");
+                            System.Diagnostics.Debug.WriteLine($"ViewModelの型: {ViewModel?.GetType().Name}");
+                            
+                            // ViewModelの更新処理を実行
+                            await ViewModel.UpdateTaskScheduleAsync(task, originalStartDate, originalEndDate);
+                            
+                            System.Diagnostics.Debug.WriteLine($"ViewModel.UpdateTaskScheduleAsyncの呼び出しが完了しました");
+                            System.Diagnostics.Debug.WriteLine($"更新処理が完了: {task.Title}");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"日付に変更がないため更新処理をスキップ: {task.Title}");
+                            System.Diagnostics.Debug.WriteLine($"新しい日付: {newDate:yyyy/MM/dd}");
+                            System.Diagnostics.Debug.WriteLine($"現在の開始日: {task.StartDate:yyyy/MM/dd}");
+                            System.Diagnostics.Debug.WriteLine($"現在の終了日: {task.EndDate:yyyy/MM/dd}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DatePicker日付変更処理エラー: {ex.Message}");
             }
         }
     }

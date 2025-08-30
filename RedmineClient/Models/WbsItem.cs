@@ -29,6 +29,7 @@ namespace RedmineClient.Models
         private DateTime _redmineCreatedOn = DateTime.MinValue;
         private DateTime _redmineUpdatedOn = DateTime.MinValue;
         private bool _isNew = false;
+        private bool _hasUnsavedChanges = false;
 
         public string Id
         {
@@ -100,6 +101,64 @@ namespace RedmineClient.Models
         {
             get => _redmineIssueId;
             set => SetProperty(ref _redmineIssueId, value);
+        }
+
+        /// <summary>
+        /// 日付変更イベント
+        /// </summary>
+        public event EventHandler<DateChangedEventArgs>? DateChanged;
+
+        /// <summary>
+        /// 日付変更イベントの引数
+        /// </summary>
+        public class DateChangedEventArgs : EventArgs
+        {
+            public DateTime OldStartDate { get; set; }
+            public DateTime OldEndDate { get; set; }
+            public DateTime NewStartDate { get; set; }
+            public DateTime NewEndDate { get; set; }
+        }
+
+        /// <summary>
+        /// 開始日を設定し、変更イベントを発火する
+        /// </summary>
+        /// <param name="value">新しい開始日</param>
+        public void SetStartDate(DateTime value)
+        {
+            var oldStartDate = _startDate;
+            var oldEndDate = _endDate;
+            
+            SetProperty(ref _startDate, value);
+            
+            // 日付変更イベントを発火
+            DateChanged?.Invoke(this, new DateChangedEventArgs
+            {
+                OldStartDate = oldStartDate,
+                OldEndDate = oldEndDate,
+                NewStartDate = value,
+                NewEndDate = _endDate
+            });
+        }
+
+        /// <summary>
+        /// 終了日を設定し、変更イベントを発火する
+        /// </summary>
+        /// <param name="value">新しい終了日</param>
+        public void SetEndDate(DateTime value)
+        {
+            var oldStartDate = _startDate;
+            var oldEndDate = _endDate;
+            
+            SetProperty(ref _endDate, value);
+            
+            // 日付変更イベントを発火
+            DateChanged?.Invoke(this, new DateChangedEventArgs
+            {
+                OldStartDate = oldStartDate,
+                OldEndDate = oldEndDate,
+                NewStartDate = _startDate,
+                NewEndDate = value
+            });
         }
 
         public string RedmineUrl
@@ -312,5 +371,14 @@ namespace RedmineClient.Models
         /// 開始日の日を取得
         /// </summary>
         public int Day => StartDate.Day;
+
+        /// <summary>
+        /// 未保存の変更があるかどうか
+        /// </summary>
+        public bool HasUnsavedChanges
+        {
+            get => _hasUnsavedChanges;
+            set => SetProperty(ref _hasUnsavedChanges, value);
+        }
     }
 }
