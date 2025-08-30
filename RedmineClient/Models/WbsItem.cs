@@ -96,7 +96,32 @@ namespace RedmineClient.Models
         public string Status
         {
             get => _status;
-            set => SetProperty(ref _status, value);
+            set 
+            {
+                if (SetProperty(ref _status, value))
+                {
+                    // ステータス変更イベントを発火
+                    StatusChanged?.Invoke(this, new StatusChangedEventArgs
+                    {
+                        OldStatus = _status,
+                        NewStatus = value
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// ステータス変更イベント
+        /// </summary>
+        public event EventHandler<StatusChangedEventArgs>? StatusChanged;
+
+        /// <summary>
+        /// ステータス変更イベントの引数
+        /// </summary>
+        public class StatusChangedEventArgs : EventArgs
+        {
+            public string OldStatus { get; set; } = string.Empty;
+            public string NewStatus { get; set; } = string.Empty;
         }
 
         public string Priority
@@ -353,6 +378,57 @@ namespace RedmineClient.Models
             {
                 if (!HasSuccessors) return string.Empty;
                 return $"後続: {SuccessorCount}件";
+            }
+        }
+
+        /// <summary>
+        /// 先行タスクがすべて完了しているかどうか
+        /// </summary>
+        public bool ArePredecessorsCompleted
+        {
+            get
+            {
+                if (!HasPredecessors) return true;
+                return Predecessors.All(p => p.Status == "完了");
+            }
+        }
+
+        /// <summary>
+        /// 先行タスクの完了を待っているかどうか
+        /// </summary>
+        public bool IsWaitingForPredecessors => HasPredecessors && !ArePredecessorsCompleted;
+
+        /// <summary>
+        /// 先行タスクのチケット番号を表示用テキストで取得
+        /// </summary>
+        public string PredecessorTicketNumbers
+        {
+            get
+            {
+                if (!HasPredecessors) return string.Empty;
+                var ticketNumbers = Predecessors
+                    .Where(p => !string.IsNullOrEmpty(p.Id))
+                    .Select(p => p.Id)
+                    .Distinct();
+                return string.Join(", ", ticketNumbers);
+            }
+        }
+
+        /// <summary>
+        /// 先行タスクの詳細情報（ツールチップ用）
+        /// </summary>
+        public string PredecessorTooltipText
+        {
+            get
+            {
+                if (!HasPredecessors) return "先行タスクなし";
+                
+                var details = Predecessors.Select(p => 
+                {
+                    var status = p.Status == "完了" ? "✓" : "⏳";
+                    return $"{status} {p.Title} (ID: {p.Id}) - {p.Status}";
+                });
+                return $"先行タスク:\n{string.Join("\n", details)}";
             }
         }
 
