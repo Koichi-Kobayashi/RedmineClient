@@ -1,5 +1,4 @@
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -89,7 +88,7 @@ namespace RedmineClient.Views.Controls
         }
 
         /// <summary>
-        /// Gridの内容を初期化（TextBlockを追加）
+        /// Gridの内容を初期化
         /// </summary>
         private void InitializeGridContent()
         {
@@ -97,22 +96,6 @@ namespace RedmineClient.Views.Controls
             {
                 // 既存の子要素をクリア
                 grid.Children.Clear();
-                
-                // 3列すべてにTextBlockを追加（ドラッグ判定で列0、列1、列2を参照するため）
-                for (int i = 0; i < 3; i++)
-                {
-                    var textBlock = new TextBlock
-                    {
-                        Text = "",
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        FontSize = 8,
-                        Foreground = Brushes.Black,
-                        Background = Brushes.Transparent
-                    };
-                    Grid.SetColumn(textBlock, i);
-                    grid.Children.Add(textBlock);
-                }
             }
         }
 
