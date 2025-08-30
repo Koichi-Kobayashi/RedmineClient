@@ -55,7 +55,6 @@ namespace RedmineClient.Services
                 // 該当年のデータがない場合は空のセットを返す
                 if (!_holidayCache.ContainsKey(year))
                 {
-                    System.Diagnostics.Debug.WriteLine($"年 {year} の祝日データが見つかりません");
                     return new HashSet<DateTime>();
                 }
 
@@ -72,18 +71,11 @@ namespace RedmineClient.Services
             {
                 var success = await LoadHolidayDataFromAssetsAsync();
                 
-                if (success)
-                {
-                    System.Diagnostics.Debug.WriteLine("祝日データの更新が完了しました");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("祝日データの更新に失敗しました（ファイルが見つからないか、読み込みに失敗）");
-                }
+                // 祝日データの更新処理完了
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"祝日データの更新でエラーが発生しました: {ex.Message}");
+                // 祝日データの更新でエラーが発生した場合は無視
             }
         }
 
@@ -108,7 +100,6 @@ namespace RedmineClient.Services
 
                 if (!File.Exists(assetsPath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"祝日データファイルが見つかりません: {assetsPath}");
                     return false;
                 }
 
@@ -177,9 +168,9 @@ namespace RedmineClient.Services
             {
                 await UpdateHolidayDataAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"祝日データの強制更新でエラーが発生しました: {ex.Message}");
+                // 祝日データの強制更新でエラーが発生した場合は無視
             }
         }
     }

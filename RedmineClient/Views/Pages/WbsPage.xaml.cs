@@ -2,7 +2,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using RedmineClient.Helpers;
-using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
 using RedmineClient.Views.Controls;
 
@@ -1650,6 +1649,9 @@ namespace RedmineClient.Views.Pages
                         border.Background = System.Windows.Media.Brushes.Transparent;
                         border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                         border.BorderThickness = new Thickness(1);
+
+                        // Redmineへの更新を非同期で実行
+                        
                     }
                 }
             }

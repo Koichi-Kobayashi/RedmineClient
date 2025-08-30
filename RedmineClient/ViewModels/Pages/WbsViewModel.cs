@@ -135,24 +135,19 @@ namespace RedmineClient.ViewModels.Pages
             {
                 if (!IsDateChangeWatchingEnabled)
                 {
-                    System.Diagnostics.Debug.WriteLine("日付変更の監視が無効のため、更新処理をスキップしました");
                     return;
                 }
 
                 if (task == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("タスクがnullのため、更新処理をスキップしました");
                     return;
                 }
 
                 // 新規登録時は更新処理を実行しない
                 if (int.TryParse(task.Id, out int taskId) && taskId <= 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"新規タスク（ID: {taskId}）のため、更新処理をスキップしました");
                     return;
                 }
-
-                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' の日付変更処理を開始: {oldStartDate:yyyy/MM/dd} -> {task.StartDate:yyyy/MM/dd}, {oldEndDate:yyyy/MM/dd} -> {task.EndDate:yyyy/MM/dd}");
 
                 // Redmineに更新を送信
                 if (IsRedmineConnected && SelectedProject != null)
@@ -162,11 +157,9 @@ namespace RedmineClient.ViewModels.Pages
                         await UpdateRedmineIssueAsync(task, oldStartDate, oldEndDate);
                         // 更新が成功したら未保存フラグをクリア
                         task.HasUnsavedChanges = false;
-                        System.Diagnostics.Debug.WriteLine($"Redmine更新完了: タスク '{task.Title}'");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Redmine更新でエラー: {ex.Message}");
                         // Redmine更新に失敗した場合は未保存フラグを設定
                         task.HasUnsavedChanges = true;
                     }
@@ -175,24 +168,21 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     // Redmineに接続されていない場合は未保存フラグを設定
                     task.HasUnsavedChanges = true;
-                    System.Diagnostics.Debug.WriteLine("Redmineに接続されていないため、未保存フラグを設定しました");
                 }
 
                 // スケジュール表を再生成
                 try
                 {
                     await RefreshScheduleAsync();
-                    System.Diagnostics.Debug.WriteLine("スケジュール表の再生成が完了しました");
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    System.Diagnostics.Debug.WriteLine($"スケジュール表再生成でエラー: {ex.Message}");
+                    // スケジュール表再生成でエラーが発生した場合は無視
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"UpdateTaskScheduleAsyncで予期しないエラー: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"スタックトレース: {ex.StackTrace}");
+                // UpdateTaskScheduleAsyncで予期しないエラーが発生した場合は無視
             }
         }
 
@@ -210,8 +200,6 @@ namespace RedmineClient.ViewModels.Pages
                 CanAddChild = false;
             }
         }
-
-
 
         partial void OnScheduleStartYearMonthChanged(string value)
         {
@@ -1419,13 +1407,13 @@ namespace RedmineClient.ViewModels.Pages
                         _ = Task.Run(async () => await UpdateFlattenedList());
                         
                         // 成功メッセージをデバッグ出力
-                        System.Diagnostics.Debug.WriteLine($"タスクの順番変更完了: '{sourceItem.Title}' を '{targetItem.Title}' の位置に移動しました");
+
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"タスク順番変更エラー: {ex.Message}");
+                // タスク順番変更でエラーが発生した場合は無視
             }
         }
 
