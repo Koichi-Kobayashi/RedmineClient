@@ -20,12 +20,16 @@ namespace RedmineClient.Views.Controls
         private DateTime _previewStartDate; // プレビュー用の開始日
         private DateTime _previewEndDate;   // プレビュー用の終了日
         private WbsItem _wbsItem;
-        private DateTime _currentDate;
+        private DateTime _startDate; // 表示開始日（列0の日付）
+        private DateTime _currentDate; // 現在のDraggableTaskBorderが表示している日付
         private int _columnIndex;
         private int _totalColumns;
 
         // ドラッグハンドルの幅
         private const double DRAG_HANDLE_WIDTH = 10.0;
+        
+        // タスク情報列数（ID, タスク名, 説明, 開始日, 終了日, 進捗, ステータス, 優先度, 担当者の9列）
+        private const int TASK_INFO_COLUMN_COUNT = 9;
 
         public DraggableTaskBorder()
         {
@@ -68,14 +72,20 @@ namespace RedmineClient.Views.Controls
         /// <summary>
         /// タスク情報を設定
         /// </summary>
-        public void SetTaskInfo(WbsItem wbsItem, DateTime currentDate, int columnIndex, int totalColumns)
+        public void SetTaskInfo(WbsItem wbsItem, DateTime startDate, DateTime currentDate, int columnIndex, int totalColumns)
         {
             _wbsItem = wbsItem;
-            _currentDate = currentDate;
+            _startDate = startDate; // 表示開始日（列0の日付）
+            _currentDate = currentDate; // 現在のDraggableTaskBorderが表示している日付
             _columnIndex = columnIndex;
             _totalColumns = totalColumns;
 
-            // デバッグ情報は削除
+            // デバッグ情報を追加
+            System.Diagnostics.Debug.WriteLine($"SetTaskInfo: タスク={wbsItem.Title}, startDate={startDate:yyyy/MM/dd}, currentDate={currentDate:yyyy/MM/dd}, columnIndex={columnIndex}, totalColumns={totalColumns}");
+            
+            // タスクの開始日・終了日に対応する列インデックスを事前計算
+            var (startDateColumn, endDateColumn) = GetActualTaskColumns();
+            System.Diagnostics.Debug.WriteLine($"  計算された列: 開始日列={startDateColumn}, 終了日列={endDateColumn}");
         }
 
         /// <summary>
@@ -92,8 +102,6 @@ namespace RedmineClient.Views.Controls
             _previewEndDate = _wbsItem.EndDate;     // プレビュー用の終了日を初期化
 
             // ドラッグ開始位置を判定（日付ベース）
-            var relativeX = _dragStartPoint.X;
-            var width = ActualWidth;
 
             // 開始日と終了日に対応する列を計算
             var (startDateColumn, endDateColumn) = GetActualTaskColumns();
@@ -122,6 +130,7 @@ namespace RedmineClient.Views.Controls
                 // 開始日の列の場合（開始日変更）
                 _isDraggingStart = true;
                 _isDraggingEnd = false;
+                _isDraggingMove = false;
                 Cursor = Cursors.SizeWE;
                 System.Diagnostics.Debug.WriteLine($"開始日変更ドラッグ開始: {_wbsItem.Title} (開始日列)");
             }
@@ -130,6 +139,7 @@ namespace RedmineClient.Views.Controls
                 // 終了日の列の場合（終了日変更）
                 _isDraggingStart = false;
                 _isDraggingEnd = true;
+                _isDraggingMove = false;
                 Cursor = Cursors.SizeWE;
                 System.Diagnostics.Debug.WriteLine($"終了日変更ドラッグ開始: {_wbsItem.Title} (終了日列)");
             }
@@ -149,9 +159,9 @@ namespace RedmineClient.Views.Controls
                     // タスク期間内の列の場合は、より柔軟なドラッグ判定を行う
                     var (taskStartColumn, taskEndColumn) = GetActualTaskColumns();
                     
-                    // _columnIndexは固定列9個を含むグリッド全体のインデックス
-                    // 日付列の相対位置に変換する（固定列9個を引く）
-                    var dateColumnIndex = _columnIndex - 9;
+                    // _columnIndexはタスク情報列を含むグリッド全体のインデックス
+                    // 日付列の相対位置に変換する（タスク情報列数を引く）
+                    var dateColumnIndex = _columnIndex - TASK_INFO_COLUMN_COUNT;
                     
                     // タスク期間の判定：現在の列がタスクの開始日から終了日の範囲内にあるか
                     // ただし、負の値や上限を超える値も考慮する
@@ -161,99 +171,173 @@ namespace RedmineClient.Views.Controls
                     System.Diagnostics.Debug.WriteLine($"  タスク期間判定: _columnIndex={_columnIndex}, dateColumnIndex={dateColumnIndex}, taskStartColumn={taskStartColumn}, taskEndColumn={taskEndColumn}, isInTaskPeriod={isInTaskPeriod}");
                     
                     // タスク期間内の列の場合、または現在の列がタスクの表示範囲内にある場合は拡張ドラッグ判定を適用
-                    if (isInTaskPeriod || (dateColumnIndex >= 0 && dateColumnIndex < _totalColumns - 9))
+                    if (isInTaskPeriod || (dateColumnIndex >= 0 && dateColumnIndex < _totalColumns - TASK_INFO_COLUMN_COUNT))
                     {
-                        // タスク期間内の列の場合：より広い範囲でドラッグ判定
-                        var extendedHandleWidth = Math.Max(DRAG_HANDLE_WIDTH, width * 0.4); // 幅の40%または10pxの大きい方
+                        // セル単位での判定に変更
+                        // 左端のセル（列0）: 開始日変更
+                        // 右端のセル（列2）: 終了日変更
+                        // 中央のセル（列1）: 期間移動
+                        var clickedColumn = Grid.GetColumn(e.OriginalSource as UIElement);
                         
                         // デバッグ情報を追加
-                        System.Diagnostics.Debug.WriteLine($"  位置判定: relativeX={relativeX:F1}, width={width:F1}, extendedHandleWidth={extendedHandleWidth:F1}");
-                        System.Diagnostics.Debug.WriteLine($"  判定条件: relativeX <= {extendedHandleWidth:F1} = {relativeX <= extendedHandleWidth}, relativeX >= {width - extendedHandleWidth:F1} = {relativeX >= width - extendedHandleWidth}");
+                        System.Diagnostics.Debug.WriteLine($"  セル判定詳細: clickedColumn={clickedColumn}, e.OriginalSource={e.OriginalSource?.GetType().Name}");
                         
-                        // より確実な判定のため、右端を優先的に判定
-                        if (relativeX >= width - extendedHandleWidth)
+                        // e.OriginalSourceがDraggableTaskBorder自体の場合は、そのDraggableTaskBorderが表示している日付で判定
+                        if (e.OriginalSource is DraggableTaskBorder)
                         {
-                            // 右側（終了日変更）を優先
-                            _isDraggingStart = false;
-                            _isDraggingEnd = true;
-                            Cursor = Cursors.SizeWE;
-                            System.Diagnostics.Debug.WriteLine($"  拡張判定で終了日変更ドラッグ開始: {_wbsItem.Title} (右側)");
-                        }
-                        else if (relativeX <= extendedHandleWidth)
-                        {
-                            // 左側（開始日変更）
-                            _isDraggingStart = true;
-                            _isDraggingEnd = false;
-                            Cursor = Cursors.SizeWE;
-                            System.Diagnostics.Debug.WriteLine($"  拡張判定で開始日変更ドラッグ開始: {_wbsItem.Title} (左側)");
+                            System.Diagnostics.Debug.WriteLine($"  DraggableTaskBorder自体がクリックされたため、表示日付で判定");
+                            
+                            // 現在のDraggableTaskBorderが表示している日付が開始日・終了日かどうかを判定
+                            // _currentDateは既に設定されているので、直接使用
+                            var isCurrentDateStartDate = _currentDate.Date == _wbsItem.StartDate.Date;
+                            var isCurrentDateEndDate = _currentDate.Date == _wbsItem.EndDate.Date;
+                            
+                            // デバッグ情報を追加
+                            System.Diagnostics.Debug.WriteLine($"  日付計算詳細: _startDate={_startDate:yyyy/MM/dd}, _currentDate={_currentDate:yyyy/MM/dd}");
+                            System.Diagnostics.Debug.WriteLine($"  比較対象: startDate={_wbsItem.StartDate:yyyy/MM/dd}, endDate={_wbsItem.EndDate:yyyy/MM/dd}");
+                            
+                            System.Diagnostics.Debug.WriteLine($"  表示日付判定: _columnIndex={_columnIndex}, currentDate={_currentDate:yyyy/MM/dd}, startDate={_wbsItem.StartDate:yyyy/MM/dd}, endDate={_wbsItem.EndDate:yyyy/MM/dd}");
+                            System.Diagnostics.Debug.WriteLine($"  判定結果: isStartDate={isCurrentDateStartDate}, isEndDate={isCurrentDateEndDate}");
+                            
+                            if (isCurrentDateStartDate)
+                            {
+                                // 開始日の日付（開始日変更のみ）
+                                _isDraggingStart = true;
+                                _isDraggingEnd = false;
+                                _isDraggingMove = false;
+                                Cursor = Cursors.SizeWE;
+                                System.Diagnostics.Debug.WriteLine($"  開始日日付判定で開始日変更ドラッグ開始: {_wbsItem.Title}");
+                            }
+                            else if (isCurrentDateEndDate)
+                            {
+                                // 終了日の日付（終了日変更のみ）
+                                _isDraggingStart = false;
+                                _isDraggingEnd = true;
+                                _isDraggingMove = false;
+                                Cursor = Cursors.SizeWE;
+                                System.Diagnostics.Debug.WriteLine($"  終了日日付判定で終了日変更ドラッグ開始: {_wbsItem.Title}");
+                            }
+                            else
+                            {
+                                // 開始日・終了日以外の日付（期間移動のみ）
+                                _isDraggingStart = false;
+                                _isDraggingEnd = false;
+                                _isDraggingMove = true;
+                                Cursor = Cursors.SizeAll;
+                                System.Diagnostics.Debug.WriteLine($"  期間移動日付判定で期間移動ドラッグ開始: {_wbsItem.Title}");
+                            }
                         }
                         else
                         {
-                            // 中央部分の場合は、期間移動のドラッグ操作を開始
-                            _isDraggingStart = false;
-                            _isDraggingEnd = false;
-                            _isDraggingMove = true; // 期間移動フラグを追加
-                            Cursor = Cursors.SizeAll;
-                            System.Diagnostics.Debug.WriteLine($"  中央部分で期間移動ドラッグ開始: {_wbsItem.Title} (中央)");
+                            // 通常のセル判定
+                            System.Diagnostics.Debug.WriteLine($"  判定条件: clickedColumn == 0 = {clickedColumn == 0}, clickedColumn == 2 = {clickedColumn == 2}");
+                            
+                            if (clickedColumn == 0)
+                            {
+                                // 左端のセル（開始日変更）
+                                _isDraggingStart = true;
+                                _isDraggingEnd = false;
+                                _isDraggingMove = false;
+                                Cursor = Cursors.SizeWE;
+                                System.Diagnostics.Debug.WriteLine($"  セル判定で開始日変更ドラッグ開始: {_wbsItem.Title} (左端セル)");
+                            }
+                            else if (clickedColumn == 2)
+                            {
+                                // 右端のセル（終了日変更）
+                                _isDraggingStart = false;
+                                _isDraggingEnd = true;
+                                _isDraggingMove = false;
+                                Cursor = Cursors.SizeWE;
+                                System.Diagnostics.Debug.WriteLine($"  セル判定で終了日変更ドラッグ開始: {_wbsItem.Title} (右端セル)");
+                            }
+                            else
+                            {
+                                // 中央のセル（期間移動）
+                                _isDraggingStart = false;
+                                _isDraggingEnd = false;
+                                _isDraggingMove = true;
+                                Cursor = Cursors.SizeAll;
+                                System.Diagnostics.Debug.WriteLine($"  セル判定で期間移動ドラッグ開始: {_wbsItem.Title} (中央セル)");
+                            }
                         }
+                        
+                        // 最終的なフラグ状態をログ出力
+                        System.Diagnostics.Debug.WriteLine($"  最終フラグ状態: _isDraggingStart={_isDraggingStart}, _isDraggingEnd={_isDraggingEnd}, _isDraggingMove={_isDraggingMove}");
                     }
                     else
                     {
                         // タスク期間外の列の場合でも、タスクが表示されている列であれば拡張ドラッグ判定を適用
-                        if (dateColumnIndex >= 0 && dateColumnIndex < _totalColumns - 9)
+                        if (dateColumnIndex >= 0 && dateColumnIndex < _totalColumns - TASK_INFO_COLUMN_COUNT)
                         {
-                            // タスクが表示されている列の場合：拡張ドラッグ判定
-                            var extendedHandleWidth = Math.Max(DRAG_HANDLE_WIDTH, width * 0.4);
+                            // セル単位での判定に変更
+                            var clickedColumn = Grid.GetColumn(e.OriginalSource as UIElement);
                             
-                            if (relativeX <= extendedHandleWidth)
+                            // デバッグ情報を追加
+                            System.Diagnostics.Debug.WriteLine($"  セル判定詳細（期間外）: clickedColumn={clickedColumn}, e.OriginalSource={e.OriginalSource?.GetType().Name}");
+                            
+                            if (clickedColumn == 0)
                             {
-                                // 左側（開始日変更）
+                                // 左端のセル（開始日変更）
                                 _isDraggingStart = true;
                                 _isDraggingEnd = false;
+                                _isDraggingMove = false;
                                 Cursor = Cursors.SizeWE;
-                                System.Diagnostics.Debug.WriteLine($"  拡張判定（期間外）で開始日変更ドラッグ開始: {_wbsItem.Title} (左側)");
+                                System.Diagnostics.Debug.WriteLine($"  セル判定（期間外）で開始日変更ドラッグ開始: {_wbsItem.Title} (左端セル)");
                             }
-                            else if (relativeX >= width - extendedHandleWidth)
+                            else if (clickedColumn == 2)
                             {
-                                // 右側（終了日変更）
+                                // 右端のセル（終了日変更）
                                 _isDraggingStart = false;
                                 _isDraggingEnd = true;
+                                _isDraggingMove = false;
                                 Cursor = Cursors.SizeWE;
-                                System.Diagnostics.Debug.WriteLine($"  拡張判定（期間外）で終了日変更ドラッグ開始: {_wbsItem.Title} (右側)");
+                                System.Diagnostics.Debug.WriteLine($"  セル判定（期間外）で終了日変更ドラッグ開始: {_wbsItem.Title} (右端セル)");
                             }
                             else
                             {
-                                // 中央部分の場合は、ドラッグ操作を開始しない
+                                // 中央のセル（期間移動）
                                 _isDraggingStart = false;
                                 _isDraggingEnd = false;
-                                Cursor = Cursors.Arrow;
-                                System.Diagnostics.Debug.WriteLine($"  中央部分（期間外）のためドラッグ操作を開始しない: {_wbsItem.Title} (中央)");
-                                return;
+                                _isDraggingMove = true;
+                                Cursor = Cursors.SizeAll;
+                                System.Diagnostics.Debug.WriteLine($"  セル判定（期間外）で期間移動ドラッグ開始: {_wbsItem.Title} (中央セル)");
                             }
                         }
                         else
                         {
                             // 従来の位置ベース判定
-                            if (relativeX <= DRAG_HANDLE_WIDTH)
+                            // セル単位での判定に変更
+                            var clickedColumn = Grid.GetColumn(e.OriginalSource as UIElement);
+                            
+                            // デバッグ情報を追加
+                            System.Diagnostics.Debug.WriteLine($"  セル判定詳細（位置ベース）: clickedColumn={clickedColumn}, e.OriginalSource={e.OriginalSource?.GetType().Name}");
+                            
+                            if (clickedColumn == 0)
                             {
-                                // 左端（開始日変更）
+                                // 左端のセル（開始日変更）
                                 _isDraggingStart = true;
                                 _isDraggingEnd = false;
+                                _isDraggingMove = false;
                                 Cursor = Cursors.SizeWE;
-                                System.Diagnostics.Debug.WriteLine($"  位置ベース判定で開始日変更ドラッグ開始: {_wbsItem.Title} (左端)");
+                                System.Diagnostics.Debug.WriteLine($"  セル判定（位置ベース）で開始日変更ドラッグ開始: {_wbsItem.Title} (左端セル)");
                             }
-                            else if (relativeX >= width - DRAG_HANDLE_WIDTH)
+                            else if (clickedColumn == 2)
                             {
-                                // 右端（終了日変更）
+                                // 右端のセル（終了日変更）
                                 _isDraggingStart = false;
                                 _isDraggingEnd = true;
+                                _isDraggingMove = false;
                                 Cursor = Cursors.SizeWE;
-                                System.Diagnostics.Debug.WriteLine($"  位置ベース判定で終了日変更ドラッグ開始: {_wbsItem.Title} (右端)");
+                                System.Diagnostics.Debug.WriteLine($"  セル判定（位置ベース）で終了日変更ドラッグ開始: {_wbsItem.Title} (右端セル)");
                             }
                             else
                             {
-                                System.Diagnostics.Debug.WriteLine($"  位置ベース判定で中央部分のため処理しない");
-                                return;
+                                // 中央のセル（期間移動）
+                                _isDraggingStart = false;
+                                _isDraggingEnd = false;
+                                _isDraggingMove = true;
+                                Cursor = Cursors.SizeAll;
+                                System.Diagnostics.Debug.WriteLine($"  セル判定（位置ベース）で期間移動ドラッグ開始: {_wbsItem.Title} (中央セル)");
                             }
                         }
                     }
@@ -274,6 +358,9 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
+            // フラグ状態をログ出力
+            System.Diagnostics.Debug.WriteLine($"OnMouseMove: _isDraggingStart={_isDraggingStart}, _isDraggingEnd={_isDraggingEnd}, _isDraggingMove={_isDraggingMove}");
+            
             if (!_isDraggingStart && !_isDraggingEnd && !_isDraggingMove)
             {
                 // マウスの位置に応じてツールチップを動的に設定
@@ -819,24 +906,29 @@ namespace RedmineClient.Views.Controls
         {
             if (_wbsItem == null) return;
 
-            var width = ActualWidth;
-            var relativeX = mousePosition.X;
-            var extendedHandleWidth = Math.Max(DRAG_HANDLE_WIDTH, width * 0.35);
+            // 現在のDraggableTaskBorderが表示している日付で判定
+            // _currentDateは既に設定されているので、直接使用
+            var isCurrentDateStartDate = _currentDate.Date == _wbsItem.StartDate.Date;
+            var isCurrentDateEndDate = _currentDate.Date == _wbsItem.EndDate.Date;
 
-            if (relativeX <= extendedHandleWidth)
+            // デバッグ情報を追加
+            System.Diagnostics.Debug.WriteLine($"  ツールチップ日付計算: _startDate={_startDate:yyyy/MM/dd}, _currentDate={_currentDate:yyyy/MM/dd}");
+            System.Diagnostics.Debug.WriteLine($"  ツールチップ比較: startDate={_wbsItem.StartDate:yyyy/MM/dd}, endDate={_wbsItem.EndDate:yyyy/MM/dd}");
+
+            if (isCurrentDateStartDate)
             {
-                // 左端の場合
+                // 開始日の日付
                 ToolTip = $"ドラッグして開始日（{_wbsItem.StartDate:yyyy/MM/dd}）を変更";
             }
-            else if (relativeX >= width - extendedHandleWidth)
+            else if (isCurrentDateEndDate)
             {
-                // 右端の場合
+                // 終了日の日付
                 ToolTip = $"ドラッグして終了日（{_wbsItem.EndDate:yyyy/MM/dd}）を変更";
             }
             else
             {
-                // 中央部分の場合
-                ToolTip = $"ドラッグして開始日・終了日を変更";
+                // 開始日・終了日以外の日付
+                ToolTip = $"ドラッグして期間を移動";
             }
         }
 
@@ -845,20 +937,20 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private int GetColumnIndexFromDate(DateTime date)
         {
-            // 現在の日付（_currentDate）からの差分日数を計算
-            var daysDiff = (date - _currentDate).TotalDays;
+            // 現在の日付（_startDate）からの差分日数を計算
+            var daysDiff = (date - _startDate).TotalDays;
 
-            // 列インデックスに変換（0ベース）
-            var columnIndex = (int)Math.Round(daysDiff);
+            // 列インデックスに変換（0ベース）し、タスク情報列数を加算
+            var columnIndex = (int)Math.Round(daysDiff) + TASK_INFO_COLUMN_COUNT;
 
             // デバッグ情報を最小限に削減
-            // System.Diagnostics.Debug.WriteLine($"GetColumnIndexFromDate: 日付={date:yyyy/MM/dd}, _currentDate={_currentDate:yyyy/MM/dd}, 差分={daysDiff:F1}日, 列={columnIndex}");
+            // System.Diagnostics.Debug.WriteLine($"GetColumnIndexFromDate: 日付={date:yyyy/MM/dd}, _startDate={_startDate:yyyy/MM/dd}, 差分={daysDiff:F1}日, 列={columnIndex}");
 
             // 範囲チェック
-            if (columnIndex < 0)
+            if (columnIndex < TASK_INFO_COLUMN_COUNT) // タスク情報列数未満は許可しない
             {
-                // System.Diagnostics.Debug.WriteLine($"  列インデックスが負のため0に調整: {columnIndex} -> 0");
-                columnIndex = 0;
+                // System.Diagnostics.Debug.WriteLine($"  列インデックスがタスク情報列数未満のため調整: {columnIndex} -> {TASK_INFO_COLUMN_COUNT}");
+                columnIndex = TASK_INFO_COLUMN_COUNT;
             }
             if (columnIndex >= _totalColumns)
             {
@@ -877,26 +969,26 @@ namespace RedmineClient.Views.Controls
             if (_wbsItem == null) return (0, 0);
 
             // タスクの開始日と終了日を基準とした列インデックスを計算
-            // _currentDateがタスクの期間外にある場合でも、タスクの実際の位置を正しく計算
+            // _startDateは表示開始日（列0の日付）なので、タスク情報列数を加算して実際の列インデックスに変換
 
             // タスクの開始日が現在表示されている最初の日付（列0）から何日後か
-            var startDaysFromFirst = (_wbsItem.StartDate - _currentDate).TotalDays;
-            var startColumn = (int)Math.Round(startDaysFromFirst);
+            var startDaysFromFirst = (_wbsItem.StartDate - _startDate).TotalDays;
+            var startColumn = (int)Math.Round(startDaysFromFirst) + TASK_INFO_COLUMN_COUNT; // タスク情報列数を加算
 
             // タスクの終了日が現在表示されている最初の日付（列0）から何日後か
-            var endDaysFromFirst = (_wbsItem.EndDate - _currentDate).TotalDays;
-            var endColumn = (int)Math.Round(endDaysFromFirst);
+            var endDaysFromFirst = (_wbsItem.EndDate - _startDate).TotalDays;
+            var endColumn = (int)Math.Round(endDaysFromFirst) + TASK_INFO_COLUMN_COUNT; // タスク情報列数を加算
 
             // 範囲チェック（負の値や上限を超える値も許可）
             // タスクが表示範囲外にある場合でも、適切なドラッグ処理を可能にする
-            if (startColumn < -100) startColumn = -100; // 最小値制限
-            if (startColumn > _totalColumns + 100) startColumn = _totalColumns + 100; // 最大値制限
-            if (endColumn < -100) endColumn = -100; // 最小値制限
-            if (endColumn > _totalColumns + 100) endColumn = _totalColumns + 100; // 最大値制限
+            if (startColumn < TASK_INFO_COLUMN_COUNT) startColumn = TASK_INFO_COLUMN_COUNT; // タスク情報列数未満は許可しない
+            if (startColumn > _totalColumns - 1) startColumn = _totalColumns - 1; // 最大値制限
+            if (endColumn < TASK_INFO_COLUMN_COUNT) endColumn = TASK_INFO_COLUMN_COUNT; // タスク情報列数未満は許可しない
+            if (endColumn > _totalColumns - 1) endColumn = _totalColumns - 1; // 最大値制限
 
             // デバッグ情報を有効化
             System.Diagnostics.Debug.WriteLine($"GetActualTaskColumns: 開始日列={startColumn}, 終了日列={endColumn}");
-            System.Diagnostics.Debug.WriteLine($"  詳細計算: 開始日={_wbsItem.StartDate:yyyy/MM/dd}, 基準日={_currentDate:yyyy/MM/dd}, 開始日差分={startDaysFromFirst:F1}日, 終了日差分={endDaysFromFirst:F1}日");
+            System.Diagnostics.Debug.WriteLine($"  詳細計算: 開始日={_wbsItem.StartDate:yyyy/MM/dd}, 基準日={_startDate:yyyy/MM/dd}, 開始日差分={startDaysFromFirst:F1}日, 終了日差分={endDaysFromFirst:F1}日");
 
             return (startColumn, endColumn);
         }

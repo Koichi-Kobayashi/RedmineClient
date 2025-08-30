@@ -668,8 +668,8 @@ namespace RedmineClient.Views.Pages
                                  // 固定列9個 + 日付列の位置（columnCount）
                                  var actualColumnIndex = 9 + columnCount;
                                  
-                                 // デバッグ情報を最小限に削減
-                                 // System.Diagnostics.Debug.WriteLine($"列生成: columnCount={columnCount}, actualColumnIndex={actualColumnIndex}, 日付={loopDate:yyyy/MM/dd}");
+                                 // デバッグ情報を追加
+                                 System.Diagnostics.Debug.WriteLine($"列生成: columnCount={columnCount}, actualColumnIndex={actualColumnIndex}, 日付={loopDate:yyyy/MM/dd}");
                                  
                                  // 列0の日付（表示開始日）を基準として渡す
                                  // これにより、各列での日付計算が正しく行われる
@@ -679,12 +679,12 @@ namespace RedmineClient.Views.Pages
                                  // 境界条件の確認：actualColumnIndexがactualTotalColumnsの範囲内にあることを確認
                                  if (actualColumnIndex >= actualTotalColumns)
                                  {
-                                     // System.Diagnostics.Debug.WriteLine($"警告: actualColumnIndex({actualColumnIndex}) >= actualTotalColumns({actualTotalColumns})");
+                                     System.Diagnostics.Debug.WriteLine($"警告: actualColumnIndex({actualColumnIndex}) >= actualTotalColumns({actualTotalColumns})");
                                      actualColumnIndex = actualTotalColumns - 1;
-                                     // System.Diagnostics.Debug.WriteLine($"調整後: actualColumnIndex = {actualColumnIndex}");
+                                     System.Diagnostics.Debug.WriteLine($"調整後: actualColumnIndex = {actualColumnIndex}");
                                  }
                                  
-                                 border.SetTaskInfo(dataContext, startDate, actualColumnIndex, actualTotalColumns);
+                                 border.SetTaskInfo(dataContext, startDate, loopDate, actualColumnIndex, actualTotalColumns);
                             }
                         }
                     });
