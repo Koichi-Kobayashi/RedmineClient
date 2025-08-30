@@ -550,7 +550,6 @@ namespace RedmineClient.Views.Pages
                      if (earliestStartDate < startDate)
                      {
                          startDate = earliestStartDate.AddDays(-7); // タスク開始日の1週間前から表示
-                         System.Diagnostics.Debug.WriteLine($"タスク開始日が設定開始日より前のため、表示開始日を調整: {earliestStartDate:yyyy/MM/dd} -> {startDate:yyyy/MM/dd}");
                      }
                  }
                  
@@ -648,12 +647,21 @@ namespace RedmineClient.Views.Pages
                     taskPeriodFactory.SetValue(DraggableTaskBorder.VisibilityProperty, multiBinding);
 
                     // 進捗に応じた背景色の設定（WbsItemから直接取得）
+                    // ただし、土日祝の場合は日付の背景色を優先するため、透明度を下げる
                     var progressBinding = new System.Windows.Data.Binding
                     {
                         Path = new System.Windows.PropertyPath("Progress"),
                         Converter = new TaskProgressToColorConverter()
                     };
                     taskPeriodFactory.SetValue(DraggableTaskBorder.BackgroundProperty, progressBinding);
+                    
+                    // 土日祝の場合は背景色の透明度を下げて、日付の背景色が見えるようにする
+                    var opacityBinding = new System.Windows.Data.Binding
+                    {
+                        Source = loopDate,
+                        Converter = new RedmineClient.Helpers.DateToOpacityConverter()
+                    };
+                    taskPeriodFactory.SetValue(DraggableTaskBorder.OpacityProperty, opacityBinding);
 
                     // タスク情報を設定するためのイベントハンドラーを追加
                     var loadedEvent = new System.Windows.RoutedEventHandler((sender, args) =>
@@ -668,9 +676,6 @@ namespace RedmineClient.Views.Pages
                                  // 固定列9個 + 日付列の位置（columnCount）
                                  var actualColumnIndex = 9 + columnCount;
                                  
-                                 // デバッグ情報を追加
-                                 System.Diagnostics.Debug.WriteLine($"列生成: columnCount={columnCount}, actualColumnIndex={actualColumnIndex}, 日付={loopDate:yyyy/MM/dd}");
-                                 
                                  // 列0の日付（表示開始日）を基準として渡す
                                  // これにより、各列での日付計算が正しく行われる
                                  // totalColumnsには固定列9個 + 日付列の総数を渡す必要がある
@@ -679,9 +684,7 @@ namespace RedmineClient.Views.Pages
                                  // 境界条件の確認：actualColumnIndexがactualTotalColumnsの範囲内にあることを確認
                                  if (actualColumnIndex >= actualTotalColumns)
                                  {
-                                     System.Diagnostics.Debug.WriteLine($"警告: actualColumnIndex({actualColumnIndex}) >= actualTotalColumns({actualTotalColumns})");
                                      actualColumnIndex = actualTotalColumns - 1;
-                                     System.Diagnostics.Debug.WriteLine($"調整後: actualColumnIndex = {actualColumnIndex}");
                                  }
                                  
                                  border.SetTaskInfo(dataContext, startDate, loopDate, actualColumnIndex, actualTotalColumns);
