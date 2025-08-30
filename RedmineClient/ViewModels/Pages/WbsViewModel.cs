@@ -1325,6 +1325,71 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         /// <summary>
+        /// タスクの順番を変更する（ドラッグ&ドロップ用）
+        /// </summary>
+        /// <param name="sourceItem">移動元のタスク</param>
+        /// <param name="targetItem">移動先のタスク</param>
+        /// <remarks>
+        /// 同じ階層レベルで同じ親を持つタスク間でのみ順番変更が可能です。
+        /// 異なる階層や親が異なるタスクは移動できません。
+        /// </remarks>
+        public void ReorderTask(WbsItem sourceItem, WbsItem targetItem)
+        {
+            if (sourceItem == null || targetItem == null || sourceItem == targetItem) return;
+
+            try
+            {
+                // 平坦化リストでのインデックスを取得
+                var sourceIndex = FlattenedWbsItems.IndexOf(sourceItem);
+                var targetIndex = FlattenedWbsItems.IndexOf(targetItem);
+
+                if (sourceIndex == -1 || targetIndex == -1) return;
+
+                // 階層レベルが同じ場合のみ順番変更を許可
+                if (sourceItem.Level == targetItem.Level)
+                {
+                    // 同じ親を持つタスク間での順番変更
+                    if (sourceItem.Parent == targetItem.Parent)
+                    {
+                        // 親の子コレクションで順番を変更
+                        if (sourceItem.Parent != null)
+                        {
+                            var parentChildren = sourceItem.Parent.Children;
+                            var sourceChildIndex = parentChildren.IndexOf(sourceItem);
+                            var targetChildIndex = parentChildren.IndexOf(targetItem);
+
+                            if (sourceChildIndex != -1 && targetChildIndex != -1)
+                            {
+                                parentChildren.Move(sourceChildIndex, targetChildIndex);
+                            }
+                        }
+                        else
+                        {
+                            // ルートレベルのタスクの場合
+                            var sourceRootIndex = WbsItems.IndexOf(sourceItem);
+                            var targetRootIndex = WbsItems.IndexOf(targetItem);
+
+                            if (sourceRootIndex != -1 && targetRootIndex != -1)
+                            {
+                                WbsItems.Move(sourceRootIndex, targetRootIndex);
+                            }
+                        }
+
+                        // 平坦化リストを更新
+                        _ = Task.Run(async () => await UpdateFlattenedList());
+                        
+                        // 成功メッセージをデバッグ出力
+                        System.Diagnostics.Debug.WriteLine($"タスクの順番変更完了: '{sourceItem.Title}' を '{targetItem.Title}' の位置に移動しました");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"タスク順番変更エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// スケジュール表を初期化する
         /// </summary>
         private async Task InitializeScheduleItems()

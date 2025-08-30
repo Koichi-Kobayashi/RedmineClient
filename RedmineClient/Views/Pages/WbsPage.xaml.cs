@@ -1,6 +1,8 @@
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using RedmineClient.Helpers;
+using RedmineClient.Models;
 using RedmineClient.ViewModels.Pages;
 using RedmineClient.Views.Controls;
 
@@ -1390,5 +1392,260 @@ namespace RedmineClient.Views.Pages
                 System.Diagnostics.Debug.WriteLine($"DatePicker日付変更処理エラー: {ex.Message}");
             }
         }
+
+        #region ドラッグ&ドロップ機能（タスクの順番変更）
+        // このセクションではタスクのドラッグ&ドロップによる順番変更機能を実装しています。
+        // 使い方：
+        // 1. タスク名のセルを左クリックしてドラッグ開始
+        // 2. 同じ階層レベルの他のタスクの上にドロップ
+        // 3. 自動的にタスクの順番が変更されます
+        // 
+        // 制限事項：
+        // - 同じ階層レベルで同じ親を持つタスク間でのみ移動可能
+        // - 異なる階層や親が異なるタスクへの移動は無効
+
+        private Point _dragStartPoint;
+        private bool _isDragging = false;
+
+        /// <summary>
+        /// DataGridのドロップイベント
+        /// </summary>
+        private void WbsDataGrid_Drop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (e.Data.GetDataPresent(typeof(WbsItem)))
+                {
+                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
+                    if (sourceItem != null)
+                    {
+                        // ドロップ位置からターゲットアイテムを取得
+                        var dropPoint = e.GetPosition(WbsDataGrid);
+                        var targetRow = GetRowAtPoint(dropPoint);
+                        
+                        if (targetRow != null && targetRow.DataContext is WbsItem targetItem)
+                        {
+                            // 同じ階層レベルで同じ親を持つタスク間での順番変更のみ許可
+                            if (sourceItem.Level == targetItem.Level && sourceItem.Parent == targetItem.Parent)
+                            {
+                                ViewModel.ReorderTask(sourceItem, targetItem);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DataGridドロップ処理エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// DataGridのドラッグエンターイベント
+        /// </summary>
+        private void WbsDataGrid_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(WbsItem)))
+            {
+                e.Effects = DragDropEffects.Move;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// DataGridのドラッグリーブイベント
+        /// </summary>
+        private void WbsDataGrid_DragLeave(object sender, DragEventArgs e)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// DataGrid行のドロップイベント
+        /// </summary>
+        private void DataGridRow_Drop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (e.Data.GetDataPresent(typeof(WbsItem)))
+                {
+                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
+                    if (sourceItem != null && sender is DataGridRow targetRow && targetRow.DataContext is WbsItem targetItem)
+                    {
+                        // 同じ階層レベルで同じ親を持つタスク間での順番変更のみ許可
+                        if (sourceItem.Level == targetItem.Level && sourceItem.Parent == targetItem.Parent)
+                        {
+                            ViewModel.ReorderTask(sourceItem, targetItem);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DataGrid行ドロップ処理エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// DataGrid行のドラッグエンターイベント
+        /// </summary>
+        private void DataGridRow_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(WbsItem)))
+            {
+                e.Effects = DragDropEffects.Move;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// DataGrid行のドラッグリーブイベント
+        /// </summary>
+        private void DataGridRow_DragLeave(object sender, DragEventArgs e)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// タスク境界のドロップイベント
+        /// </summary>
+        private void TaskBorder_Drop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (e.Data.GetDataPresent(typeof(WbsItem)))
+                {
+                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
+                    if (sourceItem != null && sender is Border targetBorder && targetBorder.DataContext is WbsItem targetItem)
+                    {
+                        // 同じ階層レベルで同じ親を持つタスク間での順番変更のみ許可
+                        if (sourceItem.Level == targetItem.Level && sourceItem.Parent == targetItem.Parent)
+                        {
+                            ViewModel.ReorderTask(sourceItem, targetItem);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"タスク境界ドロップ処理エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// タスク境界のドラッグエンターイベント
+        /// </summary>
+        private void TaskBorder_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(WbsItem)))
+            {
+                e.Effects = DragDropEffects.Move;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// タスク境界のドラッグリーブイベント
+        /// </summary>
+        private void TaskBorder_DragLeave(object sender, DragEventArgs e)
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// 指定されたポイントにある行を取得する
+        /// </summary>
+        private DataGridRow GetRowAtPoint(Point point)
+        {
+            var element = WbsDataGrid.InputHitTest(point) as DependencyObject;
+            while (element != null && !(element is DataGridRow))
+            {
+                element = VisualTreeHelper.GetParent(element);
+            }
+            return element as DataGridRow;
+        }
+
+        /// <summary>
+        /// タスク境界のマウス左ボタンダウンイベント（ドラッグ開始）
+        /// </summary>
+        private void TaskBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                if (sender is Border border && border.DataContext is WbsItem wbsItem)
+                {
+                    _dragStartPoint = e.GetPosition(border);
+                    _isDragging = false;
+                    border.CaptureMouse();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"タスク境界MouseLeftButtonDownエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// タスク境界のマウス移動イベント（ドラッグ判定）
+        /// </summary>
+        private void TaskBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            try
+            {
+                if (e.LeftButton == MouseButtonState.Pressed && sender is Border border && border.DataContext is WbsItem wbsItem)
+                {
+                    var currentPosition = e.GetPosition(border);
+                    var distance = Point.Subtract(currentPosition, _dragStartPoint).Length;
+
+                    // 一定距離移動したらドラッグ開始
+                    if (distance > 10 && !_isDragging)
+                    {
+                        _isDragging = true;
+                        var dragData = new DataObject(typeof(WbsItem), wbsItem);
+                        DragDrop.DoDragDrop(border, dragData, DragDropEffects.Move);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"タスク境界MouseMoveエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// タスク境界のマウス左ボタンアップイベント（ドラッグ終了）
+        /// </summary>
+        private void TaskBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                if (sender is Border border)
+                {
+                    border.ReleaseMouseCapture();
+                    _isDragging = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"タスク境界MouseLeftButtonUpエラー: {ex.Message}");
+            }
+        }
+
+        #endregion
     }
 }

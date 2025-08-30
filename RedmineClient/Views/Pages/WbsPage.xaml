@@ -185,7 +185,8 @@
                 ScrollViewer.VerticalScrollBarVisibility="Auto"
                 SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
                 SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.CacheLength="3,3" VirtualizingPanel.CacheLengthUnit="Page" VirtualizingPanel.IsContainerVirtualizable="True"
-                VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.VirtualizationMode="Recycling">
+                VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.VirtualizationMode="Recycling"
+                AllowDrop="True" Drop="WbsDataGrid_Drop" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridCell">
@@ -315,7 +316,9 @@
                                         Grid.Column="1" Padding="4,2"
                                         Background="{Binding IsSelected, Converter={x:Static helpers:SelectionHighlightConverter.Instance}}"
                                         BorderBrush="{Binding IsSelected, Converter={x:Static helpers:SelectionBorderConverter.Instance}}"
-                                        BorderThickness="1" CornerRadius="3" Cursor="Hand">
+                                        BorderThickness="1" CornerRadius="3" Cursor="Hand"
+                                        AllowDrop="True" Drop="TaskBorder_Drop" DragEnter="TaskBorder_DragEnter" DragLeave="TaskBorder_DragLeave"
+                                        MouseLeftButtonDown="TaskBorder_MouseLeftButtonDown" MouseMove="TaskBorder_MouseMove" MouseLeftButtonUp="TaskBorder_MouseLeftButtonUp">
                                         <Border.InputBindings>
                                             <MouseBinding Command="{Binding DataContext.ViewModel.SelectItemCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" MouseAction="LeftClick" />
                                         </Border.InputBindings>
@@ -467,6 +470,10 @@
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Padding" Value="4,2" />
                         <Setter Property="Margin" Value="0,1" />
+                        <Setter Property="AllowDrop" Value="True" />
+                        <EventSetter Event="Drop" Handler="DataGridRow_Drop" />
+                        <EventSetter Event="DragEnter" Handler="DataGridRow_DragEnter" />
+                        <EventSetter Event="DragLeave" Handler="DataGridRow_DragLeave" />
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="#E5F3FF" />
