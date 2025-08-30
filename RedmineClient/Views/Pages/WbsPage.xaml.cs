@@ -2,6 +2,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using RedmineClient.Helpers;
 using RedmineClient.ViewModels.Pages;
+using RedmineClient.Views.Controls;
 
 using Wpf.Ui.Abstractions.Controls;
 
@@ -549,6 +550,15 @@ namespace RedmineClient.Views.Pages
                 // 固定列の数を取得（タスク名、ID、説明、開始日、終了日、進捗、ステータス、優先度、担当者）
                 var fixedColumnCount = 9;
 
+                // 日付列の総数を計算
+                var totalColumns = 0;
+                var tempDate = startDate;
+                while (tempDate <= endDate)
+                {
+                    totalColumns++;
+                    tempDate = tempDate.AddDays(1);
+                }
+
                 while (currentDate <= endDate)
                 {
                     // 月が変わったかどうかをチェック
@@ -604,15 +614,10 @@ namespace RedmineClient.Views.Pages
                         factory.AppendChild(todayLineFactory);
                     }
 
-                    // タスク期間表示用のBorder（開始日から終了日まで）
-                    var taskPeriodFactory = new FrameworkElementFactory(typeof(Border));
-                    taskPeriodFactory.SetValue(Border.WidthProperty, 30.0);
-                    taskPeriodFactory.SetValue(Border.HeightProperty, 20.0);
-                    taskPeriodFactory.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
-                    taskPeriodFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Blue);
-                    taskPeriodFactory.SetValue(Border.BorderThicknessProperty, new Thickness(2));
-                    taskPeriodFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
-                    taskPeriodFactory.SetValue(Border.OpacityProperty, 0.8);
+                    // タスク期間表示用のDraggableTaskBorder（開始日から終了日まで）
+                    var taskPeriodFactory = new FrameworkElementFactory(typeof(DraggableTaskBorder));
+                    taskPeriodFactory.SetValue(DraggableTaskBorder.WidthProperty, 30.0);
+                    taskPeriodFactory.SetValue(DraggableTaskBorder.HeightProperty, 20.0);
                     taskPeriodFactory.SetValue(Grid.ZIndexProperty, 1);
 
                     // タスク期間の表示/非表示を制御（MultiBindingを使用）
@@ -633,7 +638,7 @@ namespace RedmineClient.Views.Pages
                     };
                     multiBinding.Bindings.Add(endDateBinding);
                     
-                    taskPeriodFactory.SetValue(Border.VisibilityProperty, multiBinding);
+                    taskPeriodFactory.SetValue(DraggableTaskBorder.VisibilityProperty, multiBinding);
 
                     // 進捗に応じた背景色の設定（WbsItemから直接取得）
                     var progressBinding = new System.Windows.Data.Binding
@@ -641,7 +646,21 @@ namespace RedmineClient.Views.Pages
                         Path = new System.Windows.PropertyPath("Progress"),
                         Converter = new TaskProgressToColorConverter()
                     };
-                    taskPeriodFactory.SetValue(Border.BackgroundProperty, progressBinding);
+                    taskPeriodFactory.SetValue(DraggableTaskBorder.BackgroundProperty, progressBinding);
+
+                    // タスク情報を設定するためのイベントハンドラーを追加
+                    var loadedEvent = new System.Windows.RoutedEventHandler((sender, args) =>
+                    {
+                        if (sender is DraggableTaskBorder border)
+                        {
+                            var dataContext = border.DataContext as WbsItem;
+                            if (dataContext != null)
+                            {
+                                border.SetTaskInfo(dataContext, currentDate, columnCount, totalColumns);
+                            }
+                        }
+                    });
+                    taskPeriodFactory.AddHandler(DraggableTaskBorder.LoadedEvent, loadedEvent);
 
                     // Gridに要素を追加
                     factory.AppendChild(backgroundFactory);
