@@ -2,6 +2,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using RedmineClient.Helpers;
 using RedmineClient.ViewModels.Pages;
+
 using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.Views.Pages
@@ -63,6 +64,8 @@ namespace RedmineClient.Views.Pages
             }
         }
 #pragma warning restore CS1998
+
+
 
         /// <summary>
         /// キーボードショートカットを処理する
@@ -1140,6 +1143,136 @@ namespace RedmineClient.Views.Pages
                 
                 // UIを即座に更新
                 WbsDataGrid.Items.Refresh();
+            }
+        }
+
+        /// <summary>
+        /// DataGridの日付テキストボックスでフォーカスが失われた時の処理
+        /// </summary>
+        private void DateTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox textBox && textBox.DataContext is WbsItem task)
+            {
+                try
+                {
+                    var tag = textBox.Tag as string;
+                    var text = textBox.Text?.Trim() ?? string.Empty;
+                    
+                    // 空の値の場合は元の値に戻す
+                    if (string.IsNullOrEmpty(text))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"日付が空のため、元の値に戻します: {tag}");
+                        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+                        return;
+                    }
+                    
+                    // 日付形式の検証（yyyy/MM/dd形式のみ許可）
+                    if (!IsValidDateFormat(text))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"無効な日付形式: {text}。元の値に戻します。");
+                        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+                        return;
+                    }
+                    
+                    if (DateTime.TryParse(text, out var newDate))
+                    {
+                        DateTime oldDate = DateTime.MinValue;
+                        
+                        if (tag == "StartDate")
+                        {
+                            oldDate = task.StartDate;
+                            task.StartDate = newDate;
+                            
+                            // 開始日が終了日より後になった場合は調整
+                            if (task.StartDate > task.EndDate)
+                            {
+                                task.EndDate = task.StartDate;
+                            }
+                            
+                            System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' の開始日が変更されました: {oldDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
+                        }
+                        else if (tag == "EndDate")
+                        {
+                            oldDate = task.EndDate;
+                            task.EndDate = newDate;
+                            
+                            // 終了日が開始日より前になった場合は調整
+                            if (task.EndDate < task.StartDate)
+                            {
+                                task.StartDate = task.EndDate;
+                            }
+                            
+                            System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' の終了日が変更されました: {oldDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
+                        }
+                        
+                        // スケジュール変更イベントを発行（ガントチャートと同様）
+                        OnTaskScheduleChanged(task, oldDate, task.StartDate, task.EndDate);
+                    }
+                    else
+                    {
+                        // 無効な日付の場合は元の値に戻す
+                        System.Diagnostics.Debug.WriteLine($"日付の解析に失敗: {text}。元の値に戻します。");
+                        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"日付変更処理エラー: {ex.Message}");
+                    // エラーが発生した場合は元の値に戻す
+                    textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 日付形式が有効かどうかをチェックする
+        /// </summary>
+        /// <param name="dateText">チェックする日付文字列</param>
+        /// <returns>有効な場合はtrue</returns>
+        private bool IsValidDateFormat(string dateText)
+        {
+            try
+            {
+                // 空文字列は無効
+                if (string.IsNullOrEmpty(dateText))
+                    return false;
+                
+                // yyyy/MM/dd形式のパターンをチェック
+                var pattern = @"^\d{4}/\d{2}/\d{2}$";
+                if (!System.Text.RegularExpressions.Regex.IsMatch(dateText, pattern))
+                    return false;
+                
+                // 実際にDateTimeとして解析できるかチェック
+                if (!DateTime.TryParse(dateText, out var date))
+                    return false;
+                
+                // 妥当な範囲内かチェック（例：1900年から2100年）
+                if (date.Year < 1900 || date.Year > 2100)
+                    return false;
+                
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// タスクスケジュール変更イベントを発行する
+        /// </summary>
+        private void OnTaskScheduleChanged(WbsItem task, DateTime oldStartDate, DateTime newStartDate, DateTime newEndDate)
+        {
+            try
+            {
+
+                
+                // 必要に応じてRedmineに更新を送信するなどの処理を追加
+                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' のスケジュールが変更されました: {oldStartDate:yyyy/MM/dd} → {newStartDate:yyyy/MM/dd} - {newEndDate:yyyy/MM/dd}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"スケジュール変更イベント処理エラー: {ex.Message}");
             }
         }
     }

@@ -95,6 +95,11 @@ namespace RedmineClient.ViewModels.Pages
         [ObservableProperty]
         private bool _showTodayLine = true;
 
+        /// <summary>
+        /// ガントチャート表示するかどうか
+        /// </summary>
+
+
 
 
         partial void OnSelectedItemChanged(WbsItem? value)
@@ -845,17 +850,6 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     SelectedItem = null;
                 }
-                
-                // 新しく追加されたアイテムの場合、NewWbsItemsからも削除
-                if (NewWbsItems.Contains(item))
-                {
-                    NewWbsItems.Remove(item);
-                    CanRegisterItems = NewWbsItems.Count > 0;
-                    OnPropertyChanged(nameof(NewItemsCount));
-                }
-                
-                // UIを更新
-                UpdateFlattenedListManually();
             }
         }
 
@@ -2109,6 +2103,8 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+
+
         /// <summary>
         /// 階層構造を平坦化したリストを手動で更新（MS Projectレベルの高速化）
         /// </summary>
@@ -2415,6 +2411,8 @@ namespace RedmineClient.ViewModels.Pages
                 ErrorMessage = $"チケットの読み込み中にエラーが発生しました: {ex.Message}";
             }
         }
+
+
     }
 }
 
