@@ -1647,5 +1647,111 @@ namespace RedmineClient.Views.Pages
         }
 
         #endregion
+
+        #region 先行・後続の依存関係設定（ドラッグ&ドロップ）
+        // このセクションでは先行・後続の関係性をドラッグ&ドロップで設定する機能を実装しています。
+        // 使い方：
+        // 1. タスク名のセルを左クリックしてドラッグ開始
+        // 2. 先行・後続列の"D&D"エリアにドロップ
+        // 3. 先行関係または後続関係が自動的に設定されます
+        //
+        // 制限事項：
+        // - 循環参照が発生する場合は設定を拒否
+        // - 自分自身への依存関係は設定不可
+
+        /// <summary>
+        /// 先行・後続列のドロップイベント
+        /// </summary>
+        private void DependencyDrop_Drop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (e.Data.GetDataPresent(typeof(WbsItem)))
+                {
+                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
+                    if (sourceItem != null && sender is Border border && border.DataContext is WbsItem targetItem)
+                    {
+                        // 自分自身への依存関係は設定不可
+                        if (sourceItem == targetItem) return;
+
+                        // 先行・後続の関係性を設定
+                        // デフォルトでは先行関係として設定（sourceItemがtargetItemの先行タスクになる）
+                        ViewModel.SetDependency(sourceItem, targetItem, true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"依存関係ドロップ処理エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 先行・後続列のドラッグエンターイベント
+        /// </summary>
+        private void DependencyDrop_DragEnter(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (e.Data.GetDataPresent(typeof(WbsItem)))
+                {
+                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
+                    if (sourceItem != null && sender is Border border && border.DataContext is WbsItem targetItem)
+                    {
+                        // 自分自身への依存関係は設定不可
+                        if (sourceItem == targetItem)
+                        {
+                            e.Effects = DragDropEffects.None;
+                        }
+                        else
+                        {
+                            e.Effects = DragDropEffects.Copy;
+                            // 先行関係設定の視覚的フィードバック
+                            border.Background = System.Windows.Media.Brushes.LightGreen;
+                            border.BorderBrush = System.Windows.Media.Brushes.Green;
+                            border.BorderThickness = new Thickness(2);
+                        }
+                    }
+                }
+                else
+                {
+                    e.Effects = DragDropEffects.None;
+                }
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"依存関係ドラッグエンターエラー: {ex.Message}");
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// 先行・後続列のドラッグリーブイベント
+        /// </summary>
+        private void DependencyDrop_DragLeave(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (sender is Border border)
+                {
+                    // 視覚的フィードバックをリセット
+                    border.Background = System.Windows.Media.Brushes.Transparent;
+                    border.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                    border.BorderThickness = new Thickness(1);
+                }
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"依存関係ドラッグリーブエラー: {ex.Message}");
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+            }
+        }
+
+        #endregion
     }
 }

@@ -243,6 +243,41 @@ namespace RedmineClient.Models
         }
         public WbsItem? Parent { get; set; }
 
+        // 先行・後続の関係性
+        private ObservableCollection<WbsItem> _predecessors = new();
+        public ObservableCollection<WbsItem> Predecessors
+        {
+            get => _predecessors;
+            set => SetProperty(ref _predecessors, value);
+        }
+
+        private ObservableCollection<WbsItem> _successors = new();
+        public ObservableCollection<WbsItem> Successors
+        {
+            get => _successors;
+            set => SetProperty(ref _successors, value);
+        }
+
+        /// <summary>
+        /// 先行タスクがあるかどうか
+        /// </summary>
+        public bool HasPredecessors => Predecessors.Count > 0;
+
+        /// <summary>
+        /// 後続タスクがあるかどうか
+        /// </summary>
+        public bool HasSuccessors => Successors.Count > 0;
+
+        /// <summary>
+        /// 先行タスクの数を取得
+        /// </summary>
+        public int PredecessorCount => Predecessors.Count;
+
+        /// <summary>
+        /// 後続タスクの数を取得
+        /// </summary>
+        public int SuccessorCount => Successors.Count;
+
         public int Level
         {
             get
@@ -321,9 +356,117 @@ namespace RedmineClient.Models
             }
         }
 
+        /// <summary>
+        /// 先行タスクを追加
+        /// </summary>
+        /// <param name="predecessor">先行タスク</param>
+        public void AddPredecessor(WbsItem predecessor)
+        {
+            if (predecessor == null || predecessor == this) return;
+
+            // 循環参照をチェック
+            if (WouldCreateCycle(predecessor))
+            {
+                throw new InvalidOperationException("先行タスクを追加すると循環参照が発生します。");
+            }
+
+            if (!Predecessors.Contains(predecessor))
+            {
+                Predecessors.Add(predecessor);
+                predecessor.AddSuccessor(this);
+                OnPropertyChanged(nameof(HasPredecessors));
+                OnPropertyChanged(nameof(PredecessorCount));
+            }
+        }
+
+        /// <summary>
+        /// 先行タスクを削除
+        /// </summary>
+        /// <param name="predecessor">削除する先行タスク</param>
+        public void RemovePredecessor(WbsItem predecessor)
+        {
+            if (Predecessors.Remove(predecessor))
+            {
+                predecessor.RemoveSuccessor(this);
+                OnPropertyChanged(nameof(HasPredecessors));
+                OnPropertyChanged(nameof(PredecessorCount));
+            }
+        }
+
+        /// <summary>
+        /// 後続タスクを追加
+        /// </summary>
+        /// <param name="successor">後続タスク</param>
+        public void AddSuccessor(WbsItem successor)
+        {
+            if (successor == null || successor == this) return;
+
+            // 循環参照をチェック
+            if (WouldCreateCycle(successor))
+            {
+                throw new InvalidOperationException("後続タスクを追加すると循環参照が発生します。");
+            }
+
+            if (!Successors.Contains(successor))
+            {
+                Successors.Add(successor);
+                successor.AddPredecessor(this);
+                OnPropertyChanged(nameof(HasSuccessors));
+                OnPropertyChanged(nameof(SuccessorCount));
+            }
+        }
+
+        /// <summary>
+        /// 後続タスクを削除
+        /// </summary>
+        /// <param name="successor">削除する後続タスク</param>
+        public void RemoveSuccessor(WbsItem successor)
+        {
+            if (Successors.Remove(successor))
+            {
+                successor.RemovePredecessor(this);
+                OnPropertyChanged(nameof(HasSuccessors));
+                OnPropertyChanged(nameof(SuccessorCount));
+            }
+        }
+
+        /// <summary>
+        /// 循環参照が発生するかチェック
+        /// </summary>
+        /// <param name="newDependency">新しく追加しようとしている依存関係</param>
+        /// <returns>循環参照が発生する場合はtrue</returns>
+        private bool WouldCreateCycle(WbsItem newDependency)
+        {
+            var visited = new HashSet<WbsItem>();
+            return HasCycle(newDependency, visited);
+        }
+
+        /// <summary>
+        /// 循環参照の存在をチェック（深さ優先探索）
+        /// </summary>
+        /// <param name="current">現在チェック中のアイテム</param>
+        /// <param name="visited">既に訪問済みのアイテム</param>
+        /// <returns>循環参照が存在する場合はtrue</returns>
+        private bool HasCycle(WbsItem current, HashSet<WbsItem> visited)
+        {
+            if (visited.Contains(current))
+                return true;
+
+            visited.Add(current);
+
+            foreach (var successor in current.Successors)
+            {
+                if (HasCycle(successor, visited))
+                    return true;
+            }
+
+            visited.Remove(current);
+            return false;
+        }
+
         public WbsItem Clone()
         {
-            return new WbsItem
+            var cloned = new WbsItem
             {
                 Id = Id,
                 Title = Title,
@@ -343,6 +486,11 @@ namespace RedmineClient.Models
                 RedmineCreatedOn = RedmineCreatedOn,
                 RedmineUpdatedOn = RedmineUpdatedOn
             };
+
+            // 先行・後続の関係性はコピーしない（新しいインスタンスなので）
+            // 必要に応じて後で設定する
+
+            return cloned;
         }
 
         /// <summary>

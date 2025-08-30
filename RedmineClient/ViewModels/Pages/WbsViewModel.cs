@@ -452,6 +452,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand RefreshRedmineDataCommand { get; }
         public ICommand SettingsCommand { get; }
         public ICommand CreateNewIssueCommand { get; }
+        public ICommand RemoveDependencyCommand { get; }
 
         public WbsViewModel()
         {
@@ -492,6 +493,7 @@ namespace RedmineClient.ViewModels.Pages
             SettingsCommand = new RelayCommand(OpenSettings);
             CreateNewIssueCommand = new RelayCommand(CreateNewIssue);
             RegisterItemsCommand = new RelayCommand(RegisterItems);
+            RemoveDependencyCommand = new RelayCommand<WbsItem>(RemoveDependency);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -1386,6 +1388,114 @@ namespace RedmineClient.ViewModels.Pages
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"タスク順番変更エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 先行・後続の関係性を設定する（ドラッグ&ドロップ用）
+        /// </summary>
+        /// <param name="sourceItem">ドラッグ元のタスク</param>
+        /// <param name="targetItem">ドロップ先のタスク</param>
+        /// <param name="isPredecessor">先行関係として設定する場合はtrue、後続関係の場合はfalse</param>
+        /// <remarks>
+        /// ドラッグ&ドロップで先行・後続の関係性を設定します。
+        /// 循環参照が発生する場合は設定を拒否します。
+        /// </remarks>
+        public void SetDependency(WbsItem sourceItem, WbsItem targetItem, bool isPredecessor)
+        {
+            if (sourceItem == null || targetItem == null || sourceItem == targetItem) return;
+
+            try
+            {
+                if (isPredecessor)
+                {
+                    // 先行関係を設定（sourceItemがtargetItemの先行タスクになる）
+                    targetItem.AddPredecessor(sourceItem);
+                    System.Diagnostics.Debug.WriteLine($"先行関係設定完了: '{sourceItem.Title}' → '{targetItem.Title}'");
+                }
+                else
+                {
+                    // 後続関係を設定（sourceItemがtargetItemの後続タスクになる）
+                    sourceItem.AddSuccessor(targetItem);
+                    System.Diagnostics.Debug.WriteLine($"後続関係設定完了: '{sourceItem.Title}' → '{targetItem.Title}'");
+                }
+
+                // UIを更新
+                OnPropertyChanged(nameof(FlattenedWbsItems));
+            }
+            catch (InvalidOperationException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"依存関係設定エラー: {ex.Message}");
+                // TODO: ユーザーにエラーメッセージを表示
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"依存関係設定エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 先行・後続の関係性を削除する
+        /// </summary>
+        /// <param name="sourceItem">関係性を削除するタスク</param>
+        /// <param name="targetItem">関係性を削除するタスク</param>
+        public void RemoveDependency(WbsItem sourceItem, WbsItem targetItem)
+        {
+            if (sourceItem == null || targetItem == null) return;
+
+            try
+            {
+                // 両方向の関係性を削除
+                if (sourceItem.Predecessors.Contains(targetItem))
+                {
+                    sourceItem.RemovePredecessor(targetItem);
+                }
+                else if (sourceItem.Successors.Contains(targetItem))
+                {
+                    sourceItem.RemoveSuccessor(targetItem);
+                }
+
+                // UIを更新
+                OnPropertyChanged(nameof(FlattenedWbsItems));
+                System.Diagnostics.Debug.WriteLine($"依存関係削除完了: '{sourceItem.Title}' と '{targetItem.Title}' の関係性を削除しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"依存関係削除エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 選択されたアイテムの依存関係を削除する（コマンド用）
+        /// </summary>
+        /// <param name="selectedItem">依存関係を削除するタスク</param>
+        public void RemoveDependency(WbsItem selectedItem)
+        {
+            if (selectedItem == null) return;
+
+            try
+            {
+                // 先行タスクをすべて削除
+                var predecessorsToRemove = selectedItem.Predecessors.ToList();
+                foreach (var predecessor in predecessorsToRemove)
+                {
+                    selectedItem.RemovePredecessor(predecessor);
+                }
+
+                // 後続タスクをすべて削除
+                var successorsToRemove = selectedItem.Successors.ToList();
+                foreach (var successor in successorsToRemove)
+                {
+                    selectedItem.RemoveSuccessor(successor);
+                }
+
+                // UIを更新
+                OnPropertyChanged(nameof(FlattenedWbsItems));
+                System.Diagnostics.Debug.WriteLine($"依存関係削除完了: '{selectedItem.Title}' のすべての依存関係を削除しました");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"依存関係削除エラー: {ex.Message}");
             }
         }
 

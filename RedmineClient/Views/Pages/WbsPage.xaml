@@ -97,7 +97,13 @@
                 <ui:ToggleSwitch Margin="16,0,0,0" Content="今日の日付ライン" IsChecked="{Binding ViewModel.ShowTodayLine, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
-            
+            <!--  先行・後続の関係性設定説明  -->
+            <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
+                <ui:TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="先行・後続設定:" />
+                <ui:TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="Orange" Text="↑先行" />
+                <ui:TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="Blue" Text="↓後続" />
+                <ui:TextBlock Margin="0,0,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="タスク名をドラッグして先行・後続列にドロップ" />
+            </StackPanel>
 
             <!--  管理機能ボタン  -->
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.UpdateProgressCommand}" Content="進捗更新" Icon="Refresh" />
@@ -344,6 +350,22 @@
                                                 </ui:MenuItem.Icon>
                                             </ui:MenuItem>
                                             <Separator />
+                                            <ui:MenuItem Header="依存関係管理">
+                                                <ui:MenuItem.Icon>
+                                                    <ui:SymbolIcon Symbol="Link16" />
+                                                </ui:MenuItem.Icon>
+                                                <ui:MenuItem Header="先行タスクを削除" Command="{Binding DataContext.ViewModel.RemoveDependencyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="ArrowUp16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
+                                                <ui:MenuItem Header="後続タスクを削除" Command="{Binding DataContext.ViewModel.RemoveDependencyCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="ArrowDown16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
+                                            </ui:MenuItem>
+                                            <Separator />
                                             <ui:MenuItem Header="削除">
                                                 <ui:MenuItem.Icon>
                                                     <ui:SymbolIcon Symbol="Delete16" />
@@ -454,6 +476,73 @@
                                 <Border Padding="4,2" Background="{Binding Priority, Converter={x:Static helpers:PriorityToBrushConverter.Instance}}" CornerRadius="2">
                                     <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Priority}" />
                                 </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!--  先行・後続列  -->
+                    <DataGridTemplateColumn Width="120" Header="先行・後続" IsReadOnly="True">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!--  先行タスク数  -->
+                                    <StackPanel Grid.Column="0" Margin="2,0" Orientation="Horizontal" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                        <ui:SymbolIcon Symbol="ArrowUp16" Width="12" Height="12" Margin="0,0,2,0" Foreground="Orange" />
+                                        <ui:TextBlock FontSize="9" Foreground="Orange" Text="{Binding PredecessorCount}" />
+                                    </StackPanel>
+
+                                    <!--  後続タスク数  -->
+                                    <StackPanel Grid.Column="1" Margin="2,0" Orientation="Horizontal" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                        <ui:SymbolIcon Symbol="ArrowDown16" Width="12" Height="12" Margin="0,0,2,0" Foreground="Blue" />
+                                        <ui:TextBlock FontSize="9" Foreground="Blue" Text="{Binding SuccessorCount}" />
+                                    </StackPanel>
+
+                                    <!--  ドロップターゲット（先行・後続設定用）  -->
+                                    <Border
+                                        Grid.ColumnSpan="2" Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2"
+                                        AllowDrop="True" Drop="DependencyDrop_Drop" DragEnter="DependencyDrop_DragEnter" DragLeave="DependencyDrop_DragLeave">
+                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="8" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="D&amp;D" />
+                                    </Border>
+
+                                    <!--  ツールチップ（詳細情報表示）  -->
+                                    <Grid.ToolTip>
+                                        <StackPanel MinWidth="200">
+                                            <ui:TextBlock FontWeight="Bold" Text="先行・後続の関係性" Margin="0,0,0,8" />
+                                            
+                                            <!--  先行タスク  -->
+                                            <StackPanel Margin="0,0,0,8" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                <ui:TextBlock FontWeight="SemiBold" Text="先行タスク:" Foreground="Orange" />
+                                                <ItemsControl ItemsSource="{Binding Predecessors}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <ui:TextBlock Text="{Binding Title}" Margin="8,0,0,0" FontSize="11" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                            
+                                            <!--  後続タスク  -->
+                                            <StackPanel Margin="0,0,0,8" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                <ui:TextBlock FontWeight="SemiBold" Text="後続タスク:" Foreground="Blue" />
+                                                <ItemsControl ItemsSource="{Binding Successors}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <ui:TextBlock Text="{Binding Title}" Margin="8,0,0,0" FontSize="11" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                            
+                                            <!--  使用方法  -->
+                                            <ui:TextBlock Text="使用方法: タスク名をドラッグしてこの列にドロップすると先行関係を設定できます" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Grid.ToolTip>
+                                </Grid>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
