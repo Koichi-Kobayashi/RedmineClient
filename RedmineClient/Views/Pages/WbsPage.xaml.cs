@@ -708,22 +708,8 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-                if (sender is Wpf.Ui.Controls.TextBox dateTextBox)
-                {
-                    if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Tab)
-                    {
-                        // エンターキーまたはタブキーで次の項目に移動
-                        e.Handled = true;
-                        MoveToNextField(dateTextBox, e.Key == System.Windows.Input.Key.Tab && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == System.Windows.Input.ModifierKeys.Shift);
-                    }
-                    else if (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down ||
-                             e.Key == System.Windows.Input.Key.Left || e.Key == System.Windows.Input.Key.Right)
-                    {
-                        // 矢印キーで日付を調整
-                        e.Handled = true;
-                        AdjustDate(dateTextBox, e.Key);
-                    }
-                }
+                // DatePickerを使用するため、このメソッドは不要
+                // 日付の調整はDatePickerのカレンダーで行う
             }
             catch
             {
@@ -743,26 +729,12 @@ namespace RedmineClient.Views.Pages
                 if (reverse)
                 {
                     // 逆方向に移動
-                    if (currentDateTextBox == EndDateTextBox)
-                    {
-                        StartDateTextBox?.Focus();
-                    }
-                    else if (currentDateTextBox == StartDateTextBox)
-                    {
-                        DescriptionTextBox?.Focus();
-                    }
+                    DescriptionTextBox?.Focus();
                 }
                 else
                 {
                     // 順方向に移動
-                    if (currentDateTextBox == StartDateTextBox)
-                    {
-                        EndDateTextBox?.Focus();
-                    }
-                    else if (currentDateTextBox == EndDateTextBox)
-                    {
-                        ProgressSlider?.Focus();
-                    }
+                    ProgressSlider?.Focus();
                 }
             }
             catch
@@ -780,40 +752,8 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-                // 現在の日付を取得
-                if (DateTime.TryParse(dateTextBox.Text, out DateTime currentDate))
-                {
-                    DateTime newDate = currentDate;
-
-                    switch (key)
-                    {
-                        case System.Windows.Input.Key.Up:
-                            // 上キー：月をインクリメント
-                            newDate = currentDate.AddMonths(1);
-                            break;
-                        case System.Windows.Input.Key.Down:
-                            // 下キー：月をデクリメント
-                            newDate = currentDate.AddMonths(-1);
-                            break;
-                        case System.Windows.Input.Key.Right:
-                            // 右キー：日をインクリメント
-                            newDate = currentDate.AddDays(1);
-                            break;
-                        case System.Windows.Input.Key.Left:
-                            // 左キー：日をデクリメント
-                            newDate = currentDate.AddDays(-1);
-                            break;
-                    }
-
-                    // 新しい日付をテキストボックスに設定
-                    dateTextBox.Text = newDate.ToString("yyyy/MM/dd");
-                }
-                else
-                {
-                    // 日付が解析できない場合は今日の日付を設定
-                    var today = DateTime.Today;
-                    dateTextBox.Text = today.ToString("yyyy/MM/dd");
-                }
+                // DatePickerを使用するため、このメソッドは不要
+                // 日付の調整はDatePickerのカレンダーで行う
             }
             catch
             {
@@ -828,65 +768,8 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-                if (sender is Wpf.Ui.Controls.TextBox dateTextBox)
-                {
-                    // カーソル位置に基づいて日付の特定の部分を調整
-                    var cursorPosition = dateTextBox.CaretIndex;
-                    var text = dateTextBox.Text;
-
-                    if (DateTime.TryParse(text, out DateTime currentDate))
-                    {
-                        DateTime newDate = currentDate;
-                        bool dateChanged = false;
-
-                        switch (e.Key)
-                        {
-                            case System.Windows.Input.Key.Up:
-                                if (cursorPosition <= 4) // 年
-                                {
-                                    newDate = currentDate.AddYears(1);
-                                    dateChanged = true;
-                                }
-                                else if (cursorPosition <= 7) // 月
-                                {
-                                    newDate = currentDate.AddMonths(1);
-                                    dateChanged = true;
-                                }
-                                else // 日
-                                {
-                                    newDate = currentDate.AddDays(1);
-                                    dateChanged = true;
-                                }
-                                break;
-
-                            case System.Windows.Input.Key.Down:
-                                if (cursorPosition <= 4) // 年
-                                {
-                                    newDate = currentDate.AddYears(-1);
-                                    dateChanged = true;
-                                }
-                                else if (cursorPosition <= 7) // 月
-                                {
-                                    newDate = currentDate.AddMonths(-1);
-                                    dateChanged = true;
-                                }
-                                else // 日
-                                {
-                                    newDate = currentDate.AddDays(-1);
-                                    dateChanged = true;
-                                }
-                                break;
-                        }
-
-                        if (dateChanged)
-                        {
-                            dateTextBox.Text = newDate.ToString("yyyy/MM/dd");
-                            // カーソル位置を復元
-                            dateTextBox.CaretIndex = cursorPosition;
-                            e.Handled = true;
-                        }
-                    }
-                }
+                // DatePickerを使用するため、このメソッドは不要
+                // 日付の調整はDatePickerのカレンダーで行う
             }
             catch
             {
@@ -1151,77 +1034,8 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void DateTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            if (sender is TextBox textBox && textBox.DataContext is WbsItem task)
-            {
-                try
-                {
-                    var tag = textBox.Tag as string;
-                    var text = textBox.Text?.Trim() ?? string.Empty;
-                    
-                    // 空の値の場合は元の値に戻す
-                    if (string.IsNullOrEmpty(text))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"日付が空のため、元の値に戻します: {tag}");
-                        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
-                        return;
-                    }
-                    
-                    // 日付形式の検証（yyyy/MM/dd形式のみ許可）
-                    if (!IsValidDateFormat(text))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"無効な日付形式: {text}。元の値に戻します。");
-                        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
-                        return;
-                    }
-                    
-                    if (DateTime.TryParse(text, out var newDate))
-                    {
-                        DateTime oldDate = DateTime.MinValue;
-                        
-                        if (tag == "StartDate")
-                        {
-                            oldDate = task.StartDate;
-                            task.StartDate = newDate;
-                            
-                            // 開始日が終了日より後になった場合は調整
-                            if (task.StartDate > task.EndDate)
-                            {
-                                task.EndDate = task.StartDate;
-                            }
-                            
-                            System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' の開始日が変更されました: {oldDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
-                        }
-                        else if (tag == "EndDate")
-                        {
-                            oldDate = task.EndDate;
-                            task.EndDate = newDate;
-                            
-                            // 終了日が開始日より前になった場合は調整
-                            if (task.EndDate < task.StartDate)
-                            {
-                                task.StartDate = task.EndDate;
-                            }
-                            
-                            System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' の終了日が変更されました: {oldDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
-                        }
-                        
-                        // スケジュール変更イベントを発行（ガントチャートと同様）
-                        OnTaskScheduleChanged(task, oldDate, task.StartDate, task.EndDate);
-                    }
-                    else
-                    {
-                        // 無効な日付の場合は元の値に戻す
-                        System.Diagnostics.Debug.WriteLine($"日付の解析に失敗: {text}。元の値に戻します。");
-                        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"日付変更処理エラー: {ex.Message}");
-                    // エラーが発生した場合は元の値に戻す
-                    textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
-                }
-            }
+            // DatePickerを使用するため、このメソッドは不要
+            // 日付の検証はDatePickerで自動的に行われる
         }
 
         /// <summary>
@@ -1233,23 +1047,8 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-                // 空文字列は無効
-                if (string.IsNullOrEmpty(dateText))
-                    return false;
-                
-                // yyyy/MM/dd形式のパターンをチェック
-                var pattern = @"^\d{4}/\d{2}/\d{2}$";
-                if (!System.Text.RegularExpressions.Regex.IsMatch(dateText, pattern))
-                    return false;
-                
-                // 実際にDateTimeとして解析できるかチェック
-                if (!DateTime.TryParse(dateText, out var date))
-                    return false;
-                
-                // 妥当な範囲内かチェック（例：1900年から2100年）
-                if (date.Year < 1900 || date.Year > 2100)
-                    return false;
-                
+                // DatePickerを使用するため、このメソッドは不要
+                // 日付の検証はDatePickerで自動的に行われる
                 return true;
             }
             catch
@@ -1265,9 +1064,8 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-
-                
-                // 必要に応じてRedmineに更新を送信するなどの処理を追加
+                // DatePickerを使用するため、このメソッドは不要
+                // 日付の変更はDatePickerで自動的に処理される
                 System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' のスケジュールが変更されました: {oldStartDate:yyyy/MM/dd} → {newStartDate:yyyy/MM/dd} - {newEndDate:yyyy/MM/dd}");
             }
             catch (Exception ex)

@@ -367,12 +367,12 @@
                         </DataGridTemplateColumn.CellTemplate>
                         <DataGridTemplateColumn.CellEditingTemplate>
                             <DataTemplate>
-                                <ui:TextBox Text="{Binding StartDate, StringFormat=yyyy/MM/dd, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" 
-                                           KeyDown="DateTextBox_KeyDown" 
-                                           KeyUp="DateTextBox_KeyUp"
-                                           LostFocus="DateTextBox_LostFocus"
-                                                                                       Tag="StartDate"
-                                            MaxLength="10" />
+                                <DatePicker SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                           FirstDayOfWeek="Monday"
+                                           IsTodayHighlighted="True"
+                                           DisplayDateStart="1900-01-01"
+                                           DisplayDateEnd="2100-12-31"
+                                           SelectedDateFormat="Short" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
@@ -388,12 +388,12 @@
                         </DataGridTemplateColumn.CellTemplate>
                         <DataGridTemplateColumn.CellEditingTemplate>
                             <DataTemplate>
-                                <ui:TextBox Text="{Binding EndDate, StringFormat=yyyy/MM/dd, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" 
-                                           KeyDown="DateTextBox_KeyDown" 
-                                           KeyUp="DateTextBox_KeyUp"
-                                           LostFocus="DateTextBox_LostFocus"
-                                                                                       Tag="EndDate"
-                                            MaxLength="10" />
+                                <DatePicker SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                           FirstDayOfWeek="Monday"
+                                           IsTodayHighlighted="True"
+                                           DisplayDateStart="1900-01-01"
+                                           DisplayDateEnd="2100-12-31"
+                                           SelectedDateFormat="Short" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
@@ -531,11 +531,21 @@
                                 <StackPanel>
                                     <!--  開始日  -->
                                     <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="開始日" />
-                                    <ui:TextBox x:Name="StartDateTextBox" KeyDown="DateTextBox_KeyDown" KeyUp="DateTextBox_KeyUp" PlaceholderText="yyyy/MM/dd" Text="{Binding ViewModel.SelectedItem.StartDate, StringFormat=yyyy/MM/dd, UpdateSourceTrigger=PropertyChanged}" />
+                                    <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                FirstDayOfWeek="Monday"
+                                                IsTodayHighlighted="True"
+                                                DisplayDateStart="1900-01-01"
+                                                DisplayDateEnd="2100-12-31"
+                                                SelectedDateFormat="Short" />
 
                                     <!--  終了日  -->
                                     <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
-                                    <ui:TextBox x:Name="EndDateTextBox" KeyDown="DateTextBox_KeyDown" KeyUp="DateTextBox_KeyUp" PlaceholderText="yyyy/MM/dd" Text="{Binding ViewModel.SelectedItem.EndDate, StringFormat=yyyy/MM/dd, UpdateSourceTrigger=PropertyChanged}" />
+                                    <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                FirstDayOfWeek="Monday"
+                                                IsTodayHighlighted="True"
+                                                DisplayDateStart="1900-01-01"
+                                                DisplayDateEnd="2100-12-31"
+                                                SelectedDateFormat="Short" />
                                 </StackPanel>
                             </Expander>
 
