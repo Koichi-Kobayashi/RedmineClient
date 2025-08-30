@@ -13,9 +13,12 @@ namespace RedmineClient.Views.Controls
     {
         private bool _isDraggingStart = false;
         private bool _isDraggingEnd = false;
+        private bool _isDraggingMove = false; // 期間移動フラグを追加
         private Point _dragStartPoint;
         private DateTime _originalStartDate;
         private DateTime _originalEndDate;
+        private DateTime _previewStartDate; // プレビュー用の開始日
+        private DateTime _previewEndDate;   // プレビュー用の終了日
         private WbsItem _wbsItem;
         private DateTime _currentDate;
         private int _columnIndex;
@@ -34,13 +37,14 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void InitializeBorder()
         {
-            // 基本設定
-            Background = Brushes.Transparent;
-            BorderBrush = Brushes.Blue;
-            BorderThickness = new Thickness(2);
-            CornerRadius = new CornerRadius(3);
+            // 基本設定 - 背景色はWbsPage.xaml.csで設定されるため、ここでは設定しない
+            BorderBrush = Brushes.Blue; // 青色の罫線
+            BorderThickness = new Thickness(1);
+            CornerRadius = new CornerRadius(2);
             Opacity = 0.8;
             Cursor = Cursors.SizeWE;
+            
+            // デバッグ情報は削除
 
             // Gridレイアウトを設定（左端、中央、右端の3列）
             var grid = new Grid();
@@ -57,8 +61,8 @@ namespace RedmineClient.Views.Controls
             MouseEnter += OnMouseEnter;
             MouseLeave += OnMouseLeave;
 
-            // ツールチップを設定
-            ToolTip = "開始日と終了日をドラッグして変更";
+            // ツールチップは動的に設定するため、初期値は空
+            ToolTip = "";
         }
 
         /// <summary>
@@ -71,12 +75,7 @@ namespace RedmineClient.Views.Controls
             _columnIndex = columnIndex;
             _totalColumns = totalColumns;
 
-            // デバッグ情報を最小限に削減
-            // System.Diagnostics.Debug.WriteLine($"SetTaskInfo: タスク={wbsItem?.Title}, 現在日付={currentDate:yyyy/MM/dd}, 列={columnIndex}, 総列数={totalColumns}");
-            // if (wbsItem != null)
-            // {
-            //     System.Diagnostics.Debug.WriteLine($"  タスク期間: {wbsItem.StartDate:yyyy/MM/dd} ～ {wbsItem.EndDate:yyyy/MM/dd}");
-            // }
+            // デバッグ情報は削除
         }
 
         /// <summary>
@@ -89,6 +88,8 @@ namespace RedmineClient.Views.Controls
             _dragStartPoint = e.GetPosition(this);
             _originalStartDate = _wbsItem.StartDate;
             _originalEndDate = _wbsItem.EndDate;
+            _previewStartDate = _wbsItem.StartDate; // プレビュー用の開始日を初期化
+            _previewEndDate = _wbsItem.EndDate;     // プレビュー用の終了日を初期化
 
             // ドラッグ開始位置を判定（日付ベース）
             var relativeX = _dragStartPoint.X;
@@ -165,7 +166,20 @@ namespace RedmineClient.Views.Controls
                         // タスク期間内の列の場合：より広い範囲でドラッグ判定
                         var extendedHandleWidth = Math.Max(DRAG_HANDLE_WIDTH, width * 0.4); // 幅の40%または10pxの大きい方
                         
-                        if (relativeX <= extendedHandleWidth)
+                        // デバッグ情報を追加
+                        System.Diagnostics.Debug.WriteLine($"  位置判定: relativeX={relativeX:F1}, width={width:F1}, extendedHandleWidth={extendedHandleWidth:F1}");
+                        System.Diagnostics.Debug.WriteLine($"  判定条件: relativeX <= {extendedHandleWidth:F1} = {relativeX <= extendedHandleWidth}, relativeX >= {width - extendedHandleWidth:F1} = {relativeX >= width - extendedHandleWidth}");
+                        
+                        // より確実な判定のため、右端を優先的に判定
+                        if (relativeX >= width - extendedHandleWidth)
+                        {
+                            // 右側（終了日変更）を優先
+                            _isDraggingStart = false;
+                            _isDraggingEnd = true;
+                            Cursor = Cursors.SizeWE;
+                            System.Diagnostics.Debug.WriteLine($"  拡張判定で終了日変更ドラッグ開始: {_wbsItem.Title} (右側)");
+                        }
+                        else if (relativeX <= extendedHandleWidth)
                         {
                             // 左側（開始日変更）
                             _isDraggingStart = true;
@@ -173,21 +187,14 @@ namespace RedmineClient.Views.Controls
                             Cursor = Cursors.SizeWE;
                             System.Diagnostics.Debug.WriteLine($"  拡張判定で開始日変更ドラッグ開始: {_wbsItem.Title} (左側)");
                         }
-                        else if (relativeX >= width - extendedHandleWidth)
-                        {
-                            // 右側（終了日変更）
-                            _isDraggingStart = false;
-                            _isDraggingEnd = true;
-                            Cursor = Cursors.SizeWE;
-                            System.Diagnostics.Debug.WriteLine($"  拡張判定で終了日変更ドラッグ開始: {_wbsItem.Title} (右側)");
-                        }
                         else
                         {
-                            // 中央部分でも、タスク期間内の場合は開始日変更として扱う（より直感的な操作）
-                            _isDraggingStart = true;
+                            // 中央部分の場合は、期間移動のドラッグ操作を開始
+                            _isDraggingStart = false;
                             _isDraggingEnd = false;
-                            Cursor = Cursors.SizeWE;
-                            System.Diagnostics.Debug.WriteLine($"  中央部分でも開始日変更ドラッグ開始: {_wbsItem.Title} (中央)");
+                            _isDraggingMove = true; // 期間移動フラグを追加
+                            Cursor = Cursors.SizeAll;
+                            System.Diagnostics.Debug.WriteLine($"  中央部分で期間移動ドラッグ開始: {_wbsItem.Title} (中央)");
                         }
                     }
                     else
@@ -216,11 +223,12 @@ namespace RedmineClient.Views.Controls
                             }
                             else
                             {
-                                // 中央部分でも、タスクが表示されている列の場合は開始日変更として扱う
-                                _isDraggingStart = true;
+                                // 中央部分の場合は、ドラッグ操作を開始しない
+                                _isDraggingStart = false;
                                 _isDraggingEnd = false;
-                                Cursor = Cursors.SizeWE;
-                                System.Diagnostics.Debug.WriteLine($"  中央部分（期間外）でも開始日変更ドラッグ開始: {_wbsItem.Title} (中央)");
+                                Cursor = Cursors.Arrow;
+                                System.Diagnostics.Debug.WriteLine($"  中央部分（期間外）のためドラッグ操作を開始しない: {_wbsItem.Title} (中央)");
+                                return;
                             }
                         }
                         else
@@ -266,60 +274,112 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (!_isDraggingStart && !_isDraggingEnd) return;
+            if (!_isDraggingStart && !_isDraggingEnd && !_isDraggingMove)
+            {
+                // マウスの位置に応じてツールチップを動的に設定
+                UpdateToolTip(e.GetPosition(this));
+                return;
+            }
 
             var currentPoint = e.GetPosition(this);
             var deltaX = currentPoint.X - _dragStartPoint.X;
 
-            // 列幅に基づいて日数に変換（実際の列幅を使用）
+            // 列幅に基づいてセル単位での移動量を計算
             // WbsPage.xaml.csで設定されている列幅（40px）を使用
             var columnWidth = 40.0;
             
-            // より滑らかなドラッグ操作のため、ピクセル単位での細かい制御を実現
-            // 1px = 0.025日（40px ÷ 1日）の精度で計算
-            var daysDelta = deltaX / columnWidth;
+            // セル単位での移動量を計算（隣のセルに移動したら1日変わる）
+            var cellsDelta = deltaX / columnWidth;
             
-            // 最小移動単位を0.025日に設定（1px = 0.025日）でより滑らかな操作を実現
-            if (Math.Abs(daysDelta) < 0.025)
+            // セル単位での移動量を整数に丸める（隣のセルに移動したら1日変わる）
+            var roundedCellsDelta = Math.Round(cellsDelta);
+            var daysDelta = roundedCellsDelta; // 1セル = 1日
+            
+            // 最小移動単位を1セル（1日）に設定
+            if (Math.Abs(daysDelta) < 1)
             {
                 daysDelta = 0;
             }
 
             // デバッグ情報を最小限に削減
-            // System.Diagnostics.Debug.WriteLine($"ドラッグ中: deltaX={deltaX:F1}px, columnWidth={columnWidth}px, daysDelta={daysDelta:F2}日");
+            // System.Diagnostics.Debug.WriteLine($"ドラッグ中: deltaX={deltaX:F1}px, columnWidth={columnWidth}px, cellsDelta={cellsDelta:F2}セル, daysDelta={daysDelta}日");
 
             if (_isDraggingStart)
             {
                 // 開始日を変更（プレビュー用、実際の変更はドラッグ完了時）
-                var newStartDate = _originalStartDate.AddDays(daysDelta);
+                // 小数点での計算を避けて、整数日での移動に統一
+                var roundedDaysDelta = Math.Round(daysDelta);
+                var newStartDate = _originalStartDate.AddDays(roundedDaysDelta);
 
-                // プレビュー用に一時的に変更（視覚的フィードバックのみ）
-                _wbsItem.StartDate = newStartDate;
+                // 内側へのドラッグ制限を緩和（最低1日の期間を保つ）
+                if (newStartDate >= _originalEndDate.AddDays(-1))
+                {
+                    newStartDate = _originalEndDate.AddDays(-1);
+                    System.Diagnostics.Debug.WriteLine($"  開始日制限: 最低期間を保つため調整: {newStartDate:yyyy/MM/dd}");
+                }
+
+                // プレビュー用の変数に設定（元の日付は保持）
+                _previewStartDate = newStartDate;
                 UpdateVisualFeedback(true);
 
                 // デバッグ情報
-                if (Math.Abs(daysDelta) > 0.01)
+                if (Math.Abs(roundedDaysDelta) > 0)
                 {
-                    var direction = daysDelta > 0 ? "右方向" : "左方向";
+                    var direction = roundedDaysDelta > 0 ? "右方向" : "左方向";
                     var taskDuration = (_originalEndDate - newStartDate).TotalDays;
-                    System.Diagnostics.Debug.WriteLine($"開始日変更プレビュー: {_originalStartDate:yyyy/MM/dd} -> {newStartDate:yyyy/MM/dd} (差分: {daysDelta:F2}日, {direction}, タスク期間: {taskDuration:F1}日)");
+                    System.Diagnostics.Debug.WriteLine($"開始日変更プレビュー: {_originalStartDate:yyyy/MM/dd} -> {newStartDate:yyyy/MM/dd} (差分: {roundedDaysDelta}セル, {direction}, タスク期間: {taskDuration:F1}日)");
                 }
             }
             else if (_isDraggingEnd)
             {
                 // 終了日を変更（プレビュー用、実際の変更はドラッグ完了時）
-                var newEndDate = _originalEndDate.AddDays(daysDelta);
+                // 小数点での計算を避けて、整数日での移動に統一
+                var roundedDaysDelta = Math.Round(daysDelta);
+                var newEndDate = _originalEndDate.AddDays(roundedDaysDelta);
 
-                // プレビュー用に一時的に変更（視覚的フィードバックのみ）
-                _wbsItem.EndDate = newEndDate;
+                // 内側へのドラッグ制限を緩和（最低1日の期間を保つ）
+                if (newEndDate <= _originalStartDate.AddDays(1))
+                {
+                    newEndDate = _originalStartDate.AddDays(1);
+                    System.Diagnostics.Debug.WriteLine($"  終了日制限: 最低期間を保つため調整: {newEndDate:yyyy/MM/dd}");
+                }
+
+                // プレビュー用の変数に設定（元の日付は保持）
+                _previewEndDate = newEndDate;
                 UpdateVisualFeedback(false);
 
                 // デバッグ情報
-                if (Math.Abs(daysDelta) > 0.01)
+                if (Math.Abs(roundedDaysDelta) > 0)
                 {
-                    var direction = daysDelta > 0 ? "右方向" : "左方向";
+                    var direction = roundedDaysDelta > 0 ? "右方向" : "左方向";
                     var taskDuration = (newEndDate - _originalStartDate).TotalDays;
-                    System.Diagnostics.Debug.WriteLine($"終了日変更プレビュー: {_originalEndDate:yyyy/MM/dd} -> {newEndDate:yyyy/MM/dd} (差分: {daysDelta:F2}日, {direction}, タスク期間: {taskDuration:F1}日)");
+                    System.Diagnostics.Debug.WriteLine($"終了日変更プレビュー: {_originalEndDate:yyyy/MM/dd} -> {newEndDate:yyyy/MM/dd} (差分: {roundedDaysDelta}セル, {direction}, タスク期間: {taskDuration:F1}日)");
+                }
+            }
+            else if (_isDraggingMove)
+            {
+                // 期間移動（開始日と終了日を同時に移動、期間は保持）
+                // 外側のスコープで既に計算済みの変数を使用
+                // currentPoint, deltaX, columnWidth, daysDelta は既に定義済み
+
+                // 小数点での計算を避けて、整数日での移動に統一
+                var roundedDaysDelta = Math.Round(daysDelta);
+                
+                // 開始日と終了日を同時に移動（整数日単位）
+                var newStartDate = _originalStartDate.AddDays(roundedDaysDelta);
+                var newEndDate = _originalEndDate.AddDays(roundedDaysDelta);
+
+                // プレビュー用の変数に設定（元の日付は保持）
+                _previewStartDate = newStartDate;
+                _previewEndDate = newEndDate;
+                UpdateVisualFeedback(true); // 期間移動用のフィードバック
+
+                // デバッグ情報
+                if (Math.Abs(roundedDaysDelta) > 0)
+                {
+                    var direction = roundedDaysDelta > 0 ? "右方向" : "左方向";
+                    var taskDuration = (newEndDate - newStartDate).TotalDays;
+                    System.Diagnostics.Debug.WriteLine($"期間移動プレビュー: 開始日={newStartDate:yyyy/MM/dd}, 終了日={newEndDate:yyyy/MM/dd} (差分: {roundedDaysDelta}セル, {direction}, タスク期間: {taskDuration:F1}日)");
                 }
             }
         }
@@ -329,11 +389,17 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (_isDraggingStart || _isDraggingEnd)
+            if (_isDraggingStart || _isDraggingEnd || _isDraggingMove)
             {
                 // 日付変更が完了した場合、ViewModelに通知
                 if (_wbsItem != null)
                 {
+                    // プレビュー用の日付を実際の日付に反映
+                    if (_isDraggingStart || _isDraggingMove)
+                        _wbsItem.StartDate = _previewStartDate;
+                    if (_isDraggingEnd || _isDraggingMove)
+                        _wbsItem.EndDate = _previewEndDate;
+
                     var oldStartDate = _originalStartDate;
                     var oldEndDate = _originalEndDate;
 
@@ -391,6 +457,7 @@ namespace RedmineClient.Views.Controls
 
             _isDraggingStart = false;
             _isDraggingEnd = false;
+            _isDraggingMove = false;
             ReleaseMouseCapture();
             Cursor = Cursors.SizeWE;
             ClearVisualFeedback();
@@ -402,8 +469,11 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void OnMouseEnter(object sender, MouseEventArgs e)
         {
-            if (!_isDraggingStart && !_isDraggingEnd)
+            if (!_isDraggingStart && !_isDraggingEnd && !_isDraggingMove)
             {
+                // マウスの位置に応じてツールチップを動的に設定
+                UpdateToolTip(e.GetPosition(this));
+                
                 // ドラッグハンドルを表示
                 ShowDragHandles();
             }
@@ -414,7 +484,7 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void OnMouseLeave(object sender, MouseEventArgs e)
         {
-            if (!_isDraggingStart && !_isDraggingEnd)
+            if (!_isDraggingStart && !_isDraggingEnd && !_isDraggingMove)
             {
                 // ドラッグハンドルを非表示
                 HideDragHandles();
@@ -435,36 +505,8 @@ namespace RedmineClient.Views.Controls
                     grid.Children.Remove(handle);
                 }
 
-                // 開始日と終了日に対応する列を計算
-                var startDateColumn = GetColumnIndexFromDate(_wbsItem.StartDate);
-                var endDateColumn = GetColumnIndexFromDate(_wbsItem.EndDate);
-
-                // 開始日のドラッグハンドル（青）
-                var startHandle = new Rectangle
-                {
-                    Fill = Brushes.LightBlue,
-                    Stroke = Brushes.DarkBlue,
-                    StrokeThickness = 2,
-                    Opacity = 0.9,
-                    ToolTip = $"開始日（{_wbsItem.StartDate:yyyy/MM/dd}）を変更"
-                };
-                Grid.SetColumn(startHandle, startDateColumn);
-                grid.Children.Add(startHandle);
-
-                // 終了日のドラッグハンドル（緑）
-                var endHandle = new Rectangle
-                {
-                    Fill = Brushes.LightGreen,
-                    Stroke = Brushes.DarkGreen,
-                    StrokeThickness = 2,
-                    Opacity = 0.9,
-                    ToolTip = $"終了日（{_wbsItem.EndDate:yyyy/MM/dd}）を変更"
-                };
-                Grid.SetColumn(endHandle, endDateColumn);
-                grid.Children.Add(endHandle);
-
-                // ツールチップを更新
-                ToolTip = $"開始日（青、{_wbsItem.StartDate:yyyy/MM/dd}）と終了日（緑、{_wbsItem.EndDate:yyyy/MM/dd}）をドラッグして変更";
+                // 色付きのRectangleは削除し、シンプルな透明度の変化のみに
+                // ツールチップは動的に更新されるため、ここでは設定しない
             }
         }
 
@@ -482,8 +524,7 @@ namespace RedmineClient.Views.Controls
                 }
             }
 
-            // ツールチップを元に戻す
-            ToolTip = "左端をドラッグして開始日を変更、右端をドラッグして終了日を変更";
+            // ツールチップは動的に更新されるため、ここでは設定しない
         }
 
         /// <summary>
@@ -491,19 +532,234 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void UpdateVisualFeedback(bool isStartDrag)
         {
-            if (isStartDrag)
+            if (_isDraggingMove)
             {
-                // 開始日変更中のフィードバック
-                Background = Brushes.LightBlue;
-                BorderBrush = Brushes.DarkBlue;
+                // 期間移動中のフィードバック：背景色と罫線を変更して区別
+                Background = Brushes.Orange; // オレンジ色の背景
+                BorderBrush = Brushes.DarkOrange; // 濃いオレンジ色の罫線
+                BorderThickness = new Thickness(2); // 太い罫線
                 Opacity = 0.9;
+                
+                // 期間中のTextBlockの色もオレンジ系に変更
+                System.Diagnostics.Debug.WriteLine($"期間移動開始: TextBlockの色をオレンジ系に変更 (プレビュー開始日: {_previewStartDate:yyyy/MM/dd}, プレビュー終了日: {_previewEndDate:yyyy/MM/dd})");
+                UpdateTaskPeriodColors(Brushes.Orange, Brushes.DarkOrange);
+            }
+            else if (_isDraggingStart)
+            {
+                // 開始日変更ドラッグ中のフィードバック
+                // 背景色は一時的に変更（ドラッグ終了時に元に戻る）
+                Background = Brushes.LightBlue; // 薄い青色の背景
+                BorderBrush = Brushes.Blue; // 青色の罫線
+                Opacity = 0.9;
+                
+                // 開始日部分のTextBlockを青色系に変更
+                System.Diagnostics.Debug.WriteLine($"開始日変更開始: TextBlockの色を青色系に変更");
+                UpdateStartDateColors(Brushes.LightBlue, Brushes.Blue);
+            }
+            else if (_isDraggingEnd)
+            {
+                // 終了日変更ドラッグ中のフィードバック
+                // 背景色は一時的に変更（ドラッグ終了時に元に戻る）
+                Background = Brushes.LightGreen; // 薄い緑色の背景
+                BorderBrush = Brushes.Green; // 緑色の罫線
+                Opacity = 0.9;
+                
+                // 終了日部分のTextBlockを緑色系に変更
+                System.Diagnostics.Debug.WriteLine($"終了日変更開始: TextBlockの色を緑色系に変更");
+                UpdateEndDateColors(Brushes.LightGreen, Brushes.Green);
             }
             else
             {
-                // 終了日変更中のフィードバック
-                Background = Brushes.LightGreen;
-                BorderBrush = Brushes.DarkGreen;
+                // 通常のドラッグ中のフィードバック：透明度のみ変更
                 Opacity = 0.9;
+            }
+        }
+
+        /// <summary>
+        /// 開始日部分のTextBlockの色を変更
+        /// </summary>
+        private void UpdateStartDateColors(Brush backgroundBrush, Brush foregroundBrush)
+        {
+            if (Child is Grid grid)
+            {
+                // 開始日部分（左端）のTextBlockの色を変更
+                foreach (UIElement child in grid.Children)
+                {
+                    if (Grid.GetColumn(child) == 0 && child is TextBlock textBlock) // 左端の列
+                    {
+                        textBlock.Background = backgroundBrush;
+                        textBlock.Foreground = foregroundBrush;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 終了日部分のTextBlockの色を変更
+        /// </summary>
+        private void UpdateEndDateColors(Brush backgroundBrush, Brush foregroundBrush)
+        {
+            if (Child is Grid grid)
+            {
+                // 終了日部分（右端）のTextBlockの色を変更
+                foreach (UIElement child in grid.Children)
+                {
+                    if (Grid.GetColumn(child) == 2 && child is TextBlock textBlock) // 右端の列
+                    {
+                        textBlock.Background = backgroundBrush;
+                        textBlock.Foreground = foregroundBrush;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 期間中のTextBlockの色を変更
+        /// </summary>
+        private void UpdateTaskPeriodColors(Brush backgroundBrush, Brush foregroundBrush)
+        {
+            if (Child is Grid grid)
+            {
+                // 期間移動中の場合は、プレビュー用の日付を使用
+                int startColumn, endColumn;
+                if (_isDraggingMove && _previewStartDate != default && _previewEndDate != default)
+                {
+                    // プレビュー用の日付から列インデックスを計算
+                    startColumn = GetColumnIndexFromDate(_previewStartDate);
+                    endColumn = GetColumnIndexFromDate(_previewEndDate);
+                }
+                else
+                {
+                    // 通常の場合は、現在のタスク期間を使用
+                    var columns = GetActualTaskColumns();
+                    startColumn = columns.startColumn;
+                    endColumn = columns.endColumn;
+                }
+                
+                // 現在のDraggableTaskBorderが表示されている列範囲を計算
+                var currentStartColumn = _columnIndex;
+                var currentEndColumn = _columnIndex + grid.ColumnDefinitions.Count - 1;
+                
+                // タスク期間と現在の表示範囲の重複部分を計算
+                var overlapStart = Math.Max(startColumn, currentStartColumn);
+                var overlapEnd = Math.Min(endColumn, currentEndColumn);
+                
+                // 重複部分がある場合のみ色を変更
+                if (overlapStart <= overlapEnd)
+                {
+                    // 重複部分の列に対応するTextBlockの色を変更
+                    for (int i = 0; i < grid.ColumnDefinitions.Count; i++)
+                    {
+                        var columnIndex = currentStartColumn + i;
+                        
+                        // タスク期間内の列の場合のみ色を変更
+                        if (columnIndex >= overlapStart && columnIndex <= overlapEnd)
+                        {
+                            foreach (UIElement child in grid.Children)
+                            {
+                                if (Grid.GetColumn(child) == i && child is TextBlock textBlock)
+                                {
+                                    textBlock.Background = backgroundBrush;
+                                    textBlock.Foreground = foregroundBrush;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 開始日部分のTextBlockの色を元に戻す
+        /// </summary>
+        private void ResetStartDateColors()
+        {
+            if (Child is Grid grid)
+            {
+                // 開始日部分（左端）のTextBlockの色を元に戻す
+                foreach (UIElement child in grid.Children)
+                {
+                    if (Grid.GetColumn(child) == 0 && child is TextBlock textBlock) // 左端の列
+                    {
+                        textBlock.Background = Brushes.Transparent;
+                        textBlock.Foreground = Brushes.Black;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 終了日部分のTextBlockの色を元に戻す
+        /// </summary>
+        private void ResetEndDateColors()
+        {
+            if (Child is Grid grid)
+            {
+                // 終了日部分（右端）のTextBlockの色を元に戻す
+                foreach (UIElement child in grid.Children)
+                {
+                    if (Grid.GetColumn(child) == 2 && child is TextBlock textBlock) // 右端の列
+                    {
+                        textBlock.Background = Brushes.Transparent;
+                        textBlock.Foreground = Brushes.Black;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 期間中のTextBlockの色を元に戻す
+        /// </summary>
+        private void ResetTaskPeriodColors()
+        {
+            if (Child is Grid grid)
+            {
+                // 期間移動中の場合は、プレビュー用の日付を使用
+                int startColumn, endColumn;
+                if (_isDraggingMove && _previewStartDate != default && _previewEndDate != default)
+                {
+                    // プレビュー用の日付から列インデックスを計算
+                    startColumn = GetColumnIndexFromDate(_previewStartDate);
+                    endColumn = GetColumnIndexFromDate(_previewEndDate);
+                }
+                else
+                {
+                    // 通常の場合は、現在のタスク期間を使用
+                    var columns = GetActualTaskColumns();
+                    startColumn = columns.startColumn;
+                    endColumn = columns.endColumn;
+                }
+                
+                // 現在のDraggableTaskBorderが表示されている列範囲を計算
+                var currentStartColumn = _columnIndex;
+                var currentEndColumn = _columnIndex + grid.ColumnDefinitions.Count - 1;
+                
+                // タスク期間と現在の表示範囲の重複部分を計算
+                var overlapStart = Math.Max(startColumn, currentStartColumn);
+                var overlapEnd = Math.Min(endColumn, currentEndColumn);
+                
+                // 重複部分がある場合のみ色を元に戻す
+                if (overlapStart <= overlapEnd)
+                {
+                    // 重複部分の列に対応するTextBlockの色を元に戻す
+                    for (int i = 0; i < grid.ColumnDefinitions.Count; i++)
+                    {
+                        var columnIndex = currentStartColumn + i;
+                        
+                        // タスク期間内の列の場合のみ色を元に戻す
+                        if (columnIndex >= overlapStart && columnIndex <= overlapEnd)
+                        {
+                            foreach (UIElement child in grid.Children)
+                            {
+                                if (Grid.GetColumn(child) == i && child is TextBlock textBlock)
+                                {
+                                    textBlock.Background = Brushes.Transparent;
+                                    textBlock.Foreground = Brushes.Black;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -512,9 +768,76 @@ namespace RedmineClient.Views.Controls
         /// </summary>
         private void ClearVisualFeedback()
         {
-            Background = Brushes.Transparent;
-            BorderBrush = Brushes.Blue;
+            // 透明度を元に戻す
             Opacity = 0.8;
+            
+            if (_isDraggingMove)
+            {
+                // 期間移動中だった場合は、背景色と罫線も元に戻す
+                // 背景色をクリアしてWbsPage.xaml.csの設定を適用
+                ClearValue(BackgroundProperty);
+                BorderBrush = Brushes.Blue; // 元の青色の罫線
+                BorderThickness = new Thickness(1); // 元の細い罫線
+                
+                // 期間中のTextBlockの色も元に戻す
+                System.Diagnostics.Debug.WriteLine($"期間移動終了: TextBlockの色を元に戻す");
+                ResetTaskPeriodColors();
+            }
+            else if (_isDraggingStart)
+            {
+                // 開始日変更ドラッグ中だった場合は、背景色と罫線も元に戻す
+                // 背景色をクリアしてWbsPage.xaml.csの設定を適用
+                ClearValue(BackgroundProperty);
+                BorderBrush = Brushes.Blue; // 元の青色の罫線
+                
+                // 開始日部分のTextBlockの色も元に戻す
+                System.Diagnostics.Debug.WriteLine($"開始日変更終了: TextBlockの色を元に戻す");
+                ResetStartDateColors();
+            }
+            else if (_isDraggingEnd)
+            {
+                // 終了日変更ドラッグ中だった場合は、背景色と罫線も元に戻す
+                // 背景色をクリアしてWbsPage.xaml.csの設定を適用
+                ClearValue(BackgroundProperty);
+                BorderBrush = Brushes.Blue; // 元の青色の罫線
+                
+                // 終了日部分のTextBlockの色も元に戻す
+                System.Diagnostics.Debug.WriteLine($"終了日変更終了: TextBlockの色を元に戻す");
+                ResetEndDateColors();
+            }
+            else
+            {
+                // 通常のドラッグの場合は、罫線のみ元に戻す
+                BorderBrush = Brushes.Blue; // 元の青色の罫線
+            }
+        }
+
+        /// <summary>
+        /// マウスの位置に応じてツールチップを動的に更新
+        /// </summary>
+        private void UpdateToolTip(Point mousePosition)
+        {
+            if (_wbsItem == null) return;
+
+            var width = ActualWidth;
+            var relativeX = mousePosition.X;
+            var extendedHandleWidth = Math.Max(DRAG_HANDLE_WIDTH, width * 0.35);
+
+            if (relativeX <= extendedHandleWidth)
+            {
+                // 左端の場合
+                ToolTip = $"ドラッグして開始日（{_wbsItem.StartDate:yyyy/MM/dd}）を変更";
+            }
+            else if (relativeX >= width - extendedHandleWidth)
+            {
+                // 右端の場合
+                ToolTip = $"ドラッグして終了日（{_wbsItem.EndDate:yyyy/MM/dd}）を変更";
+            }
+            else
+            {
+                // 中央部分の場合
+                ToolTip = $"ドラッグして開始日・終了日を変更";
+            }
         }
 
         /// <summary>

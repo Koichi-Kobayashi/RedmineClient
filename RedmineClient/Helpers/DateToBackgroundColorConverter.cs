@@ -23,9 +23,9 @@ namespace RedmineClient.Helpers
                 // 祝日は赤色（日曜日と同じ）
                 if (HolidayService.IsHoliday(date))
                     return Brushes.LightPink;
-                // 土曜日は青色
+                // 土曜日は薄いシアン色
                 else if (date.DayOfWeek == DayOfWeek.Saturday)
-                    return Brushes.LightBlue;
+                    return Brushes.LightCyan;
                 // 日曜日はピンク色
                 else if (date.DayOfWeek == DayOfWeek.Sunday)
                     return Brushes.LightPink;
