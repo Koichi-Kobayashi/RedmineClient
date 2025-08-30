@@ -520,6 +520,7 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void GenerateDateColumns()
         {
+            System.Diagnostics.Debug.WriteLine("=== GenerateDateColumns開始 ===");
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && WbsDataGrid.IsInitialized)
             {
 
@@ -541,37 +542,43 @@ namespace RedmineClient.Views.Pages
                  {
                      startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1); // デフォルトは今月の1日
                  }
+                 
+                 // タスクの開始日が設定された開始日より前の場合は、タスクの開始日から表示
+                 if (ViewModel.WbsItems != null && ViewModel.WbsItems.Count > 0)
+                 {
+                     var earliestStartDate = ViewModel.WbsItems.Min(item => item.StartDate);
+                     if (earliestStartDate < startDate)
+                     {
+                         startDate = earliestStartDate.AddDays(-7); // タスク開始日の1週間前から表示
+                         System.Diagnostics.Debug.WriteLine($"タスク開始日が設定開始日より前のため、表示開始日を調整: {earliestStartDate:yyyy/MM/dd} -> {startDate:yyyy/MM/dd}");
+                     }
+                 }
+                 
                  var endDate = startDate.AddMonths(2).AddDays(-1); // 2か月分表示（タスク期間をカバー）
 
                 var currentDate = startDate;
-                var columnCount = 0;
                 var lastMonth = -1;
 
                 // 固定列の数を取得（タスク名、ID、説明、開始日、終了日、進捗、ステータス、優先度、担当者）
                 var fixedColumnCount = 9;
 
                 // 日付列の総数を計算
-                var totalColumns = 0;
-                var tempDate = startDate;
-                while (tempDate <= endDate)
-                {
-                    totalColumns++;
-                    tempDate = tempDate.AddDays(1);
-                }
+                var totalColumns = (int)((endDate - startDate).TotalDays) + 1;
 
-                while (currentDate <= endDate)
+                for (int columnCount = 0; columnCount < totalColumns; columnCount++)
                 {
+                    var loopDate = startDate.AddDays(columnCount);
                     // 月が変わったかどうかをチェック
-                    var isMonthStart = currentDate.Month != lastMonth;
+                    var isMonthStart = loopDate.Month != lastMonth;
                     if (isMonthStart)
                     {
-                        lastMonth = currentDate.Month;
+                        lastMonth = loopDate.Month;
                     }
 
                     var dateColumn = new DataGridTemplateColumn
                     {
                         Width = 40, // 幅を少し広げて3行表示に対応
-                        Header = CreateThreeRowHeader(currentDate, isMonthStart),
+                        Header = CreateThreeRowHeader(loopDate, isMonthStart),
                         IsReadOnly = true,
                         HeaderStyle = CreateDateHeaderStyle()
                     };
@@ -595,13 +602,13 @@ namespace RedmineClient.Views.Pages
 
                     var backgroundBinding = new System.Windows.Data.Binding
                     {
-                        Source = currentDate,
+                        Source = loopDate,
                         Converter = new RedmineClient.Helpers.DateToBackgroundColorConverter()
                     };
                     backgroundFactory.SetValue(Border.BackgroundProperty, backgroundBinding);
 
                     // 今日の日付ライン表示（設定が有効な場合のみ）
-                    if (ViewModel.ShowTodayLine && currentDate.Date == DateTime.Today)
+                    if (ViewModel.ShowTodayLine && loopDate.Date == DateTime.Today)
                     {
                         var todayLineFactory = new FrameworkElementFactory(typeof(Border));
                         todayLineFactory.SetValue(Border.WidthProperty, 30.0);
@@ -622,7 +629,7 @@ namespace RedmineClient.Views.Pages
 
                     // タスク期間の表示/非表示を制御（MultiBindingを使用）
                     var multiBinding = new System.Windows.Data.MultiBinding();
-                    multiBinding.Converter = new TaskPeriodMultiBindingConverter(currentDate);
+                    multiBinding.Converter = new TaskPeriodMultiBindingConverter(loopDate);
                     
                     // 開始日（WbsItemから直接取得）
                     var startDateBinding = new System.Windows.Data.Binding
@@ -656,7 +663,28 @@ namespace RedmineClient.Views.Pages
                             var dataContext = border.DataContext as WbsItem;
                             if (dataContext != null)
                             {
-                                border.SetTaskInfo(dataContext, currentDate, columnCount, totalColumns);
+                                                                 // 現在の列の実際のインデックスを計算
+                                 // columnCountは日付列のインデックス（0から始まる）
+                                 // 固定列9個 + 日付列の位置（columnCount）
+                                 var actualColumnIndex = 9 + columnCount;
+                                 
+                                 // デバッグ情報を最小限に削減
+                                 // System.Diagnostics.Debug.WriteLine($"列生成: columnCount={columnCount}, actualColumnIndex={actualColumnIndex}, 日付={loopDate:yyyy/MM/dd}");
+                                 
+                                 // 列0の日付（表示開始日）を基準として渡す
+                                 // これにより、各列での日付計算が正しく行われる
+                                 // totalColumnsには固定列9個 + 日付列の総数を渡す必要がある
+                                 var actualTotalColumns = 9 + totalColumns;
+                                 
+                                 // 境界条件の確認：actualColumnIndexがactualTotalColumnsの範囲内にあることを確認
+                                 if (actualColumnIndex >= actualTotalColumns)
+                                 {
+                                     // System.Diagnostics.Debug.WriteLine($"警告: actualColumnIndex({actualColumnIndex}) >= actualTotalColumns({actualTotalColumns})");
+                                     actualColumnIndex = actualTotalColumns - 1;
+                                     // System.Diagnostics.Debug.WriteLine($"調整後: actualColumnIndex = {actualColumnIndex}");
+                                 }
+                                 
+                                 border.SetTaskInfo(dataContext, startDate, actualColumnIndex, actualTotalColumns);
                             }
                         }
                     });
@@ -671,8 +699,6 @@ namespace RedmineClient.Views.Pages
 
                     // 固定列の後ろに日付列を追加
                     WbsDataGrid.Columns.Insert(fixedColumnCount + columnCount, dateColumn);
-                    columnCount++;
-                    currentDate = currentDate.AddDays(1);
                 }
             }
         }
