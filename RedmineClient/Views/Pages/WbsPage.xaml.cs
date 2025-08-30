@@ -53,7 +53,6 @@ namespace RedmineClient.Views.Pages
             
             // 日付変更の監視を有効化
             ViewModel.StartDateChangeWatching();
-            System.Diagnostics.Debug.WriteLine("日付変更の監視を有効化しました");
 
             // キーボードショートカットを設定
             this.KeyDown += WbsPage_KeyDown;
@@ -1270,7 +1269,6 @@ namespace RedmineClient.Views.Pages
             {
                 // 現在の日付値をキャッシュに保存
                 _dateChangeCache[datePicker] = (task.StartDate, task.EndDate);
-                System.Diagnostics.Debug.WriteLine($"DatePickerフォーカス取得: {task.Title} - 開始日: {task.StartDate:yyyy/MM/dd}, 終了日: {task.EndDate:yyyy/MM/dd}");
             }
         }
 
@@ -1285,12 +1283,9 @@ namespace RedmineClient.Views.Pages
             {
                 if (sender is DatePicker datePicker && datePicker.DataContext is WbsItem task)
                 {
-                    System.Diagnostics.Debug.WriteLine($"DatePicker日付変更イベントが発生: タスク '{task.Title}'");
-                    
                     // 新規登録時は更新処理を実行しない
                     if (int.TryParse(task.Id, out int idValue) && idValue <= 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"新規タスクのため更新処理をスキップ: {task.Title}");
                         return;
                     }
 
@@ -1304,19 +1299,10 @@ namespace RedmineClient.Views.Pages
                         var oldStartDate = oldValues.StartDate;
                         var oldEndDate = oldValues.EndDate;
 
-                        System.Diagnostics.Debug.WriteLine($"=== 日付変更詳細情報 ===");
-                        System.Diagnostics.Debug.WriteLine($"タスク: {task.Title}");
-                        System.Diagnostics.Debug.WriteLine($"新しい日付: {newDate:yyyy/MM/dd}");
-                        System.Diagnostics.Debug.WriteLine($"変更前の開始日: {oldStartDate:yyyy/MM/dd}");
-                        System.Diagnostics.Debug.WriteLine($"変更前の終了日: {oldEndDate:yyyy/MM/dd}");
-                        System.Diagnostics.Debug.WriteLine($"現在の開始日: {task.StartDate:yyyy/MM/dd}");
-                        System.Diagnostics.Debug.WriteLine($"現在の終了日: {task.EndDate:yyyy/MM/dd}");
-                        System.Diagnostics.Debug.WriteLine($"DatePickerのTag: {datePicker.Tag}");
-                        System.Diagnostics.Debug.WriteLine($"========================");
+
 
                         // タグを使用して列を識別
                         string? columnType = datePicker.Tag?.ToString();
-                        System.Diagnostics.Debug.WriteLine($"列タイプ: {columnType}");
                         
                         // 日付変更の検出と処理
                         bool dateChanged = false;
@@ -1327,7 +1313,6 @@ namespace RedmineClient.Views.Pages
                         {
                             if (newDate != oldStartDate)
                             {
-                                System.Diagnostics.Debug.WriteLine($"開始日が変更されました: {oldStartDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
                                 originalStartDate = oldStartDate;
                                 task.StartDate = newDate;
                                 dateChanged = true;
@@ -1337,40 +1322,17 @@ namespace RedmineClient.Views.Pages
                         {
                             if (newDate != oldEndDate)
                             {
-                                System.Diagnostics.Debug.WriteLine($"終了日が変更されました: {oldEndDate:yyyy/MM/dd} → {newDate:yyyy/MM/dd}");
                                 originalEndDate = oldEndDate;
                                 task.EndDate = newDate;
                                 dateChanged = true;
                             }
                         }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine($"警告: 列タイプが識別できません: {columnType}");
-                        }
 
                         // 日付が変更された場合のみ更新処理を実行
                         if (dateChanged)
                         {
-                            System.Diagnostics.Debug.WriteLine($"更新処理を開始: {task.Title}");
-                            System.Diagnostics.Debug.WriteLine($"変更前: {originalStartDate:yyyy/MM/dd} - {originalEndDate:yyyy/MM/dd}");
-                            System.Diagnostics.Debug.WriteLine($"変更後: {task.StartDate:yyyy/MM/dd} - {task.EndDate:yyyy/MM/dd}");
-                            
-                            System.Diagnostics.Debug.WriteLine($"ViewModel.UpdateTaskScheduleAsyncを呼び出します...");
-                            System.Diagnostics.Debug.WriteLine($"ViewModel: {ViewModel != null}");
-                            System.Diagnostics.Debug.WriteLine($"ViewModelの型: {ViewModel?.GetType().Name}");
-                            
                             // ViewModelの更新処理を実行
                             await ViewModel.UpdateTaskScheduleAsync(task, originalStartDate, originalEndDate);
-                            
-                            System.Diagnostics.Debug.WriteLine($"ViewModel.UpdateTaskScheduleAsyncの呼び出しが完了しました");
-                            System.Diagnostics.Debug.WriteLine($"更新処理が完了: {task.Title}");
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine($"日付に変更がないため更新処理をスキップ: {task.Title}");
-                            System.Diagnostics.Debug.WriteLine($"新しい日付: {newDate:yyyy/MM/dd}");
-                            System.Diagnostics.Debug.WriteLine($"現在の開始日: {task.StartDate:yyyy/MM/dd}");
-                            System.Diagnostics.Debug.WriteLine($"現在の終了日: {task.EndDate:yyyy/MM/dd}");
                         }
                     }
                 }

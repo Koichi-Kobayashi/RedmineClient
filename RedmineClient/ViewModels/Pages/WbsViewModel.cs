@@ -133,54 +133,32 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"=== UpdateTaskScheduleAsync開始 ===");
-                System.Diagnostics.Debug.WriteLine($"タスク: {task.Title}");
-                System.Diagnostics.Debug.WriteLine($"IsDateChangeWatchingEnabled: {IsDateChangeWatchingEnabled}");
-                
                 if (!IsDateChangeWatchingEnabled)
-                {
-                    System.Diagnostics.Debug.WriteLine("日付変更の監視が無効のため、処理を終了します");
                     return;
-                }
 
                 // 新規登録時は更新処理を実行しない
                 if (int.TryParse(task.Id, out int taskId) && taskId <= 0)
-                {
-                    System.Diagnostics.Debug.WriteLine($"新規タスクのため更新処理をスキップ: ID={taskId}");
                     return;
-                }
-
-                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' のスケジュール更新処理を開始: {oldStartDate:yyyy/MM/dd} - {oldEndDate:yyyy/MM/dd} → {task.StartDate:yyyy/MM/dd} - {task.EndDate:yyyy/MM/dd}");
-
-                // Redmineの接続状態とプロジェクト選択状態をログ出力
-                System.Diagnostics.Debug.WriteLine($"Redmine接続状態: {IsRedmineConnected}");
-                System.Diagnostics.Debug.WriteLine($"選択されたプロジェクト: {SelectedProject?.Name ?? "なし"}");
-                System.Diagnostics.Debug.WriteLine($"タスクのRedmineチケットID: {task.RedmineIssueId?.ToString() ?? "なし"}");
 
                 // Redmineに更新を送信
                 if (IsRedmineConnected && SelectedProject != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Redmineへの更新処理を開始します");
                     await UpdateRedmineIssueAsync(task, oldStartDate, oldEndDate);
                     // 更新が成功したら未保存フラグをクリア
                     task.HasUnsavedChanges = false;
-                    System.Diagnostics.Debug.WriteLine("Redmineへの更新処理が完了しました");
                 }
                 else
                 {
                     // Redmineに接続されていない場合は未保存フラグを設定
-                    System.Diagnostics.Debug.WriteLine("Redmineに接続されていないか、プロジェクトが選択されていないため、未保存フラグを設定します");
                     task.HasUnsavedChanges = true;
                 }
 
                 // スケジュール表を再生成
                 await RefreshScheduleAsync();
-
-                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' のスケジュール更新処理が完了しました");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"タスクスケジュール更新処理エラー: {ex.Message}");
+                // エラーが発生した場合はログに記録（必要に応じて）
             }
         }
 
@@ -2519,44 +2497,28 @@ namespace RedmineClient.ViewModels.Pages
                             
                             if (task.StartDate != oldStartDate)
                             {
-                                System.Diagnostics.Debug.WriteLine($"開始日を更新: {oldStartDate:yyyy/MM/dd} → {task.StartDate:yyyy/MM/dd}");
                                 issue.StartDate = task.StartDate;
                                 hasChanges = true;
                             }
                             
                             if (task.EndDate != oldEndDate)
                             {
-                                System.Diagnostics.Debug.WriteLine($"終了日を更新: {oldEndDate:yyyy/MM/dd} → {task.EndDate:yyyy/MM/dd}");
                                 issue.DueDate = task.EndDate;
                                 hasChanges = true;
                             }
                             
                             if (hasChanges)
                             {
-                                System.Diagnostics.Debug.WriteLine($"Redmineチケット {task.RedmineIssueId} を更新中...");
                                 await redmineService.UpdateIssueAsync(issue);
-                                System.Diagnostics.Debug.WriteLine($"Redmineチケット {task.RedmineIssueId} の更新が完了しました");
                             }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine("変更された日付がないため、Redmineの更新をスキップします");
-                            }
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Redmineチケット {task.RedmineIssueId} が見つかりません");
                         }
                     }
                 }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' にRedmineチケットIDが設定されていません");
-                }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"Redmineチケット更新エラー: {ex.Message}");
-                throw; // エラーを上位に伝播させる
+                // エラーが発生した場合は上位に伝播させる
+                throw;
             }
         }
 
