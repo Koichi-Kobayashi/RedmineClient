@@ -2,6 +2,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows;
+using System;
 using RedmineClient.ViewModels.Pages;
 
 namespace RedmineClient.Views.Controls
@@ -500,26 +502,41 @@ namespace RedmineClient.Views.Controls
                         // UIスレッドでViewModelの日付変更処理を呼び出し
                         try
                         {
-                            var viewModel = DataContext as WbsViewModel;
+                            // DataContextの取得方法を改善
+                            var viewModel = GetWbsViewModel();
                             if (viewModel != null)
                             {
-                                // UIスレッドで非同期処理を実行
+                                // UIスレッドで非同期処理を実行（エラーハンドリングを強化）
                                 _ = Dispatcher.BeginInvoke(async () =>
                                 {
                                     try
                                     {
-                                        await viewModel.UpdateTaskScheduleAsync(_wbsItem, oldStartDate, oldEndDate);
+                                        // 日付変更の監視が有効かチェック
+                                        if (viewModel.IsDateChangeWatchingEnabled)
+                                        {
+                                            await viewModel.UpdateTaskScheduleAsync(_wbsItem, oldStartDate, oldEndDate);
+                                        }
+                                        else
+                                        {
+                                            System.Diagnostics.Debug.WriteLine("日付変更の監視が無効のため、更新処理をスキップしました");
+                                        }
                                     }
                                     catch (Exception ex)
                                     {
                                         System.Diagnostics.Debug.WriteLine($"日付変更の更新処理でエラー: {ex.Message}");
+                                        System.Diagnostics.Debug.WriteLine($"スタックトレース: {ex.StackTrace}");
                                     }
-                                });
+                                }, System.Windows.Threading.DispatcherPriority.Normal);
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine("WbsViewModelの取得に失敗しました");
                             }
                         }
                         catch (Exception ex)
                         {
                             System.Diagnostics.Debug.WriteLine($"ViewModel取得でエラー: {ex.Message}");
+                            System.Diagnostics.Debug.WriteLine($"スタックトレース: {ex.StackTrace}");
                         }
                     }
                     else
@@ -1073,6 +1090,49 @@ namespace RedmineClient.Views.Controls
         public static bool ShouldShowTaskPeriod(DateTime currentDate, DateTime startDate, DateTime endDate)
         {
             return currentDate >= startDate && currentDate <= endDate;
+        }
+
+        /// <summary>
+        /// WbsViewModelを安全に取得する
+        /// </summary>
+        /// <returns>WbsViewModel、取得できない場合はnull</returns>
+        private WbsViewModel? GetWbsViewModel()
+        {
+            try
+            {
+                // まず直接のDataContextを試行
+                if (DataContext is WbsViewModel directViewModel)
+                {
+                    return directViewModel;
+                }
+
+                // DataContextがWbsViewModelでない場合、親要素を辿って検索
+                var parent = VisualTreeHelper.GetParent(this);
+                while (parent != null)
+                {
+                    if (parent is FrameworkElement frameworkElement)
+                    {
+                        if (frameworkElement.DataContext is WbsViewModel parentViewModel)
+                        {
+                            return parentViewModel;
+                        }
+                    }
+                    parent = VisualTreeHelper.GetParent(parent);
+                }
+
+                // 最後に、Application.Current.MainWindowから検索
+                if (Application.Current?.MainWindow?.DataContext is WbsViewModel mainViewModel)
+                {
+                    return mainViewModel;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"WbsViewModel取得でエラー: {ex.Message}");
+                return null;
+            }
         }
     }
 }

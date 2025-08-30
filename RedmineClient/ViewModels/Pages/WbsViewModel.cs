@@ -134,31 +134,65 @@ namespace RedmineClient.ViewModels.Pages
             try
             {
                 if (!IsDateChangeWatchingEnabled)
+                {
+                    System.Diagnostics.Debug.WriteLine("日付変更の監視が無効のため、更新処理をスキップしました");
                     return;
+                }
+
+                if (task == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("タスクがnullのため、更新処理をスキップしました");
+                    return;
+                }
 
                 // 新規登録時は更新処理を実行しない
                 if (int.TryParse(task.Id, out int taskId) && taskId <= 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"新規タスク（ID: {taskId}）のため、更新処理をスキップしました");
                     return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' の日付変更処理を開始: {oldStartDate:yyyy/MM/dd} -> {task.StartDate:yyyy/MM/dd}, {oldEndDate:yyyy/MM/dd} -> {task.EndDate:yyyy/MM/dd}");
 
                 // Redmineに更新を送信
                 if (IsRedmineConnected && SelectedProject != null)
                 {
-                    await UpdateRedmineIssueAsync(task, oldStartDate, oldEndDate);
-                    // 更新が成功したら未保存フラグをクリア
-                    task.HasUnsavedChanges = false;
+                    try
+                    {
+                        await UpdateRedmineIssueAsync(task, oldStartDate, oldEndDate);
+                        // 更新が成功したら未保存フラグをクリア
+                        task.HasUnsavedChanges = false;
+                        System.Diagnostics.Debug.WriteLine($"Redmine更新完了: タスク '{task.Title}'");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Redmine更新でエラー: {ex.Message}");
+                        // Redmine更新に失敗した場合は未保存フラグを設定
+                        task.HasUnsavedChanges = true;
+                    }
                 }
                 else
                 {
                     // Redmineに接続されていない場合は未保存フラグを設定
                     task.HasUnsavedChanges = true;
+                    System.Diagnostics.Debug.WriteLine("Redmineに接続されていないため、未保存フラグを設定しました");
                 }
 
                 // スケジュール表を再生成
-                await RefreshScheduleAsync();
+                try
+                {
+                    await RefreshScheduleAsync();
+                    System.Diagnostics.Debug.WriteLine("スケジュール表の再生成が完了しました");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"スケジュール表再生成でエラー: {ex.Message}");
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // エラーが発生した場合はログに記録（必要に応じて）
+                System.Diagnostics.Debug.WriteLine($"UpdateTaskScheduleAsyncで予期しないエラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"スタックトレース: {ex.StackTrace}");
             }
         }
 
@@ -493,7 +527,7 @@ namespace RedmineClient.ViewModels.Pages
             SettingsCommand = new RelayCommand(OpenSettings);
             CreateNewIssueCommand = new RelayCommand(CreateNewIssue);
             RegisterItemsCommand = new RelayCommand(RegisterItems);
-            RemoveDependencyCommand = new RelayCommand<WbsItem>(RemoveDependency);
+            RemoveDependencyCommand = new RelayCommand<WbsItem?>(RemoveDependency);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -1469,7 +1503,7 @@ namespace RedmineClient.ViewModels.Pages
         /// 選択されたアイテムの依存関係を削除する（コマンド用）
         /// </summary>
         /// <param name="selectedItem">依存関係を削除するタスク</param>
-        public void RemoveDependency(WbsItem selectedItem)
+        public void RemoveDependency(WbsItem? selectedItem)
         {
             if (selectedItem == null) return;
 

@@ -52,13 +52,39 @@ namespace RedmineClient.Models
         public DateTime StartDate
         {
             get => _startDate;
-            set => SetProperty(ref _startDate, value);
+            set 
+            {
+                if (SetProperty(ref _startDate, value))
+                {
+                    // 日付変更イベントを発火
+                    DateChanged?.Invoke(this, new DateChangedEventArgs
+                    {
+                        OldStartDate = _startDate,
+                        OldEndDate = _endDate,
+                        NewStartDate = value,
+                        NewEndDate = _endDate
+                    });
+                }
+            }
         }
 
         public DateTime EndDate
         {
             get => _endDate;
-            set => SetProperty(ref _endDate, value);
+            set 
+            {
+                if (SetProperty(ref _endDate, value))
+                {
+                    // 日付変更イベントを発火
+                    DateChanged?.Invoke(this, new DateChangedEventArgs
+                    {
+                        OldStartDate = _startDate,
+                        OldEndDate = _endDate,
+                        NewStartDate = _startDate,
+                        NewEndDate = value
+                    });
+                }
+            }
         }
 
         public double Progress
@@ -278,6 +304,58 @@ namespace RedmineClient.Models
         /// </summary>
         public int SuccessorCount => Successors.Count;
 
+        /// <summary>
+        /// 先行タスクの詳細情報を取得（表示用）
+        /// </summary>
+        public string PredecessorDetails
+        {
+            get
+            {
+                if (!HasPredecessors) return string.Empty;
+                
+                var details = Predecessors.Select(p => $"{p.Title} (ID: {p.Id})");
+                return string.Join("\n", details);
+            }
+        }
+
+        /// <summary>
+        /// 後続タスクの詳細情報を取得（表示用）
+        /// </summary>
+        public string SuccessorDetails
+        {
+            get
+            {
+                if (!HasSuccessors) return string.Empty;
+                
+                var details = Successors.Select(s => $"{s.Title} (ID: {s.Id})");
+                return string.Join("\n", details);
+            }
+        }
+
+        /// <summary>
+        /// 先行タスクがある場合の表示用テキスト
+        /// </summary>
+        public string PredecessorDisplayText
+        {
+            get
+            {
+                if (!HasPredecessors) return string.Empty;
+                return $"先行: {PredecessorCount}件";
+            }
+        }
+
+        /// <summary>
+        /// 後続タスクがある場合の表示用テキスト
+        /// </summary>
+        public string SuccessorDisplayText
+        {
+            get
+            {
+                if (!HasSuccessors) return string.Empty;
+                return $"後続: {SuccessorCount}件";
+            }
+        }
+
         public int Level
         {
             get
@@ -376,6 +454,8 @@ namespace RedmineClient.Models
                 predecessor.AddSuccessor(this);
                 OnPropertyChanged(nameof(HasPredecessors));
                 OnPropertyChanged(nameof(PredecessorCount));
+                OnPropertyChanged(nameof(PredecessorDetails));
+                OnPropertyChanged(nameof(PredecessorDisplayText));
             }
         }
 
@@ -390,6 +470,8 @@ namespace RedmineClient.Models
                 predecessor.RemoveSuccessor(this);
                 OnPropertyChanged(nameof(HasPredecessors));
                 OnPropertyChanged(nameof(PredecessorCount));
+                OnPropertyChanged(nameof(PredecessorDetails));
+                OnPropertyChanged(nameof(PredecessorDisplayText));
             }
         }
 
@@ -413,6 +495,8 @@ namespace RedmineClient.Models
                 successor.AddPredecessor(this);
                 OnPropertyChanged(nameof(HasSuccessors));
                 OnPropertyChanged(nameof(SuccessorCount));
+                OnPropertyChanged(nameof(SuccessorDetails));
+                OnPropertyChanged(nameof(SuccessorDisplayText));
             }
         }
 
@@ -427,6 +511,8 @@ namespace RedmineClient.Models
                 successor.RemovePredecessor(this);
                 OnPropertyChanged(nameof(HasSuccessors));
                 OnPropertyChanged(nameof(SuccessorCount));
+                OnPropertyChanged(nameof(SuccessorDetails));
+                OnPropertyChanged(nameof(SuccessorDisplayText));
             }
         }
 

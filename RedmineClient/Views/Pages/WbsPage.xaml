@@ -493,13 +493,19 @@
                                     <!--  先行タスク数  -->
                                     <StackPanel Grid.Column="0" Margin="2,0" Orientation="Horizontal" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
                                         <ui:SymbolIcon Symbol="ArrowUp16" Width="12" Height="12" Margin="0,0,2,0" Foreground="Orange" />
-                                        <ui:TextBlock FontSize="9" Foreground="Orange" Text="{Binding PredecessorCount}" />
+                                        <ui:TextBlock FontSize="9" Foreground="Orange" Text="{Binding PredecessorCount}" FontWeight="SemiBold" />
                                     </StackPanel>
 
                                     <!--  後続タスク数  -->
                                     <StackPanel Grid.Column="1" Margin="2,0" Orientation="Horizontal" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
                                         <ui:SymbolIcon Symbol="ArrowDown16" Width="12" Height="12" Margin="0,0,2,0" Foreground="Blue" />
-                                        <ui:TextBlock FontSize="9" Foreground="Blue" Text="{Binding SuccessorCount}" />
+                                        <ui:TextBlock FontSize="9" Foreground="Blue" Text="{Binding SuccessorCount}" FontWeight="SemiBold" />
+                                    </StackPanel>
+
+                                    <!--  先行タスクがない場合の表示  -->
+                                    <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Margin="2,0" Orientation="Horizontal" 
+                                               Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanInverseConverter.Instance}}">
+                                        <ui:TextBlock FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="先行なし" />
                                     </StackPanel>
 
                                     <!--  ドロップターゲット（先行・後続設定用）  -->
@@ -511,35 +517,53 @@
 
                                     <!--  ツールチップ（詳細情報表示）  -->
                                     <Grid.ToolTip>
-                                        <StackPanel MinWidth="200">
-                                            <ui:TextBlock FontWeight="Bold" Text="先行・後続の関係性" Margin="0,0,0,8" />
+                                        <StackPanel MinWidth="250" MaxWidth="400">
+                                            <ui:TextBlock FontWeight="Bold" Text="先行・後続の関係性" Margin="0,0,0,12" FontSize="14" />
                                             
                                             <!--  先行タスク  -->
-                                            <StackPanel Margin="0,0,0,8" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                <ui:TextBlock FontWeight="SemiBold" Text="先行タスク:" Foreground="Orange" />
-                                                <ItemsControl ItemsSource="{Binding Predecessors}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <ui:TextBlock Text="{Binding Title}" Margin="8,0,0,0" FontSize="11" />
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
+                                            <StackPanel Margin="0,0,0,12" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                <ui:TextBlock FontWeight="SemiBold" Text="先行タスク:" Foreground="Orange" FontSize="12" Margin="0,0,0,4" />
+                                                <Border Background="#FFF8E1" BorderBrush="Orange" BorderThickness="1" CornerRadius="4" Padding="8,6">
+                                                    <ItemsControl ItemsSource="{Binding Predecessors}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                                    <ui:SymbolIcon Symbol="ArrowUp16" Width="12" Height="12" Foreground="Orange" Margin="0,0,4,0" />
+                                                                    <ui:TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" />
+                                                                    <ui:TextBlock Text=" (ID: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
+                                                                    <ui:TextBlock Text="{Binding Id}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
+                                                                    <ui:TextBlock Text=")" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Border>
                                             </StackPanel>
                                             
                                             <!--  後続タスク  -->
-                                            <StackPanel Margin="0,0,0,8" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                <ui:TextBlock FontWeight="SemiBold" Text="後続タスク:" Foreground="Blue" />
-                                                <ItemsControl ItemsSource="{Binding Successors}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <ui:TextBlock Text="{Binding Title}" Margin="8,0,0,0" FontSize="11" />
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
+                                            <StackPanel Margin="0,0,0,12" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                <ui:TextBlock FontWeight="SemiBold" Text="後続タスク:" Foreground="Blue" FontSize="12" Margin="0,0,0,4" />
+                                                <Border Background="#E3F2FD" BorderBrush="Blue" BorderThickness="1" CornerRadius="4" Padding="8,6">
+                                                    <ItemsControl ItemsSource="{Binding Successors}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                                    <ui:SymbolIcon Symbol="ArrowDown16" Width="12" Height="12" Foreground="Blue" Margin="0,0,4,0" />
+                                                                    <ui:TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" />
+                                                                    <ui:TextBlock Text=" (ID: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
+                                                                    <ui:TextBlock Text="{Binding Id}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
+                                                                    <ui:TextBlock Text=")" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Border>
                                             </StackPanel>
                                             
                                             <!--  使用方法  -->
-                                            <ui:TextBlock Text="使用方法: タスク名をドラッグしてこの列にドロップすると先行関係を設定できます" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <Border Background="#F5F5F5" BorderBrush="{DynamicResource TextFillColorSecondaryBrush}" BorderThickness="1" CornerRadius="4" Padding="8,6">
+                                                <ui:TextBlock Text="使用方法: タスク名をドラッグしてこの列にドロップすると先行関係を設定できます" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                            </Border>
                                         </StackPanel>
                                     </Grid.ToolTip>
                                 </Grid>
@@ -564,9 +588,21 @@
                         <EventSetter Event="DragEnter" Handler="DataGridRow_DragEnter" />
                         <EventSetter Event="DragLeave" Handler="DataGridRow_DragLeave" />
                         <Style.Triggers>
+                            <!-- 先行タスクがある場合の強調表示 -->
+                            <DataTrigger Binding="{Binding HasPredecessors}" Value="True">
+                                <Setter Property="Background" Value="#FFF8E1" />
+                                <Setter Property="BorderBrush" Value="Orange" />
+                                <Setter Property="BorderThickness" Value="1" />
+                            </DataTrigger>
+                            
+                            <!-- 選択状態の優先度を上げる -->
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="#E5F3FF" />
+                                <Setter Property="BorderBrush" Value="Blue" />
+                                <Setter Property="BorderThickness" Value="2" />
                             </Trigger>
+                            
+                            <!-- マウスオーバー状態 -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="#F0F0F0" />
                             </Trigger>
