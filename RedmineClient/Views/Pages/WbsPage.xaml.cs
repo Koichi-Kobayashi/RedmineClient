@@ -18,6 +18,10 @@ namespace RedmineClient.Views.Pages
     {
         public WbsViewModel ViewModel { get; }
 
+        // 祝日データ初期化の重複実行を防ぐフラグ
+        private bool _isHolidayDataInitializing = false;
+        private bool _isHolidayDataRefreshing = false;
+
         static WbsPage()
         {
             // 静的コンストラクタでの非同期処理は問題を引き起こす可能性があるため削除
@@ -83,8 +87,13 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private Task InitializeHolidayDataAsync()
         {
+            // 重複実行を防ぐ
+            if (_isHolidayDataInitializing) return Task.CompletedTask;
+            
             try
             {
+                _isHolidayDataInitializing = true;
+                
                 // 祝日データの初期化は非同期で実行し、エラーが発生しても処理を続行
                 _ = Task.Run(async () =>
                 {
@@ -97,12 +106,17 @@ namespace RedmineClient.Views.Pages
                         // 祝日データの初期化に失敗しても処理を続行（ログ出力のみ）
                         System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー: {ex.Message}");
                     }
+                    finally
+                    {
+                        _isHolidayDataInitializing = false;
+                    }
                 });
             }
             catch (Exception ex)
             {
                 // 祝日データの初期化に失敗しても処理を続行
                 System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー: {ex.Message}");
+                _isHolidayDataInitializing = false;
             }
             
             return Task.CompletedTask;
@@ -308,8 +322,13 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private Task RefreshHolidayDataAsync()
         {
+            // 重複実行を防ぐ
+            if (_isHolidayDataRefreshing) return Task.CompletedTask;
+            
             try
             {
+                _isHolidayDataRefreshing = true;
+                
                 // 祝日データの再初期化は非同期で実行し、エラーが発生しても処理を続行
                 _ = Task.Run(async () =>
                 {
@@ -322,12 +341,17 @@ namespace RedmineClient.Views.Pages
                         // 祝日データの再初期化に失敗しても処理を続行（ログ出力のみ）
                         System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
                     }
+                    finally
+                    {
+                        _isHolidayDataRefreshing = false;
+                    }
                 });
             }
             catch (Exception ex)
             {
                 // 祝日データの再初期化に失敗しても処理を続行
                 System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
+                _isHolidayDataRefreshing = false;
             }
             
             return Task.CompletedTask;

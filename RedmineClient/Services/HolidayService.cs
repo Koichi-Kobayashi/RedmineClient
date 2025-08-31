@@ -95,7 +95,13 @@ namespace RedmineClient.Services
                 if (!File.Exists(assetsPath))
                 {
                     var projectDir = Directory.GetCurrentDirectory();
-                    assetsPath = Path.Combine(projectDir, "Assets", "syukujitsu.csv");
+                    var fallbackPath = Path.Combine(projectDir, "Assets", "syukujitsu.csv");
+                    
+                    // フォールバックパスが存在する場合のみ設定
+                    if (File.Exists(fallbackPath))
+                    {
+                        assetsPath = fallbackPath;
+                    }
                 }
 
                 // ファイルが存在しない場合は正常終了（エラーではない）
