@@ -638,13 +638,10 @@ namespace RedmineClient.Views.Pages
                         await Task.Delay(200, _generateColumnsCancellation.Token);
                     }
                     
-                    // プログレスバーを表示（既に表示されている場合は上書きしない）
-                    if (!ViewModel.IsWbsLoading)
-                    {
-                        ViewModel.IsWbsLoading = true;
-                    }
-                    ViewModel.WbsProgressMessage = "日付列を生成中...";
-                    ViewModel.WbsProgress = 0;
+                                         // プログレスバーを表示
+                     ViewModel.SetWbsLoading(true, true);
+                     ViewModel.WbsProgressMessage = "日付列を生成中...";
+                     ViewModel.WbsProgress = 0;
                     
                     // UIの更新を確実にするために少し待機
                     if (_generateColumnsCancellation != null)
@@ -900,14 +897,14 @@ namespace RedmineClient.Views.Pages
                             {
                                 await Task.Delay(500, _generateColumnsCancellation.Token); // 完了メッセージを確認できるように少し待機
                             }
-                            ViewModel.IsWbsLoading = false;
+                            ViewModel.SetWbsLoading(false);
                             ViewModel.WbsProgressMessage = "";
                         }, DispatcherPriority.Loaded);
                     }
                     catch (OperationCanceledException)
                     {
                         // キャンセルされた場合はプログレス表示を非表示にして終了
-                        ViewModel.IsWbsLoading = false;
+                        ViewModel.SetWbsLoading(false);
                         ViewModel.WbsProgressMessage = "";
                         return;
                     }
@@ -915,7 +912,7 @@ namespace RedmineClient.Views.Pages
                 catch (OperationCanceledException)
                 {
                     // キャンセルされた場合はプログレス表示を非表示にして終了
-                    ViewModel.IsWbsLoading = false;
+                    ViewModel.SetWbsLoading(false);
                     ViewModel.WbsProgressMessage = "";
                 }
                 finally
@@ -1565,13 +1562,10 @@ namespace RedmineClient.Views.Pages
                 {
                     try
                     {
-                        // プログレスバーを表示（既に表示されている場合は上書きしない）
-                        if (!ViewModel.IsWbsLoading)
-                        {
-                            ViewModel.IsWbsLoading = true;
-                        }
-                        ViewModel.WbsProgressMessage = "Redmineデータを読み込み中...";
-                        ViewModel.WbsProgress = 0;
+                                                 // プログレスバーを表示
+                         ViewModel.SetWbsLoading(true, true);
+                         ViewModel.WbsProgressMessage = "Redmineデータを読み込み中...";
+                         ViewModel.WbsProgress = 0;
                         
                         // Redmineデータを読み込み
                         await ViewModel.LoadRedmineDataAsync();
@@ -1636,7 +1630,7 @@ namespace RedmineClient.Views.Pages
                             await Task.Delay(100);
                             if (ViewModel.IsWbsLoading && !_isGeneratingColumns)
                             {
-                                ViewModel.IsWbsLoading = false;
+                                ViewModel.SetWbsLoading(false);
                                 ViewModel.WbsProgressMessage = ""; // プログレスメッセージも消す
                             }
                         }, DispatcherPriority.Loaded);
@@ -1655,11 +1649,11 @@ namespace RedmineClient.Views.Pages
                             {
                                 await Dispatcher.InvokeAsync(() =>
                                 {
-                                    if (ViewModel.IsWbsLoading)
-                                    {
-                                        ViewModel.IsWbsLoading = false;
-                                        ViewModel.WbsProgressMessage = "";
-                                    }
+                                                                    if (ViewModel.IsWbsLoading)
+                                {
+                                    ViewModel.SetWbsLoading(false);
+                                    ViewModel.WbsProgressMessage = "";
+                                }
                                 }, DispatcherPriority.Loaded);
                             }
                             catch (TaskCanceledException)

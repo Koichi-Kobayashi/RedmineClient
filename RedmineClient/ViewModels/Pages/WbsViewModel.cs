@@ -149,6 +149,19 @@ namespace RedmineClient.ViewModels.Pages
         private bool _isGanttChartVisible = false;
 
         /// <summary>
+        /// IsWbsLoadingを安全に設定する（重複設定を防ぐ）
+        /// </summary>
+        /// <param name="isLoading">設定する値</param>
+        /// <param name="force">強制的に設定するかどうか</param>
+        public void SetWbsLoading(bool isLoading, bool force = false)
+        {
+            if (force || IsWbsLoading != isLoading)
+            {
+                IsWbsLoading = isLoading;
+            }
+        }
+
+        /// <summary>
         /// 日付変更の監視を有効にするかどうか
         /// </summary>
         [ObservableProperty]
@@ -431,10 +444,10 @@ namespace RedmineClient.ViewModels.Pages
 
         public WbsViewModel()
         {
-            // 初期状態でプログレスバーを表示
-            IsWbsLoading = true;
+            // 初期状態ではプログレスバーを非表示
+            IsWbsLoading = false;
             WbsProgress = 0;
-            WbsProgressMessage = "WBSページを初期化中...";
+            WbsProgressMessage = "";
 
             // 設定からスケジュール開始年月を読み込み（getアクセサーを呼び出さない）
             _scheduleStartYearMonth = AppConfig.GetScheduleStartYearMonthForInitialization();
@@ -506,14 +519,10 @@ namespace RedmineClient.ViewModels.Pages
 
         public async Task InitializeViewModel()
         {
-            // 即座にプログレスバーを表示（初期化開始）
+            // 初期化開始時にプログレスバーを表示
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                // 既に表示されている場合は上書きしない
-                if (!IsWbsLoading)
-                {
-                    IsWbsLoading = true;
-                }
+                SetWbsLoading(true, true);
                 WbsProgress = 0;
                 WbsProgressMessage = "WBSページを初期化中...";
             });
@@ -662,7 +671,7 @@ namespace RedmineClient.ViewModels.Pages
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsWbsLoading = false;
+                    SetWbsLoading(false);
                     WbsProgress = 0;
                     WbsProgressMessage = string.Empty;
                 });
@@ -1094,8 +1103,8 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
-                // プログレスバーを表示
-                IsWbsLoading = true;
+                // プログレスバーを表示（既に表示されている場合は上書きしない）
+                SetWbsLoading(true);
                 WbsProgress = 0;
                 WbsProgressMessage = $"プロジェクト {project.Name} のデータ読み込みを開始します...";
 
@@ -1295,10 +1304,7 @@ namespace RedmineClient.ViewModels.Pages
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // 既に表示されている場合は上書きしない
-                    if (!IsWbsLoading)
-                    {
-                        IsWbsLoading = true;
-                    }
+                    SetWbsLoading(true);
                     WbsProgress = 0;
                     WbsProgressMessage = "WBSリストを更新中...";
                 });
@@ -1348,7 +1354,7 @@ namespace RedmineClient.ViewModels.Pages
                 await Task.Delay(500);
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsWbsLoading = false;
+                    SetWbsLoading(false);
                     WbsProgress = 0;
                     WbsProgressMessage = string.Empty;
                 });
@@ -1357,7 +1363,7 @@ namespace RedmineClient.ViewModels.Pages
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsWbsLoading = false;
+                    SetWbsLoading(false);
                     WbsProgress = 0;
                     WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
                 });
@@ -2211,10 +2217,7 @@ namespace RedmineClient.ViewModels.Pages
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // 既に表示されている場合は上書きしない
-                    if (!IsWbsLoading)
-                    {
-                        IsWbsLoading = true;
-                    }
+                    SetWbsLoading(true);
                     WbsProgress = 0;
                     WbsProgressMessage = "Redmineからデータを取得中...";
                 });
@@ -2667,7 +2670,7 @@ namespace RedmineClient.ViewModels.Pages
                 await Task.Delay(1000);
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsWbsLoading = false;
+                    SetWbsLoading(false);
                     WbsProgress = 0;
                     WbsProgressMessage = string.Empty;
                 });
@@ -2676,7 +2679,7 @@ namespace RedmineClient.ViewModels.Pages
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsWbsLoading = false;
+                    SetWbsLoading(false);
                     WbsProgress = 0;
                     WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
                 });
