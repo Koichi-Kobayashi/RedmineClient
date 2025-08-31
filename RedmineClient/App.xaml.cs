@@ -278,9 +278,14 @@ namespace RedmineClient
                 AppConfig.Load();
                 AppConfig.ApplyTheme();
             }
-            catch
+            catch (Exception ex)
             {
                 // 設定の読み込みに失敗してもアプリケーションは起動する
+                System.Diagnostics.Debug.WriteLine($"設定読み込みエラー: {ex.Message}");
+                if (ex is FileNotFoundException fileEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ファイルが見つかりません: {fileEx.FileName}");
+                }
             }
 
             try

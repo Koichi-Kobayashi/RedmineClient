@@ -714,7 +714,8 @@ namespace RedmineClient.Models
             try
             {
                 // 現在のアイテムから開始して循環参照をチェック
-                return HasCycleFromCurrentItem(visited, recursionStack);
+                // ただし、新しく追加される依存関係自体は除外してチェック
+                return HasCycleFromCurrentItemExcluding(visited, recursionStack, newDependency);
             }
             finally
             {
@@ -753,6 +754,50 @@ namespace RedmineClient.Models
                 foreach (var predecessor in Predecessors)
                 {
                     if (predecessor.HasCycleFromCurrentItem(visited, recursionStack))
+                        return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                recursionStack.Remove(this);
+            }
+        }
+
+        /// <summary>
+        /// 現在のアイテムから開始して循環参照をチェック（特定のアイテムを除外）
+        /// </summary>
+        /// <param name="visited">既に訪問済みのアイテム</param>
+        /// <param name="recursionStack">現在の再帰スタック</param>
+        /// <param name="excludeItem">除外するアイテム</param>
+        /// <returns>循環参照が存在する場合はtrue</returns>
+        private bool HasCycleFromCurrentItemExcluding(HashSet<WbsItem> visited, HashSet<WbsItem> recursionStack, WbsItem excludeItem)
+        {
+            if (recursionStack.Contains(this))
+                return true; // 循環参照を検出
+
+            if (visited.Contains(this))
+                return false; // 既に訪問済み
+
+            visited.Add(this);
+            recursionStack.Add(this);
+
+            try
+            {
+                // 後続タスクをチェック（除外アイテムをスキップ）
+                foreach (var successor in Successors)
+                {
+                    if (successor == excludeItem) continue; // 除外アイテムをスキップ
+                    if (successor.HasCycleFromCurrentItemExcluding(visited, recursionStack, excludeItem))
+                        return true;
+                }
+
+                // 先行タスクもチェック（除外アイテムをスキップ）
+                foreach (var predecessor in Predecessors)
+                {
+                    if (predecessor == excludeItem) continue; // 除外アイテムをスキップ
+                    if (predecessor.HasCycleFromCurrentItemExcluding(visited, recursionStack, excludeItem))
                         return true;
                 }
 
