@@ -85,11 +85,24 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-                await RedmineClient.Services.HolidayService.ForceUpdateAsync();
+                // 祝日データの初期化は非同期で実行し、エラーが発生しても処理を続行
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await RedmineClient.Services.HolidayService.ForceUpdateAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        // 祝日データの初期化に失敗しても処理を続行（ログ出力のみ）
+                        System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー: {ex.Message}");
+                    }
+                });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // 祝日データの初期化に失敗しても処理を続行
+                System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー: {ex.Message}");
             }
         }
 
@@ -293,11 +306,24 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-                await RedmineClient.Services.HolidayService.ForceUpdateAsync();
+                // 祝日データの再初期化は非同期で実行し、エラーが発生しても処理を続行
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await RedmineClient.Services.HolidayService.ForceUpdateAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        // 祝日データの再初期化に失敗しても処理を続行（ログ出力のみ）
+                        System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
+                    }
+                });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // 祝日データの再初期化に失敗しても処理を続行
+                System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
             }
         }
 

@@ -1142,7 +1142,7 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         /// <summary>
-        /// 階層構造を平坦化したリストを更新（プログレスバーの状態を変更しない）
+        /// プログレスバーなしで平坦化リストを更新する
         /// </summary>
         private async Task UpdateFlattenedListWithoutProgressBar()
         {
@@ -1151,6 +1151,15 @@ namespace RedmineClient.ViewModels.Pages
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     FlattenedWbsItems.Clear();
+
+                    // WbsItemsが空の場合はダミーアイテムを追加して初期化完了とみなす
+                    if (WbsItems.Count == 0)
+                    {
+                        var dummyItem = new WbsItem { Title = "データなし" };
+                        FlattenedWbsItems.Add(dummyItem);
+                        System.Diagnostics.Debug.WriteLine("WbsItemsが空のため、ダミーアイテムを追加しました");
+                        return;
+                    }
 
                     // 重複チェック用のHashSet
                     var addedItems = new HashSet<WbsItem>();
@@ -1213,6 +1222,15 @@ namespace RedmineClient.ViewModels.Pages
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     FlattenedWbsItems.Clear();
+
+                    // WbsItemsが空の場合はダミーアイテムを追加して初期化完了とみなす
+                    if (WbsItems.Count == 0)
+                    {
+                        var dummyItem = new WbsItem { Title = "データなし" };
+                        FlattenedWbsItems.Add(dummyItem);
+                        System.Diagnostics.Debug.WriteLine("WbsItemsが空のため、ダミーアイテムを追加しました");
+                        return;
+                    }
 
                     // 重複チェック用のHashSet
                     var addedItems = new HashSet<WbsItem>();
@@ -2442,6 +2460,15 @@ namespace RedmineClient.ViewModels.Pages
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     FlattenedWbsItems.Clear();
+
+                    // WbsItemsが空の場合はダミーアイテムを追加して初期化完了とみなす
+                    if (WbsItems.Count == 0)
+                    {
+                        var dummyItem = new WbsItem { Title = "データなし" };
+                        FlattenedWbsItems.Add(dummyItem);
+                        System.Diagnostics.Debug.WriteLine("WbsItemsが空のため、ダミーアイテムを追加しました");
+                        return;
+                    }
 
                     // 重複チェック用のHashSet
                     var addedItems = new HashSet<WbsItem>();

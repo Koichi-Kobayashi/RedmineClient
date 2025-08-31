@@ -98,8 +98,10 @@ namespace RedmineClient.Services
                     assetsPath = Path.Combine(projectDir, "Assets", "syukujitsu.csv");
                 }
 
+                // ファイルが存在しない場合は正常終了（エラーではない）
                 if (!File.Exists(assetsPath))
                 {
+                    System.Diagnostics.Debug.WriteLine("祝日データファイルが見つかりません: syukujitsu.csv");
                     return false;
                 }
 
@@ -108,6 +110,7 @@ namespace RedmineClient.Services
                 
                 if (string.IsNullOrWhiteSpace(csvContent))
                 {
+                    System.Diagnostics.Debug.WriteLine("祝日データファイルが空です: syukujitsu.csv");
                     return false;
                 }
 
@@ -115,6 +118,7 @@ namespace RedmineClient.Services
                 var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                 if (lines.Length <= 1) // ヘッダー行のみの場合
                 {
+                    System.Diagnostics.Debug.WriteLine("祝日データファイルにデータがありません: syukujitsu.csv");
                     return false;
                 }
 
@@ -149,10 +153,13 @@ namespace RedmineClient.Services
                     _lastUpdate = DateTime.Now;
                 }
 
+                System.Diagnostics.Debug.WriteLine($"祝日データの読み込みが完了しました: {_holidayCache.Count}年分");
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                // エラーが発生した場合はログ出力のみ（アプリケーションクラッシュを防ぐ）
+                System.Diagnostics.Debug.WriteLine($"祝日データの読み込みでエラーが発生しました: {ex.Message}");
                 return false;
             }
         }
