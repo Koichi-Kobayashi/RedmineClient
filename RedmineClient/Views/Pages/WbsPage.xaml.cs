@@ -877,43 +877,23 @@ namespace RedmineClient.Views.Pages
                     ViewModel.WbsProgress = 100;
                     ViewModel.WbsProgressMessage = "日付列の生成が完了しました";
 
-                    // DataGridの描画完了を待ってからプログレス表示を非表示にする
-                    try
+                    // プログレスバーが100%に達したことを確認できるように少し待機
+                    if (_generateColumnsCancellation != null)
                     {
-                        await Dispatcher.InvokeAsync(async () =>
-                        {
-                            // レイアウト計算を一度進める
-                            await Dispatcher.Yield(DispatcherPriority.Background);
-                            WbsDataGrid.UpdateLayout();
-
-                            // Render 優先度の処理が流れ切るのを待つ
-                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                            // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
-                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-
-                            // 描画完了後にプログレス表示を非表示にする
-                            if (_generateColumnsCancellation != null)
-                            {
-                                await Task.Delay(500, _generateColumnsCancellation.Token); // 完了メッセージを確認できるように少し待機
-                            }
-                            ViewModel.SetWbsLoading(false);
-                            ViewModel.WbsProgressMessage = "";
-                        }, DispatcherPriority.Loaded);
+                        await Task.Delay(1000, _generateColumnsCancellation.Token); // 完了メッセージを確認できるように待機
                     }
-                    catch (OperationCanceledException)
-                    {
-                        // キャンセルされた場合はプログレス表示を非表示にして終了
-                        ViewModel.SetWbsLoading(false);
-                        ViewModel.WbsProgressMessage = "";
-                        return;
-                    }
+
+                    // プログレスバーを非表示にする
+                    ViewModel.SetWbsLoading(false);
+                    ViewModel.WbsProgress = 0;
+                    ViewModel.WbsProgressMessage = string.Empty;
                 }
                 catch (OperationCanceledException)
                 {
-                    // キャンセルされた場合はプログレス表示を非表示にして終了
+                    // キャンセルされた場合でも、プログレスバーを非表示にする
                     ViewModel.SetWbsLoading(false);
-                    ViewModel.WbsProgressMessage = "";
+                    ViewModel.WbsProgress = 0;
+                    ViewModel.WbsProgressMessage = string.Empty;
                 }
                 finally
                 {
@@ -1606,67 +1586,29 @@ namespace RedmineClient.Views.Pages
                     }
                 }
                 
-                // 描画完了を待ってからプログレスバーとメッセージを非表示にする
-                _ = Task.Run(async () =>
+                // DataGridの完全なレンダリングを待つ
+                await Dispatcher.Yield();
+                
+                // DataGridのアイテムが完全にレンダリングされるまで待機
+                var renderWaitCount = 0;
+                while (dataGrid.Items.Count > 0 && renderWaitCount < 50)
                 {
-                    try
+                    // DataGridのレンダリングが完了するまで少し待機
+                    await Task.Delay(50);
+                    renderWaitCount++;
+                    
+                    // レンダリングの進行状況を確認
+                    if (dataGrid.Items.Count > 0)
                     {
-                        // UIスレッドで描画完了を待機
-                        await Dispatcher.InvokeAsync(async () =>
-                        {
-                            // レイアウト計算を一度進める
-                            await Dispatcher.Yield(DispatcherPriority.Background);
-                            dataGrid.UpdateLayout();
-
-                            // Render 優先度の処理が流れ切るのを待つ
-                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-                            // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
-                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-
-                            // 描画完了後にプログレスバーとメッセージを非表示にする
-                            // ただし、日付列生成中（_isGeneratingColumns = true）の場合は非表示にしない
-                            // また、他の処理がまだ実行中の可能性があるため、少し待機してから確認
-                            await Task.Delay(100);
-                            if (ViewModel.IsWbsLoading && !_isGeneratingColumns)
-                            {
-                                ViewModel.SetWbsLoading(false);
-                                ViewModel.WbsProgressMessage = ""; // プログレスメッセージも消す
-                            }
-                        }, DispatcherPriority.Loaded);
+                        System.Diagnostics.Debug.WriteLine($"DataGridレンダリング待機中... ({renderWaitCount}回目)");
                     }
-                    catch (TaskCanceledException)
-                    {
-                        // タスクがキャンセルされた場合は何もしない
-                    }
-                    catch (Exception)
-                    {
-                        // エラーが発生した場合でもプログレス表示を非表示にする
-                        // ただし、日付列生成中は非表示にしない
-                        if (!_isGeneratingColumns)
-                        {
-                            try
-                            {
-                                await Dispatcher.InvokeAsync(() =>
-                                {
-                                                                    if (ViewModel.IsWbsLoading)
-                                {
-                                    ViewModel.SetWbsLoading(false);
-                                    ViewModel.WbsProgressMessage = "";
-                                }
-                                }, DispatcherPriority.Loaded);
-                            }
-                            catch (TaskCanceledException)
-                            {
-                                // タスクがキャンセルされた場合は何もしない
-                            }
-                            catch (Exception)
-                            {
-                                // 最終的なエラーは無視
-                            }
-                        }
-                    }
-                });
+                }
+                
+                // DataGridの完全な読み込みが完了したことを確認
+                System.Diagnostics.Debug.WriteLine($"DataGrid完全読み込み完了: Items.Count = {dataGrid.Items.Count}");
+                
+                // プログレスバーの非表示はGenerateDateColumns()内で行われるため、
+                // ここでは何もしない
             }
         }
 

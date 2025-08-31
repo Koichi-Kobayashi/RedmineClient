@@ -669,12 +669,8 @@ namespace RedmineClient.ViewModels.Pages
             }
             finally
             {
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    SetWbsLoading(false);
-                    WbsProgress = 0;
-                    WbsProgressMessage = string.Empty;
-                });
+                // プログレスバーの非表示はDataGridの完全な読み込み完了後に行うため、
+                // ここでは何もしない（WbsDataGrid_Loadedで制御される）
             }
         }
 
@@ -1177,8 +1173,7 @@ namespace RedmineClient.ViewModels.Pages
                         else
                         {
                             FlattenedWbsItems.Clear();
-                            // チケットがない場合は進捗を100%に設定
-                            WbsProgress = 100;
+                            // チケットがない場合は進捗メッセージのみ設定
                             WbsProgressMessage = "データ読み込み完了";
                         }
 
@@ -1212,15 +1207,15 @@ namespace RedmineClient.ViewModels.Pages
             }
             finally
             {
-                // プログレスバーを完了
+                // プログレスバーを完了（DataGridの読み込み完了まで表示し続けるため、ここでは非表示にしない）
                 WbsProgress = 100;
                 WbsProgressMessage = "データ読み込み完了";
 
-                // 完了メッセージを少し表示してから非表示
+                // 完了メッセージを少し表示
                 await Task.Delay(1000);
 
-                IsWbsLoading = false;
-                WbsProgress = 0;
+                // プログレスバーの非表示はDataGridの完全な読み込み完了後に行うため、
+                // ここではIsWbsLoadingをfalseにしない
 
                 lock (_dataLoadingLock)
                 {
@@ -1280,10 +1275,9 @@ namespace RedmineClient.ViewModels.Pages
 
                 await UpdateScheduleItemsAsync();
 
-                // 最終的な進捗を設定（メイン処理で制御される）
+                // 最終的な進捗メッセージを設定（プログレス値はメイン処理で制御される）
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    WbsProgress = 100;
                     WbsProgressMessage = "データ読み込み完了";
                 });
             }
@@ -1344,27 +1338,21 @@ namespace RedmineClient.ViewModels.Pages
                 // スケジュール表も更新（非同期版を使用）
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    WbsProgress = 100;
                     WbsProgressMessage = "WBSリストの更新が完了しました";
                 });
 
                 await UpdateScheduleItemsAsync();
 
-                // 完了メッセージを少し表示してからクリア
+                // 完了メッセージを少し表示
                 await Task.Delay(500);
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    SetWbsLoading(false);
-                    WbsProgress = 0;
-                    WbsProgressMessage = string.Empty;
-                });
+                // プログレスバーの非表示はDataGridの完全な読み込み完了後に行うため、
+                // ここでは何もしない（WbsDataGrid_Loadedで制御される）
             }
             catch (Exception ex)
             {
+                // エラーが発生した場合でも、プログレスバーの非表示はDataGridの完全な読み込み完了後に行う
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SetWbsLoading(false);
-                    WbsProgress = 0;
                     WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
                 });
             }
