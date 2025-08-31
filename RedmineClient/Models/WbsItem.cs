@@ -633,11 +633,73 @@ namespace RedmineClient.Models
         {
             if (newDependency == null) return false;
             
+            // 新しく追加しようとしている依存関係が現在のアイテム自身の場合は循環参照
+            if (newDependency == this) return true;
+            
+            // 新しく追加しようとしている依存関係が既に先行タスクまたは後続タスクとして存在する場合は循環参照
+            if (Predecessors.Contains(newDependency) || Successors.Contains(newDependency)) return true;
+            
+            // 新しく追加しようとしている依存関係が現在のアイテムに戻ってくるかをチェック
+            if (newDependency.Successors.Contains(this) || newDependency.Predecessors.Contains(this)) return true;
+            
+            // 新しく追加しようとしている依存関係を一時的に追加した状態で循環参照をチェック
+            // 現在のアイテムから開始して、新しく追加される依存関係を通じて循環が発生するかをチェック
             var visited = new HashSet<WbsItem>();
             var recursionStack = new HashSet<WbsItem>();
             
-            // 新しく追加しようとしている依存関係から開始して循環参照をチェック
-            return HasCycleFromDependency(newDependency, visited, recursionStack);
+            // 新しく追加される依存関係を一時的に先行タスクとして追加した状態で循環参照をチェック
+            Predecessors.Add(newDependency);
+            try
+            {
+                // 現在のアイテムから開始して循環参照をチェック
+                return HasCycleFromCurrentItem(visited, recursionStack);
+            }
+            finally
+            {
+                // 一時的に追加した依存関係を削除
+                Predecessors.Remove(newDependency);
+            }
+        }
+
+        /// <summary>
+        /// 現在のアイテムから開始して循環参照をチェック（深さ優先探索）
+        /// </summary>
+        /// <param name="visited">既に訪問済みのアイテム</param>
+        /// <param name="recursionStack">現在の再帰スタック</param>
+        /// <returns>循環参照が存在する場合はtrue</returns>
+        private bool HasCycleFromCurrentItem(HashSet<WbsItem> visited, HashSet<WbsItem> recursionStack)
+        {
+            if (recursionStack.Contains(this))
+                return true; // 循環参照を検出
+
+            if (visited.Contains(this))
+                return false; // 既に訪問済み
+
+            visited.Add(this);
+            recursionStack.Add(this);
+
+            try
+            {
+                // 後続タスクをチェック
+                foreach (var successor in Successors)
+                {
+                    if (successor.HasCycleFromCurrentItem(visited, recursionStack))
+                        return true;
+                }
+
+                // 先行タスクもチェック（双方向の循環参照を検出するため）
+                foreach (var predecessor in Predecessors)
+                {
+                    if (predecessor.HasCycleFromCurrentItem(visited, recursionStack))
+                        return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                recursionStack.Remove(this);
+            }
         }
 
         /// <summary>
@@ -745,12 +807,92 @@ namespace RedmineClient.Models
                 };
             }
 
+            // 実際の循環参照チェック：新しく追加される依存関係を一時的に追加した状態で循環を検出
+            if (WouldCreateCycle(newDependency))
+            {
+                // 循環参照のパスを構築
+                var cyclePath = new List<WbsItem>();
+                var visited = new HashSet<WbsItem>();
+                var recursionStack = new HashSet<WbsItem>();
+                
+                // 新しく追加される依存関係を一時的に先行タスクとして追加した状態で循環参照のパスを検索
+                Predecessors.Add(newDependency);
+                try
+                {
+                    FindCyclePathFromCurrentItem(visited, recursionStack, cyclePath);
+                }
+                finally
+                {
+                    // 一時的に追加した依存関係を削除
+                    Predecessors.Remove(newDependency);
+                }
+                
+                return new CircularDependencyInfo 
+                { 
+                    HasCycle = true, 
+                    CyclePath = cyclePath 
+                };
+            }
+
             // 循環参照なし
             return new CircularDependencyInfo 
             { 
                 HasCycle = false, 
                 CyclePath = new List<WbsItem>() 
             };
+        }
+
+        /// <summary>
+        /// 現在のアイテムから開始して循環参照のパスを検索
+        /// </summary>
+        /// <param name="visited">既に訪問済みのアイテム</param>
+        /// <param name="recursionStack">現在の再帰スタック</param>
+        /// <param name="cyclePath">循環参照のパス</param>
+        /// <returns>循環参照が存在する場合はtrue</returns>
+        private bool FindCyclePathFromCurrentItem(HashSet<WbsItem> visited, HashSet<WbsItem> recursionStack, List<WbsItem> cyclePath)
+        {
+            if (recursionStack.Contains(this))
+            {
+                // 循環参照のパスを構築
+                var cycleStartIndex = cyclePath.IndexOf(this);
+                if (cycleStartIndex >= 0)
+                {
+                    cyclePath.RemoveRange(0, cycleStartIndex);
+                }
+                cyclePath.Add(this);
+                return true;
+            }
+
+            if (visited.Contains(this))
+                return false;
+
+            visited.Add(this);
+            recursionStack.Add(this);
+            cyclePath.Add(this);
+
+            try
+            {
+                // 後続タスクをチェック
+                foreach (var successor in Successors)
+                {
+                    if (successor.FindCyclePathFromCurrentItem(visited, recursionStack, cyclePath))
+                        return true;
+                }
+
+                // 先行タスクもチェック
+                foreach (var predecessor in Predecessors)
+                {
+                    if (predecessor.FindCyclePathFromCurrentItem(visited, recursionStack, cyclePath))
+                        return true;
+                }
+
+                return false;
+            }
+            finally
+            {
+                recursionStack.Remove(this);
+                cyclePath.RemoveAt(cyclePath.Count - 1);
+            }
         }
 
         /// <summary>
