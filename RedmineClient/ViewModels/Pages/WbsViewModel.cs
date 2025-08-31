@@ -429,7 +429,7 @@ namespace RedmineClient.ViewModels.Pages
             // 初期状態でプログレスバーを表示
             IsWbsLoading = true;
             WbsProgress = 0;
-            WbsProgressMessage = "初期化中...";
+            WbsProgressMessage = "WBSページを初期化中...";
 
             // 設定からスケジュール開始年月を読み込み（getアクセサーを呼び出さない）
             _scheduleStartYearMonth = AppConfig.GetScheduleStartYearMonthForInitialization();
@@ -499,14 +499,14 @@ namespace RedmineClient.ViewModels.Pages
             await InitializeViewModel();
         }
 
-        private async Task InitializeViewModel()
+        public async Task InitializeViewModel()
         {
             // 即座にプログレスバーを表示（初期化開始）
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 IsWbsLoading = true;
                 WbsProgress = 0;
-                WbsProgressMessage = "初期化中...";
+                WbsProgressMessage = "WBSページを初期化中...";
             });
 
             try
@@ -577,11 +577,11 @@ namespace RedmineClient.ViewModels.Pages
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     WbsProgress = 100;
-                    WbsProgressMessage = "初期化完了";
+                    WbsProgressMessage = "初期化完了！";
                 });
 
                 // 完了メッセージを少し表示してから非表示
-                await Task.Delay(500);
+                await Task.Delay(2000);
 
                 // 日付変更の監視を開始
                 StartDateChangeWatching();

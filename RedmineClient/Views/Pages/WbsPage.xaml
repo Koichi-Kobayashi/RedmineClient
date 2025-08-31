@@ -595,9 +595,9 @@
 
                 <!--  WBSデータ読み込み中のプログレスバーオーバーレイ  -->
                 <Border Grid.Row="0" Background="#80000066" Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock Margin="0,0,0,8" HorizontalAlignment="Center" FontSize="14" Foreground="White" Text="{Binding ViewModel.WbsProgressMessage}" />
-                        <ProgressBar Width="240" Height="8" IsIndeterminate="{Binding ViewModel.IsWbsLoading}" Maximum="100" Value="{Binding ViewModel.WbsProgress}" />
+                        <ProgressBar Width="240" Height="8" HorizontalAlignment="Center" IsIndeterminate="{Binding ViewModel.IsWbsLoading}" Maximum="100" Value="{Binding ViewModel.WbsProgress}" />
                     </StackPanel>
                 </Border>
             </Grid>

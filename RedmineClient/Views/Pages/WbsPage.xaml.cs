@@ -52,6 +52,19 @@ namespace RedmineClient.Views.Pages
             // 日付変更の監視を有効化
             ViewModel.StartDateChangeWatching();
 
+            // ViewModelの初期化処理を開始
+            _ = Task.Run(async () => 
+            {
+                await ViewModel.InitializeViewModel();
+                
+                // 初期化完了後のデバッグ出力
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
+                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+                });
+            });
+
             // キーボードショートカットを設定
             this.KeyDown += WbsPage_KeyDown;
 
@@ -69,6 +82,9 @@ namespace RedmineClient.Views.Pages
                 // DataGridのLoadedイベントを登録（プログレス表示制御用）
                 WbsDataGrid.Loaded += WbsDataGrid_Loaded;
 
+                // DataGridの表示状態変更を監視してDependencyArrowCanvasと同期
+                WbsDataGrid.IsVisibleChanged += WbsDataGrid_IsVisibleChanged;
+
                 // プロジェクト選択の初期化
                 if (ViewModel?.AvailableProjects != null && ViewModel.AvailableProjects.Any())
                 {
@@ -78,11 +94,11 @@ namespace RedmineClient.Views.Pages
                 // スケジュール開始年月の初期化
                 InitializeScheduleStartYearMonth();
 
-                // 依存関係矢印の初期化
+                // 依存関係矢印の初期化（重複初期化を防ぐ）
                 InitializeDependencyArrows();
 
-                // DependencyArrowCanvasの表示状態をDataGridと同期
-                if (DependencyArrowCanvas != null)
+                // DependencyArrowCanvasの表示状態をDataGridと同期（初期化時のみ）
+                if (DependencyArrowCanvas != null && WbsDataGrid != null)
                 {
                     DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
                 }
@@ -196,56 +212,66 @@ namespace RedmineClient.Views.Pages
 
         private void WbsPage_InitialLoaded(object sender, RoutedEventArgs e)
         {
-            // 年月の選択肢を初期化
-            InitializeYearMonthOptions();
-
-            // プロジェクト選択の初期化
-
-            // Redmineに接続してプロジェクトを取得
-            if (ViewModel.AvailableProjects.Count == 0)
+            try
             {
-                try
+                // 年月の選択肢を初期化
+                InitializeYearMonthOptions();
+
+                // プロジェクト選択の初期化
+
+                // Redmineに接続してプロジェクトを取得
+                if (ViewModel.AvailableProjects.Count == 0)
                 {
-                    // Redmine接続テストを実行してプロジェクトを取得（非同期で実行）
-                    _ = Task.Run(async () =>
+                    try
                     {
-                        try
+                        // Redmine接続テストを実行してプロジェクトを取得（非同期で実行）
+                        _ = Task.Run(async () =>
                         {
-                            await ViewModel.TestRedmineConnection();
-                        }
-                        catch
-                        {
-                            // Redmine接続テストに失敗
-                        }
-                    });
+                            try
+                            {
+                                await ViewModel.TestRedmineConnection();
+                            }
+                            catch
+                            {
+                                // Redmine接続テストに失敗
+                            }
+                        });
+                    }
+                    catch
+                    {
+                        // Redmine接続テストの開始に失敗
+                    }
                 }
-                catch
+
+                // プロジェクトが選択されている場合、自動的にチケット一覧を取得
+                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
                 {
-                    // Redmine接続テストの開始に失敗
+                    try
+                    {
+                        ViewModel.LoadRedmineData();
+                    }
+                    catch
+                    {
+                        // チケット一覧の自動取得に失敗
+                    }
+                }
+
+                // DependencyArrowCanvasの表示状態をDataGridと同期（初期化時のみ）
+                if (DependencyArrowCanvas != null && WbsDataGrid != null)
+                {
+                    DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
                 }
             }
-
-            // プロジェクトが選択されている場合、自動的にチケット一覧を取得
-            if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+            catch (Exception ex)
             {
-                try
-                {
-                    ViewModel.LoadRedmineData();
-                }
-                catch
-                {
-                    // チケット一覧の自動取得に失敗
-                }
+                // エラーが発生した場合はログ出力して処理を続行
+                System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded error: {ex.Message}");
             }
-
-            // DependencyArrowCanvasの表示状態をDataGridと同期
-            if (DependencyArrowCanvas != null && WbsDataGrid != null)
+            finally
             {
-                DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
+                // このイベントは一度だけ実行
+                this.Loaded -= WbsPage_InitialLoaded;
             }
-
-            // このイベントは一度だけ実行
-            this.Loaded -= WbsPage_InitialLoaded;
         }
 
 
@@ -793,17 +819,25 @@ namespace RedmineClient.Views.Pages
 
         private void WbsPage_Loaded(object sender, RoutedEventArgs e)
         {
-            // プロジェクト選択の初期化
-            if (ViewModel?.AvailableProjects != null && ViewModel.AvailableProjects.Any())
+            try
             {
-                ProjectComboBox.SelectedIndex = 0;
+                // プロジェクト選択の初期化
+                if (ViewModel?.AvailableProjects != null && ViewModel.AvailableProjects.Any())
+                {
+                    ProjectComboBox.SelectedIndex = 0;
+                }
+
+                // スケジュール開始年月の初期化
+                InitializeScheduleStartYearMonth();
+
+                // 依存関係矢印の初期化（重複初期化を防ぐ）
+                InitializeDependencyArrows();
             }
-
-            // スケジュール開始年月の初期化
-            InitializeScheduleStartYearMonth();
-
-            // 依存関係矢印の初期化
-            InitializeDependencyArrows();
+            catch (Exception ex)
+            {
+                // エラーが発生した場合はログ出力して処理を続行
+                System.Diagnostics.Debug.WriteLine($"WbsPage_Loaded error: {ex.Message}");
+            }
         }
 
         private void InitializeScheduleStartYearMonth()
@@ -847,54 +881,61 @@ namespace RedmineClient.Views.Pages
             }
         }
 
+        private bool _isDependencyArrowsInitialized = false;
         private void InitializeDependencyArrows()
         {
-            // 依存関係矢印の表示/非表示を制御
-            if (ViewModel != null)
-            {
-                ViewModel.PropertyChanged += (s, e) =>
-                {
-                    if (e.PropertyName == nameof(ViewModel.ShowDependencyArrows))
-                    {
-                        UpdateDependencyArrowsAsync();
-                    }
-                };
-            }
+            // 重複初期化を防ぐ
+            if (_isDependencyArrowsInitialized) return;
+            _isDependencyArrowsInitialized = true;
 
-            // DataGridの表示状態変更を監視
-            if (WbsDataGrid != null)
+            try
             {
-                WbsDataGrid.IsVisibleChanged += (s, e) =>
+                // 依存関係矢印の表示/非表示を制御
+                if (ViewModel != null)
                 {
-                    // DataGridの表示状態が変更された場合、矢印も同期して表示/非表示を制御
-                    if (DependencyArrowCanvas != null)
+                    ViewModel.PropertyChanged += (s, e) =>
                     {
-                        DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
-                    }
-                };
-
-                // スクロール中の描画処理を最適化
-                var scrollViewer = GetScrollViewer(WbsDataGrid);
-                if (scrollViewer != null)
-                {
-                    scrollViewer.ScrollChanged += (s, e) =>
-                    {
-                        // スクロール中は矢印描画を一時停止
-                        if (_isDrawingArrows)
+                        if (e.PropertyName == nameof(ViewModel.ShowDependencyArrows))
                         {
-                            _arrowDrawingCancellation?.Cancel();
+                            UpdateDependencyArrowsAsync();
                         }
-
-                        // スクロール停止後、少し遅延して矢印を再描画
-                        Task.Delay(300).ContinueWith(_ =>
-                        {
-                            if (ViewModel?.ShowDependencyArrows == true)
-                            {
-                                Dispatcher.BeginInvoke(() => UpdateDependencyArrowsAsync());
-                            }
-                        });
                     };
                 }
+
+                // DataGridの表示状態変更を監視（重複登録を防ぐため、既存のイベントを削除）
+                if (WbsDataGrid != null)
+                {
+                    // 既存のイベントハンドラーを削除（重複登録を防ぐ）
+                    WbsDataGrid.IsVisibleChanged -= WbsDataGrid_IsVisibleChanged;
+                    
+                    // スクロール中の描画処理を最適化
+                    var scrollViewer = GetScrollViewer(WbsDataGrid);
+                    if (scrollViewer != null)
+                    {
+                        scrollViewer.ScrollChanged += (s, e) =>
+                        {
+                            // スクロール中は矢印描画を一時停止
+                            if (_isDrawingArrows)
+                            {
+                                _arrowDrawingCancellation?.Cancel();
+                            }
+
+                            // スクロール停止後、少し遅延して矢印を再描画
+                            Task.Delay(300).ContinueWith(_ =>
+                            {
+                                if (ViewModel?.ShowDependencyArrows == true)
+                                {
+                                    Dispatcher.BeginInvoke(() => UpdateDependencyArrowsAsync());
+                                }
+                            });
+                        };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // エラーが発生した場合はログ出力して処理を続行
+                System.Diagnostics.Debug.WriteLine($"InitializeDependencyArrows error: {ex.Message}");
             }
         }
 
@@ -1533,25 +1574,55 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ViewModel.SelectedProject))
+            try
             {
-                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
-                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+                if (e.PropertyName == nameof(ViewModel.SelectedProject))
                 {
-                    ViewModel.LoadRedmineData();
+                    // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
+                    if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+                    {
+                        ViewModel.LoadRedmineData();
+                    }
+                }
+                else if (e.PropertyName == nameof(ViewModel.AvailableProjects))
+                {
+                    // プロジェクト一覧が更新された場合の処理
+                }
+                else if (e.PropertyName == nameof(ViewModel.ShowTodayLine))
+                {
+                    // 今日の日付ライン表示設定が変更された場合、スケジュール表を再生成
+                    if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                    {
+                        GenerateDateColumns();
+                    }
+                }
+                else if (e.PropertyName == nameof(ViewModel.FlattenedWbsItems))
+                {
+                    // FlattenedWbsItemsが変更された場合のデバッグ出力
+                    System.Diagnostics.Debug.WriteLine($"FlattenedWbsItems changed: Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
+                    if (ViewModel.FlattenedWbsItems?.Count > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"First item: {ViewModel.FlattenedWbsItems[0].Title}");
+                    }
+                }
+                else if (e.PropertyName == nameof(ViewModel.WbsItems))
+                {
+                    // WbsItemsが変更された場合のデバッグ出力
+                    System.Diagnostics.Debug.WriteLine($"WbsItems changed: Count = {ViewModel.WbsItems?.Count ?? 0}");
+                }
+
+                // DependencyArrowCanvasの表示状態をDataGridと同期（必要な場合のみ）
+                // 表示状態に関連するプロパティが変更された場合のみ同期
+                if (e.PropertyName == nameof(ViewModel.ShowDependencyArrows) || 
+                    e.PropertyName == nameof(ViewModel.FlattenedWbsItems))
+                {
+                    SynchronizeDependencyArrowCanvasVisibility();
                 }
             }
-            else if (e.PropertyName == nameof(ViewModel.AvailableProjects))
+            catch (Exception ex)
             {
-                // プロジェクト一覧が更新された場合の処理
-            }
-            else if (e.PropertyName == nameof(ViewModel.ShowTodayLine))
-            {
-                // 今日の日付ライン表示設定が変更された場合、スケジュール表を再生成
-                if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
-                {
-                    GenerateDateColumns();
-                }
+                // エラーが発生した場合はログ出力して処理を続行
+                System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged error: {ex.Message}");
             }
         }
 
@@ -1585,11 +1656,13 @@ namespace RedmineClient.Views.Pages
                 // このイベントは一度だけ実行
                 dataGrid.Loaded -= WbsDataGrid_Loaded;
                 
+                // デバッグ出力：DataGridの状態を確認
+                System.Diagnostics.Debug.WriteLine($"DataGrid Loaded: ItemsSource = {dataGrid.ItemsSource}, Items.Count = {dataGrid.Items.Count}");
+                System.Diagnostics.Debug.WriteLine($"ViewModel.FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"ViewModel.WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+                
                 // DependencyArrowCanvasの表示状態をDataGridと同期
-                if (DependencyArrowCanvas != null)
-                {
-                    DependencyArrowCanvas.Visibility = dataGrid.Visibility;
-                }
+                SynchronizeDependencyArrowCanvasVisibility();
                 
                 // 描画完了を待ってからプログレスバーとメッセージを非表示にする
                 _ = Task.Run(async () =>
@@ -1638,7 +1711,71 @@ namespace RedmineClient.Views.Pages
             }
         }
 
+        /// <summary>
+        /// DependencyArrowCanvasの表示状態をDataGridと同期する
+        /// </summary>
+        private bool _isSynchronizingVisibility = false;
+        private void SynchronizeDependencyArrowCanvasVisibility()
+        {
+            // 重複実行を防ぐ
+            if (_isSynchronizingVisibility) return;
+            
+            try
+            {
+                _isSynchronizingVisibility = true;
+                
+                if (DependencyArrowCanvas != null && WbsDataGrid != null)
+                {
+                    // DataGridの表示状態を取得
+                    var dataGridVisibility = WbsDataGrid.Visibility;
+                    
+                    // 現在のCanvasの表示状態と比較して、変更がある場合のみ更新
+                    if (DependencyArrowCanvas.Visibility != dataGridVisibility)
+                    {
+                        // UIスレッドで実行されていることを確認
+                        if (Dispatcher.CheckAccess())
+                        {
+                            DependencyArrowCanvas.Visibility = dataGridVisibility;
+                        }
+                        else
+                        {
+                            Dispatcher.BeginInvoke(() => DependencyArrowCanvas.Visibility = dataGridVisibility);
+                        }
+                        
+                        // デバッグ用：表示状態をログ出力
+                        System.Diagnostics.Debug.WriteLine($"SynchronizeDependencyArrowCanvasVisibility: DataGrid={dataGridVisibility}, Canvas={DependencyArrowCanvas.Visibility}");
+                    }
+                }
+            }
+            finally
+            {
+                _isSynchronizingVisibility = false;
+            }
+        }
 
+        /// <summary>
+        /// DataGridの表示状態変更イベントハンドラー
+        /// </summary>
+        private void WbsDataGrid_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            try
+            {
+                // 表示状態が実際に変更された場合のみ同期
+                if (e.NewValue is Visibility newVisibility && e.OldValue is Visibility oldVisibility)
+                {
+                    if (newVisibility != oldVisibility)
+                    {
+                        // DependencyArrowCanvasの表示状態をDataGridと同期
+                        SynchronizeDependencyArrowCanvasVisibility();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // エラーが発生した場合はログ出力して処理を続行
+                System.Diagnostics.Debug.WriteLine($"WbsDataGrid_IsVisibleChanged error: {ex.Message}");
+            }
+        }
 
         /// <summary>
         /// 静的DatePickerのプリロードを実行する
