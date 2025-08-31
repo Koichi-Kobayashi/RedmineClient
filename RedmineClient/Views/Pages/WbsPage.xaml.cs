@@ -66,6 +66,10 @@ namespace RedmineClient.Views.Pages
                         });
                     }
                 }
+                catch (TaskCanceledException)
+                {
+                    // タスクがキャンセルされた場合は何もしない
+                }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"ViewModel初期化エラー: {ex.Message}");
@@ -79,7 +83,21 @@ namespace RedmineClient.Views.Pages
             }
 
             // DatePickerのプリロードを開始
-            _ = Task.Run(async () => await PreloadDatePickersAsync());
+            _ = Task.Run(async () => 
+            {
+                try
+                {
+                    await PreloadDatePickersAsync();
+                }
+                catch (TaskCanceledException)
+                {
+                    // タスクがキャンセルされた場合は何もしない
+                }
+                catch (Exception)
+                {
+                    // DatePickerプリロードでエラーが発生した場合は無視
+                }
+            });
         }
 
         /// <summary>
@@ -597,6 +615,7 @@ namespace RedmineClient.Views.Pages
         /// 日付列を生成する
         /// </summary>
         private bool _isGeneratingColumns = false;
+        private CancellationTokenSource _generateColumnsCancellation;
 
         private async void GenerateDateColumns()
         {
@@ -609,6 +628,7 @@ namespace RedmineClient.Views.Pages
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && WbsDataGrid.IsInitialized)
             {
                 _isGeneratingColumns = true;
+                _generateColumnsCancellation = new CancellationTokenSource();
 
                 try
                 {
@@ -618,7 +638,7 @@ namespace RedmineClient.Views.Pages
                     ViewModel.WbsProgress = 0;
                     
                     // UIの更新を確実にするために少し待機
-                    await Task.Delay(100);
+                    await Task.Delay(100, _generateColumnsCancellation.Token);
 
                     // ItemsSourceを一時的にクリアして列の操作を可能にする
                     var currentItemsSource = WbsDataGrid.ItemsSource;
@@ -667,6 +687,9 @@ namespace RedmineClient.Views.Pages
 
                         for (int columnCount = 0; columnCount < totalColumns; columnCount++)
                         {
+                            // キャンセレーションをチェック
+                            _generateColumnsCancellation.Token.ThrowIfCancellationRequested();
+
                             // プログレスメッセージを更新（5列ごと、より細かく更新）
                             if (columnCount % 5 == 0)
                             {
@@ -678,7 +701,7 @@ namespace RedmineClient.Views.Pages
                                 ViewModel.WbsProgressMessage = $"日付列を生成中... ({progressPercent}%)";
 
                                 // UIの更新を確実にするために少し待機
-                                await Task.Delay(5);
+                                await Task.Delay(5, _generateColumnsCancellation.Token);
                             }
 
                             var loopDate = startDate.AddDays(columnCount);
@@ -822,6 +845,12 @@ namespace RedmineClient.Views.Pages
                         // ItemsSourceを復元
                         WbsDataGrid.ItemsSource = currentItemsSource;
                     }
+                    catch (OperationCanceledException)
+                    {
+                        // キャンセルされた場合はItemsSourceを復元して終了
+                        WbsDataGrid.ItemsSource = currentItemsSource;
+                        return;
+                    }
                     catch (Exception)
                     {
                         // エラーが発生した場合でもItemsSourceを復元
@@ -834,27 +863,45 @@ namespace RedmineClient.Views.Pages
                     ViewModel.WbsProgressMessage = "日付列の生成が完了しました";
 
                     // DataGridの描画完了を待ってからプログレス表示を非表示にする
-                    await Dispatcher.InvokeAsync(async () =>
+                    try
                     {
-                        // レイアウト計算を一度進める
-                        await Dispatcher.Yield(DispatcherPriority.Background);
-                        WbsDataGrid.UpdateLayout();
+                        await Dispatcher.InvokeAsync(async () =>
+                        {
+                            // レイアウト計算を一度進める
+                            await Dispatcher.Yield(DispatcherPriority.Background);
+                            WbsDataGrid.UpdateLayout();
 
-                        // Render 優先度の処理が流れ切るのを待つ
-                        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                            // Render 優先度の処理が流れ切るのを待つ
+                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                        // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
-                        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                            // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
+                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
 
-                        // 描画完了後にプログレス表示を非表示にする
-                        await Task.Delay(500); // 完了メッセージを確認できるように少し待機
+                            // 描画完了後にプログレス表示を非表示にする
+                            await Task.Delay(500, _generateColumnsCancellation.Token); // 完了メッセージを確認できるように少し待機
+                            ViewModel.IsWbsLoading = false;
+                            ViewModel.WbsProgressMessage = "";
+                        }, DispatcherPriority.Loaded);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // キャンセルされた場合はプログレス表示を非表示にして終了
                         ViewModel.IsWbsLoading = false;
                         ViewModel.WbsProgressMessage = "";
-                    }, DispatcherPriority.Loaded);
+                        return;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // キャンセルされた場合はプログレス表示を非表示にして終了
+                    ViewModel.IsWbsLoading = false;
+                    ViewModel.WbsProgressMessage = "";
                 }
                 finally
                 {
                     _isGeneratingColumns = false;
+                    _generateColumnsCancellation?.Dispose();
+                    _generateColumnsCancellation = null;
                 }
             }
         }
@@ -1041,9 +1088,15 @@ namespace RedmineClient.Views.Pages
             {
                 // 描画がキャンセルされた場合は何もしない
             }
+            catch (TaskCanceledException)
+            {
+                // タスクがキャンセルされた場合も何もしない
+            }
             finally
             {
                 _isDrawingArrows = false;
+                _arrowDrawingCancellation?.Dispose();
+                _arrowDrawingCancellation = null;
             }
         }
 
@@ -1842,20 +1895,35 @@ namespace RedmineClient.Views.Pages
                             }
                         }, DispatcherPriority.Loaded);
                     }
+                    catch (TaskCanceledException)
+                    {
+                        // タスクがキャンセルされた場合は何もしない
+                    }
                     catch (Exception)
                     {
                         // エラーが発生した場合でもプログレス表示を非表示にする
                         // ただし、日付列生成中は非表示にしない
                         if (!_isGeneratingColumns)
                         {
-                            await Dispatcher.InvokeAsync(() =>
+                            try
                             {
-                                if (ViewModel.IsWbsLoading)
+                                await Dispatcher.InvokeAsync(() =>
                                 {
-                                    ViewModel.IsWbsLoading = false;
-                                    ViewModel.WbsProgressMessage = "";
-                                }
-                            }, DispatcherPriority.Loaded);
+                                    if (ViewModel.IsWbsLoading)
+                                    {
+                                        ViewModel.IsWbsLoading = false;
+                                        ViewModel.WbsProgressMessage = "";
+                                    }
+                                }, DispatcherPriority.Loaded);
+                            }
+                            catch (TaskCanceledException)
+                            {
+                                // タスクがキャンセルされた場合は何もしない
+                            }
+                            catch (Exception)
+                            {
+                                // 最終的なエラーは無視
+                            }
                         }
                     }
                 });
@@ -2074,6 +2142,18 @@ namespace RedmineClient.Views.Pages
             {
                 // アプリケーションが既に終了している場合は何もしない
                 if (Application.Current == null) return;
+
+                // 日付列生成処理をキャンセル
+                if (_generateColumnsCancellation != null && !_generateColumnsCancellation.IsCancellationRequested)
+                {
+                    _generateColumnsCancellation.Cancel();
+                }
+
+                // 矢印描画処理をキャンセル
+                if (_arrowDrawingCancellation != null && !_arrowDrawingCancellation.IsCancellationRequested)
+                {
+                    _arrowDrawingCancellation.Cancel();
+                }
 
                 // 未保存の変更がある場合は保存処理を実行
                 if (ViewModel != null)
