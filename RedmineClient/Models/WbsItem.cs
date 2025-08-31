@@ -514,8 +514,9 @@ namespace RedmineClient.Models
         /// 先行タスクを追加
         /// </summary>
         /// <param name="predecessor">先行タスク</param>
+        /// <param name="skipReciprocalCall">相互呼び出しをスキップするかどうか</param>
         /// <returns>依存関係が追加された場合はtrue、既に存在するか循環参照の場合はfalse</returns>
-        public bool AddPredecessor(WbsItem predecessor)
+        public bool AddPredecessor(WbsItem predecessor, bool skipReciprocalCall = false)
         {
             if (predecessor == null || predecessor == this) return false;
 
@@ -542,7 +543,11 @@ namespace RedmineClient.Models
             System.Diagnostics.Debug.WriteLine($"AddPredecessor: Adding predecessor {predecessor.Title} to {Title}");
             Predecessors.Add(predecessor);
             
-            predecessor.AddSuccessor(this);
+            // 相互呼び出しをスキップしない場合のみ、後続タスクとして追加
+            if (!skipReciprocalCall)
+            {
+                predecessor.AddSuccessor(this, true);
+            }
             
             OnPropertyChanged(nameof(HasPredecessors));
             OnPropertyChanged(nameof(PredecessorCount));
@@ -556,11 +561,15 @@ namespace RedmineClient.Models
         /// 先行タスクを削除
         /// </summary>
         /// <param name="predecessor">削除する先行タスク</param>
-        public void RemovePredecessor(WbsItem predecessor)
+        /// <param name="skipReciprocalCall">相互呼び出しをスキップするかどうか</param>
+        public void RemovePredecessor(WbsItem predecessor, bool skipReciprocalCall = false)
         {
             if (Predecessors.Remove(predecessor))
             {
-                predecessor.RemoveSuccessor(this);
+                if (!skipReciprocalCall)
+                {
+                    predecessor.RemoveSuccessor(this, true);
+                }
                 OnPropertyChanged(nameof(HasPredecessors));
                 OnPropertyChanged(nameof(PredecessorCount));
                 OnPropertyChanged(nameof(PredecessorDetails));
@@ -572,8 +581,9 @@ namespace RedmineClient.Models
         /// 後続タスクを追加
         /// </summary>
         /// <param name="successor">後続タスク</param>
+        /// <param name="skipReciprocalCall">相互呼び出しをスキップするかどうか</param>
         /// <returns>依存関係が追加された場合はtrue、既に存在するか循環参照の場合はfalse</returns>
-        public bool AddSuccessor(WbsItem successor)
+        public bool AddSuccessor(WbsItem successor, bool skipReciprocalCall = false)
         {
             if (successor == null || successor == this) return false;
 
@@ -599,7 +609,13 @@ namespace RedmineClient.Models
 
             System.Diagnostics.Debug.WriteLine($"AddSuccessor: Adding successor {successor.Title} to {Title}");
             Successors.Add(successor);
-            successor.AddPredecessor(this);
+            
+            // 相互呼び出しをスキップしない場合のみ、先行タスクとして追加
+            if (!skipReciprocalCall)
+            {
+                successor.AddPredecessor(this, true);
+            }
+            
             OnPropertyChanged(nameof(HasSuccessors));
             OnPropertyChanged(nameof(SuccessorCount));
             OnPropertyChanged(nameof(SuccessorDetails));
@@ -612,11 +628,15 @@ namespace RedmineClient.Models
         /// 後続タスクを削除
         /// </summary>
         /// <param name="successor">削除する後続タスク</param>
-        public void RemoveSuccessor(WbsItem successor)
+        /// <param name="skipReciprocalCall">相互呼び出しをスキップするかどうか</param>
+        public void RemoveSuccessor(WbsItem successor, bool skipReciprocalCall = false)
         {
             if (Successors.Remove(successor))
             {
-                successor.RemovePredecessor(this);
+                if (!skipReciprocalCall)
+                {
+                    successor.RemovePredecessor(this, true);
+                }
                 OnPropertyChanged(nameof(HasSuccessors));
                 OnPropertyChanged(nameof(SuccessorCount));
                 OnPropertyChanged(nameof(SuccessorDetails));
