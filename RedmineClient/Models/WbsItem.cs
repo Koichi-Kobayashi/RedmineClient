@@ -514,9 +514,10 @@ namespace RedmineClient.Models
         /// 先行タスクを追加
         /// </summary>
         /// <param name="predecessor">先行タスク</param>
-        public void AddPredecessor(WbsItem predecessor)
+        /// <returns>依存関係が追加された場合はtrue、既に存在するか循環参照の場合はfalse</returns>
+        public bool AddPredecessor(WbsItem predecessor)
         {
-            if (predecessor == null || predecessor == this) return;
+            if (predecessor == null || predecessor == this) return false;
 
             // デバッグログ：既存の先行タスクかどうかをチェック
             bool isAlreadyPredecessor = Predecessors.Contains(predecessor);
@@ -526,7 +527,7 @@ namespace RedmineClient.Models
             if (isAlreadyPredecessor)
             {
                 System.Diagnostics.Debug.WriteLine($"AddPredecessor: Skipping already existing predecessor {predecessor.Title} for {Title}");
-                return;
+                return false;
             }
 
             // 循環参照をチェック
@@ -547,6 +548,8 @@ namespace RedmineClient.Models
             OnPropertyChanged(nameof(PredecessorCount));
             OnPropertyChanged(nameof(PredecessorDetails));
             OnPropertyChanged(nameof(PredecessorDisplayText));
+            
+            return true;
         }
 
         /// <summary>
@@ -569,9 +572,10 @@ namespace RedmineClient.Models
         /// 後続タスクを追加
         /// </summary>
         /// <param name="successor">後続タスク</param>
-        public void AddSuccessor(WbsItem successor)
+        /// <returns>依存関係が追加された場合はtrue、既に存在するか循環参照の場合はfalse</returns>
+        public bool AddSuccessor(WbsItem successor)
         {
-            if (successor == null || successor == this) return;
+            if (successor == null || successor == this) return false;
 
             // デバッグログ：既存の後続タスクかどうかをチェック
             bool isAlreadySuccessor = Successors.Contains(successor);
@@ -581,7 +585,7 @@ namespace RedmineClient.Models
             if (isAlreadySuccessor)
             {
                 System.Diagnostics.Debug.WriteLine($"AddSuccessor: Skipping already existing successor {successor.Title} for {Title}");
-                return;
+                return false;
             }
 
             // 循環参照をチェック
@@ -600,6 +604,8 @@ namespace RedmineClient.Models
             OnPropertyChanged(nameof(SuccessorCount));
             OnPropertyChanged(nameof(SuccessorDetails));
             OnPropertyChanged(nameof(SuccessorDisplayText));
+            
+            return true;
         }
 
         /// <summary>

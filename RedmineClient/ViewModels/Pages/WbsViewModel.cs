@@ -1560,24 +1560,34 @@ namespace RedmineClient.ViewModels.Pages
 
             try
             {
+                bool dependencyAdded = false;
+                
                 if (isPredecessor)
                 {
                     // 先行関係を設定
                     // タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになる
                     System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Adding predecessor relationship - {targetItem.Title} -> {sourceItem.Title}");
-                    sourceItem.AddPredecessor(targetItem);
-                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Predecessor relationship added successfully");
+                    dependencyAdded = sourceItem.AddPredecessor(targetItem);
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Predecessor relationship added: {dependencyAdded}");
                 }
                 else
                 {
                     // 双方向の関係を設定
                     // sourceItemの先行がtargetItemになる
                     System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Adding bidirectional relationship - {targetItem.Title} -> {sourceItem.Title}");
-                    sourceItem.AddPredecessor(targetItem);
-                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: First part of bidirectional relationship added successfully");
+                    bool firstPartAdded = sourceItem.AddPredecessor(targetItem);
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: First part of bidirectional relationship added: {firstPartAdded}");
                     // targetItemの後続がsourceItemになる
-                    targetItem.AddSuccessor(sourceItem);
-                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Second part of bidirectional relationship added successfully");
+                    bool secondPartAdded = targetItem.AddSuccessor(sourceItem);
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Second part of bidirectional relationship added: {secondPartAdded}");
+                    dependencyAdded = firstPartAdded || secondPartAdded;
+                }
+                
+                // 依存関係が追加されなかった場合は、Redmine APIを呼び出さない
+                if (!dependencyAdded)
+                {
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: No dependency was added, skipping Redmine API call");
+                    return;
                 }
 
                 // UIを更新
