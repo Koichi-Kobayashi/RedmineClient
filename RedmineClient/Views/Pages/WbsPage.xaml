@@ -194,7 +194,6 @@
                     CanUserSortColumns="True" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave" Drop="WbsDataGrid_Drop" EnableColumnVirtualization="True"
                     EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All" HeadersVisibility="Column"
                     ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
-                    Loaded="WbsDataGrid_Loaded"
                     RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     RowHeaderWidth="0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.IsDeferredScrollingEnabled="False" ScrollViewer.PanningMode="Both"
                     ScrollViewer.VerticalScrollBarVisibility="Auto"

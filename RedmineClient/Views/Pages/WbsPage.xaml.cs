@@ -65,6 +65,21 @@ namespace RedmineClient.Views.Pages
 
                 // DataGridのサイズ変更時に矢印を再描画
                 WbsDataGrid.SizeChanged += WbsDataGrid_SizeChanged;
+
+                // DataGridのLoadedイベントを登録（プログレス表示制御用）
+                WbsDataGrid.Loaded += WbsDataGrid_Loaded;
+
+                // プロジェクト選択の初期化
+                if (ViewModel?.AvailableProjects != null && ViewModel.AvailableProjects.Any())
+                {
+                    ProjectComboBox.SelectedIndex = 0;
+                }
+
+                // スケジュール開始年月の初期化
+                InitializeScheduleStartYearMonth();
+
+                // 依存関係矢印の初期化
+                InitializeDependencyArrows();
             };
 
             // アプリケーション終了時の処理を追加
@@ -512,13 +527,13 @@ namespace RedmineClient.Views.Pages
 
                 try
                 {
-                                            // プログレスバーを表示
-                        ViewModel.IsWbsLoading = true;
-                        ViewModel.WbsProgressMessage = "日付列を生成中...";
-                        ViewModel.WbsProgress = 0;
-                        
-                        // UIの更新を確実にするために少し待機
-                        await Task.Delay(100);
+                    // プログレスバーを表示
+                    ViewModel.IsWbsLoading = true;
+                    ViewModel.WbsProgressMessage = "日付列を生成中...";
+                    ViewModel.WbsProgress = 0;
+                    
+                    // UIの更新を確実にするために少し待機
+                    await Task.Delay(100);
 
                     // ItemsSourceを一時的にクリアして列の操作を可能にする
                     var currentItemsSource = WbsDataGrid.ItemsSource;
@@ -534,7 +549,6 @@ namespace RedmineClient.Views.Pages
                         }
 
                         // 設定された年月の1日から開始
-
                         DateTime startDate;
                         if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
                         {
@@ -568,15 +582,18 @@ namespace RedmineClient.Views.Pages
 
                         for (int columnCount = 0; columnCount < totalColumns; columnCount++)
                         {
-                            // プログレスメッセージを更新（10列ごと）
-                            if (columnCount % 10 == 0)
+                            // プログレスメッセージを更新（5列ごと、より細かく更新）
+                            if (columnCount % 5 == 0)
                             {
-                                var progressPercent = (int)((double)columnCount / totalColumns * 100);
+                                // プログレス計算を修正：最初から正しく表示されるように
+                                var progressPercent = (int)((double)(columnCount + 1) / totalColumns * 100);
+                                // 100%を超えないように制限
+                                progressPercent = Math.Min(progressPercent, 100);
                                 ViewModel.WbsProgress = progressPercent;
                                 ViewModel.WbsProgressMessage = $"日付列を生成中... ({progressPercent}%)";
                                 
                                 // UIの更新を確実にするために少し待機
-                                await Task.Delay(10);
+                                await Task.Delay(5);
                             }
                             
                             var loopDate = startDate.AddDays(columnCount);
@@ -730,6 +747,11 @@ namespace RedmineClient.Views.Pages
                     // 完了メッセージを表示
                     ViewModel.WbsProgress = 100;
                     ViewModel.WbsProgressMessage = "日付列の生成が完了しました";
+                    
+                    // 完了後、少し待ってからプログレス表示を非表示にする
+                    await Task.Delay(500);
+                    ViewModel.IsWbsLoading = false;
+                    ViewModel.WbsProgressMessage = "";
                 }
                 finally
                 {
@@ -1505,43 +1527,66 @@ namespace RedmineClient.Views.Pages
             }
         }
 
+
+
         /// <summary>
-        /// DataGridのLoadedイベントハンドラー（イベント用のラッパー）
+        /// DataGridのLoadedイベントハンドラー
         /// </summary>
-        private async void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
+        private void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
         {
             if (sender is DataGrid dataGrid)
             {
+                // このイベントは一度だけ実行
+                dataGrid.Loaded -= WbsDataGrid_Loaded;
+                
                 // 描画完了を待ってからプログレスバーとメッセージを非表示にする
-                await WaitForRenderComplete(dataGrid);
-
-                // 描画完了後にプログレスバーとメッセージを非表示にする
-                await Dispatcher.InvokeAsync(() =>
+                _ = Task.Run(async () =>
                 {
-                    if (ViewModel.IsWbsLoading)
+                    try
                     {
-                        ViewModel.IsWbsLoading = false;
-                        ViewModel.WbsProgressMessage = ""; // プログレスメッセージも消す
+                        // UIスレッドで描画完了を待機
+                        await Dispatcher.InvokeAsync(async () =>
+                        {
+                            // レイアウト計算を一度進める
+                            await Dispatcher.Yield(DispatcherPriority.Background);
+                            dataGrid.UpdateLayout();
+
+                            // Render 優先度の処理が流れ切るのを待つ
+                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                            // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
+                            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+
+                            // 描画完了後にプログレスバーとメッセージを非表示にする
+                            // ただし、日付列生成中（_isGeneratingColumns = true）の場合は非表示にしない
+                            if (ViewModel.IsWbsLoading && !_isGeneratingColumns)
+                            {
+                                ViewModel.IsWbsLoading = false;
+                                ViewModel.WbsProgressMessage = ""; // プログレスメッセージも消す
+                            }
+                        }, DispatcherPriority.Loaded);
                     }
-                }, DispatcherPriority.Loaded);
+                    catch (Exception)
+                    {
+                        // エラーが発生した場合でもプログレス表示を非表示にする
+                        // ただし、日付列生成中は非表示にしない
+                        if (!_isGeneratingColumns)
+                        {
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                if (ViewModel.IsWbsLoading)
+                                {
+                                    ViewModel.IsWbsLoading = false;
+                                    ViewModel.WbsProgressMessage = "";
+                                }
+                            }, DispatcherPriority.Loaded);
+                        }
+                    }
+                });
             }
         }
 
-        /// <summary>
-        /// 「UIキューが描画まで進み、アイドルになる」まで待つユーティリティ
-        /// </summary>
-        public static async Task WaitForRenderComplete(FrameworkElement element)
-        {
-            // レイアウト計算を一度進める
-            await Dispatcher.Yield(DispatcherPriority.Background);
-            element.UpdateLayout();
 
-            // Render 優先度の処理が流れ切るのを待つ
-            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-
-            // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
-            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        }
 
         /// <summary>
         /// 静的DatePickerのプリロードを実行する
