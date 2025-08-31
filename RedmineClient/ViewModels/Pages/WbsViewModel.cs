@@ -3136,28 +3136,15 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"WbsItem ID {wbsItem.Id} の依存関係を設定中...");
-                System.Diagnostics.Debug.WriteLine($"HierarchicalIssue ID {issue.Id} の先行タスク数: {issue.Predecessors?.Count ?? 0}");
-                System.Diagnostics.Debug.WriteLine($"HierarchicalIssue ID {issue.Id} の後続タスク数: {issue.Successors?.Count ?? 0}");
-                
                 // 先行タスクを設定
                 if (issue.Predecessors != null)
                 {
                     foreach (var predecessor in issue.Predecessors)
                     {
-                        System.Diagnostics.Debug.WriteLine($"先行タスク ID {predecessor.Id} を処理中...");
-                        
                         if (convertedItems.ContainsKey(predecessor.Id))
                         {
                             var predecessorWbsItem = convertedItems[predecessor.Id];
-                            System.Diagnostics.Debug.WriteLine($"先行タスク WbsItem ID {predecessorWbsItem.Id} が見つかりました");
-                            
                             wbsItem.AddPredecessor(predecessorWbsItem);
-                            System.Diagnostics.Debug.WriteLine($"先行タスク ID {predecessorWbsItem.Id} を WbsItem ID {wbsItem.Id} に追加しました");
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine($"先行タスク ID {predecessor.Id} のWbsItemが見つかりません");
                         }
                     }
                 }
@@ -3167,29 +3154,17 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     foreach (var successor in issue.Successors)
                     {
-                        System.Diagnostics.Debug.WriteLine($"後続タスク ID {successor.Id} を処理中...");
-                        
                         if (convertedItems.ContainsKey(successor.Id))
                         {
                             var successorWbsItem = convertedItems[successor.Id];
-                            System.Diagnostics.Debug.WriteLine($"後続タスク WbsItem ID {successorWbsItem.Id} が見つかりました");
-                            
                             wbsItem.AddSuccessor(successorWbsItem);
-                            System.Diagnostics.Debug.WriteLine($"後続タスク ID {successorWbsItem.Id} を WbsItem ID {wbsItem.Id} に追加しました");
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine($"後続タスク ID {successor.Id} のWbsItemが見つかりません");
                         }
                     }
                 }
-                
-                System.Diagnostics.Debug.WriteLine($"WbsItem ID {wbsItem.Id} の依存関係設定完了: 先行タスク={wbsItem.Predecessors.Count}件, 後続タスク={wbsItem.Successors.Count}件");
             }
-            catch (Exception ex)
+            catch
             {
-                // 依存関係の設定でエラーが発生した場合は詳細ログを出力
-                System.Diagnostics.Debug.WriteLine($"WbsItem ID {wbsItem.Id} の依存関係設定でエラー: {ex.Message}");
+                // 依存関係の設定でエラーが発生した場合は無視して続行
             }
         }
     }

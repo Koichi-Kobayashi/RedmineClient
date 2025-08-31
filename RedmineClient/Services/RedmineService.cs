@@ -343,24 +343,13 @@ namespace RedmineClient.Services
                                 case "blocks":
                                     // precedes/blocks: 現在のチケットが関連チケットの前に来る
                                     // つまり、現在のチケットが関連チケットの先行タスク
-                                    System.Diagnostics.Debug.WriteLine($"precedes/blocks関係を処理中: Issue {issue.Id} -> Issue {relation.issue_to_id}");
                                     relatedIssue.AddDependency(issue, DependencyType.Predecessor);
-                                    System.Diagnostics.Debug.WriteLine($"依存関係を設定: Issue {relatedIssue.Id}.AddDependency({issue.Id}, Predecessor)");
-                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {issue.Id} の先行タスク数={issue.Predecessors.Count}, 後続タスク数={issue.Successors.Count}");
-                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {relatedIssue.Id} の先行タスク数={relatedIssue.Predecessors.Count}, 後続タスク数={relatedIssue.Successors.Count}");
                                     break;
                                 case "follows":
                                 case "blocked_by":
                                     // follows/blocked_by: 現在のチケットが関連チケットの後に来る
                                     // つまり、関連チケットが現在のチケットの先行タスク
-                                    System.Diagnostics.Debug.WriteLine($"follows/blocked_by関係を処理中: Issue {issue.Id} -> Issue {relation.issue_to_id}");
                                     issue.AddDependency(relatedIssue, DependencyType.Predecessor);
-                                    System.Diagnostics.Debug.WriteLine($"依存関係を設定: Issue {issue.Id}.AddDependency({relatedIssue.Id}, Predecessor)");
-                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {issue.Id} の先行タスク数={issue.Predecessors.Count}, 後続タスク数={issue.Successors.Count}");
-                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {relatedIssue.Id} の先行タスク数={relatedIssue.Predecessors.Count}, 後続タスク数={relatedIssue.Successors.Count}");
-                                    break;
-                                default:
-                                    System.Diagnostics.Debug.WriteLine($"未知の関係の種類: {relation.relation_type}");
                                     break;
                             }
                         }
