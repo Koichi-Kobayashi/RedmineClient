@@ -882,5 +882,54 @@ namespace RedmineClient.Models
             OnPropertyChanged(nameof(SuccessorDetails));
             OnPropertyChanged(nameof(SuccessorDisplayText));
         }
+
+        /// <summary>
+        /// オブジェクトの等価性を判定
+        /// </summary>
+        /// <param name="obj">比較対象のオブジェクト</param>
+        /// <returns>等しい場合はtrue</returns>
+        public override bool Equals(object? obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj is WbsItem other)
+            {
+                // IDが同じ場合は同じタスクとみなす
+                return Id == other.Id;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// ハッシュコードを取得
+        /// </summary>
+        /// <returns>ハッシュコード</returns>
+        public override int GetHashCode()
+        {
+            return Id?.GetHashCode() ?? 0;
+        }
+
+        /// <summary>
+        /// 等価演算子のオーバーライド
+        /// </summary>
+        /// <param name="left">左辺</param>
+        /// <param name="right">右辺</param>
+        /// <returns>等しい場合はtrue</returns>
+        public static bool operator ==(WbsItem? left, WbsItem? right)
+        {
+            if (left is null) return right is null;
+            return left.Equals(right);
+        }
+
+        /// <summary>
+        /// 不等価演算子のオーバーライド
+        /// </summary>
+        /// <param name="left">左辺</param>
+        /// <param name="right">右辺</param>
+        /// <returns>等しくない場合はtrue</returns>
+        public static bool operator !=(WbsItem? left, WbsItem? right)
+        {
+            return !(left == right);
+        }
     }
 }
