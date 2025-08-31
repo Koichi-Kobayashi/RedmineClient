@@ -725,18 +725,31 @@ namespace RedmineClient.Models
                 };
             }
 
-            // 新しく追加される依存関係から開始して循環参照をチェック
-            var visited = new HashSet<WbsItem>();
-            var recursionStack = new HashSet<WbsItem>();
-            var cyclePath = new List<WbsItem>();
-            
-            // 新しく追加される依存関係から開始して循環参照をチェック
-            var hasCycle = FindCyclePathFromNewDependency(newDependency, visited, recursionStack, cyclePath);
-            
+            // 新しく追加される依存関係が既に先行タスクまたは後続タスクとして存在する場合は循環参照
+            if (Predecessors.Contains(newDependency) || Successors.Contains(newDependency))
+            {
+                return new CircularDependencyInfo 
+                { 
+                    HasCycle = true, 
+                    CyclePath = new List<WbsItem> { this, newDependency, this } 
+                };
+            }
+
+            // 新しく追加される依存関係が現在のアイテムに戻ってくるかをチェック
+            if (newDependency.Successors.Contains(this) || newDependency.Predecessors.Contains(this))
+            {
+                return new CircularDependencyInfo 
+                { 
+                    HasCycle = true, 
+                    CyclePath = new List<WbsItem> { this, newDependency, this } 
+                };
+            }
+
+            // 循環参照なし
             return new CircularDependencyInfo 
             { 
-                HasCycle = hasCycle, 
-                CyclePath = cyclePath 
+                HasCycle = false, 
+                CyclePath = new List<WbsItem>() 
             };
         }
 
@@ -832,6 +845,13 @@ namespace RedmineClient.Models
 
             try
             {
+                // 新しく追加される依存関係が現在のアイテムに戻ってくるかをチェック
+                if (newDependency.Successors.Contains(this) || newDependency.Predecessors.Contains(this))
+                {
+                    cyclePath.Add(this);
+                    return true;
+                }
+
                 // 新しく追加される依存関係の後続タスクのみをチェック
                 foreach (var successor in newDependency.Successors)
                 {
@@ -844,13 +864,6 @@ namespace RedmineClient.Models
                 {
                     if (FindCyclePathFromNewDependency(predecessor, visited, recursionStack, cyclePath))
                         return true;
-                }
-
-                // 新しく追加される依存関係が現在のアイテムに戻ってくるかをチェック
-                if (newDependency.Successors.Contains(this) || newDependency.Predecessors.Contains(this))
-                {
-                    cyclePath.Add(this);
-                    return true;
                 }
 
                 cyclePath.RemoveAt(cyclePath.Count - 1);
