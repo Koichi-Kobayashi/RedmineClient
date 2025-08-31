@@ -585,17 +585,17 @@ namespace RedmineClient.Views.Pages
                             // プログレスメッセージを更新（5列ごと、より細かく更新）
                             if (columnCount % 5 == 0)
                             {
-                                // プログレス計算を修正：最初から正しく表示されるように
-                                var progressPercent = (int)((double)(columnCount + 1) / totalColumns * 100);
+                                // プログレス計算を修正：左端から正しく表示されるように
+                                var progressPercent = (int)((double)columnCount / totalColumns * 100);
                                 // 100%を超えないように制限
                                 progressPercent = Math.Min(progressPercent, 100);
                                 ViewModel.WbsProgress = progressPercent;
                                 ViewModel.WbsProgressMessage = $"日付列を生成中... ({progressPercent}%)";
-                                
+
                                 // UIの更新を確実にするために少し待機
                                 await Task.Delay(5);
                             }
-                            
+
                             var loopDate = startDate.AddDays(columnCount);
                             // 月が変わったかどうかをチェック
                             var isMonthStart = loopDate.Month != lastMonth;
