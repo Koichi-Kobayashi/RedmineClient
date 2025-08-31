@@ -1494,7 +1494,7 @@ namespace RedmineClient.Views.Pages
                 var selectedIndex = -1;
                 for (int i = 0; i < WbsDataGrid.Items.Count; i++)
                 {
-                    if (WbsDataGrid.Items[i] == ViewModel.SelectedItem)
+                    if (WbsDataGrid.Items[i].Equals(ViewModel.SelectedItem))
                     {
                         selectedIndex = i;
                         break;
