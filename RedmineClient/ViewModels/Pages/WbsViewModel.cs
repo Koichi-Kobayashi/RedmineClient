@@ -509,11 +509,25 @@ namespace RedmineClient.ViewModels.Pages
 
             try
             {
-                // Redmine接続状態の確認は削除（テスト接続を削除したため）
+                // Redmine接続状態の確認
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     WbsProgress = 10;
-                    WbsProgressMessage = "プロジェクト情報を初期化中...";
+                    WbsProgressMessage = "Redmine接続状態を確認中...";
+                    
+                    // Redmine接続状態を確認
+                    if (!string.IsNullOrEmpty(AppConfig.RedmineHost) && !string.IsNullOrEmpty(AppConfig.ApiKey))
+                    {
+                        IsRedmineConnected = true;
+                        ConnectionStatus = "接続済み";
+                        System.Diagnostics.Debug.WriteLine($"Redmine接続確認: Host={AppConfig.RedmineHost}, 接続状態={IsRedmineConnected}");
+                    }
+                    else
+                    {
+                        IsRedmineConnected = false;
+                        ConnectionStatus = "未接続";
+                        System.Diagnostics.Debug.WriteLine("Redmine接続情報が不足しています");
+                    }
                 });
 
                 // プロジェクト選択の初期化
