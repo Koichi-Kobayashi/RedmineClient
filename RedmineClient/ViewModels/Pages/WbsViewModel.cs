@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Redmine.Net.Api.Types;
 using RedmineClient.Services;
+using RedmineClient.ViewModels;
 using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Windows;
 using Wpf.Ui.Abstractions.Controls;
@@ -152,6 +153,12 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         [ObservableProperty]
         private bool _isDateChangeWatchingEnabled = false;
+
+        /// <summary>
+        /// スナックバーメッセージのコレクション
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<SnackbarMessage> _snackbarMessages = new();
 
         /// <summary>
         /// 日付変更の監視を開始する
@@ -1599,6 +1606,10 @@ namespace RedmineClient.ViewModels.Pages
             }
             catch (InvalidOperationException ex)
             {
+                // デバッグログ：例外の詳細を出力
+                System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: InvalidOperationException caught: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Stack trace: {ex.StackTrace}");
+
                 // 循環参照などのエラーが発生した場合はユーザーに通知
                 if (ex.Message.Contains("循環参照"))
                 {
@@ -1612,10 +1623,35 @@ namespace RedmineClient.ViewModels.Pages
                     };
                     SnackbarMessages.Add(message);
                 }
+                else
+                {
+                    // その他のInvalidOperationExceptionもスナックバーで表示
+                    var message = new SnackbarMessage
+                    {
+                        Title = "依存関係エラー",
+                        Message = ex.Message,
+                        appearance = Wpf.Ui.Controls.ControlAppearance.Caution,
+                        timeSpan = TimeSpan.FromSeconds(5)
+                    };
+                    SnackbarMessages.Add(message);
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // その他のエラーが発生した場合は無視
+                // デバッグログ：一般的な例外の詳細を出力
+                System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: General Exception caught: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Exception type: {ex.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Stack trace: {ex.StackTrace}");
+
+                // 一般的なエラーもスナックバーで表示
+                var message = new SnackbarMessage
+                {
+                    Title = "エラー",
+                    Message = $"依存関係の設定中にエラーが発生しました: {ex.Message}",
+                    appearance = Wpf.Ui.Controls.ControlAppearance.Danger,
+                    timeSpan = TimeSpan.FromSeconds(5)
+                };
+                SnackbarMessages.Add(message);
             }
         }
 

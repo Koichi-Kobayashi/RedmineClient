@@ -518,24 +518,35 @@ namespace RedmineClient.Models
         {
             if (predecessor == null || predecessor == this) return;
 
+            // デバッグログ：既存の先行タスクかどうかをチェック
+            bool isAlreadyPredecessor = Predecessors.Contains(predecessor);
+            System.Diagnostics.Debug.WriteLine($"AddPredecessor: {Title} -> {predecessor.Title}, Already exists: {isAlreadyPredecessor}");
+
+            // 既存の先行タスクの場合は何もしない
+            if (isAlreadyPredecessor)
+            {
+                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Skipping already existing predecessor {predecessor.Title} for {Title}");
+                return;
+            }
+
             // 循環参照をチェック
+            System.Diagnostics.Debug.WriteLine($"AddPredecessor: Checking circular dependency for {Title} -> {predecessor.Title}");
             var cycleInfo = GetCircularDependencyInfo(predecessor);
             if (cycleInfo.HasCycle)
             {
+                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Circular dependency detected: {cycleInfo.GetDescription()}");
                 throw new InvalidOperationException($"先行タスク「{predecessor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
             }
 
-            if (!Predecessors.Contains(predecessor))
-            {
-                Predecessors.Add(predecessor);
-                
-                predecessor.AddSuccessor(this);
-                
-                OnPropertyChanged(nameof(HasPredecessors));
-                OnPropertyChanged(nameof(PredecessorCount));
-                OnPropertyChanged(nameof(PredecessorDetails));
-                OnPropertyChanged(nameof(PredecessorDisplayText));
-            }
+            System.Diagnostics.Debug.WriteLine($"AddPredecessor: Adding predecessor {predecessor.Title} to {Title}");
+            Predecessors.Add(predecessor);
+            
+            predecessor.AddSuccessor(this);
+            
+            OnPropertyChanged(nameof(HasPredecessors));
+            OnPropertyChanged(nameof(PredecessorCount));
+            OnPropertyChanged(nameof(PredecessorDetails));
+            OnPropertyChanged(nameof(PredecessorDisplayText));
         }
 
         /// <summary>
@@ -562,22 +573,33 @@ namespace RedmineClient.Models
         {
             if (successor == null || successor == this) return;
 
+            // デバッグログ：既存の後続タスクかどうかをチェック
+            bool isAlreadySuccessor = Successors.Contains(successor);
+            System.Diagnostics.Debug.WriteLine($"AddSuccessor: {Title} -> {successor.Title}, Already exists: {isAlreadySuccessor}");
+
+            // 既存の後続タスクの場合は何もしない
+            if (isAlreadySuccessor)
+            {
+                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Skipping already existing successor {successor.Title} for {Title}");
+                return;
+            }
+
             // 循環参照をチェック
+            System.Diagnostics.Debug.WriteLine($"AddSuccessor: Checking circular dependency for {Title} -> {successor.Title}");
             var cycleInfo = GetCircularDependencyInfo(successor);
             if (cycleInfo.HasCycle)
             {
+                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Circular dependency detected: {cycleInfo.GetDescription()}");
                 throw new InvalidOperationException($"後続タスク「{successor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
             }
 
-            if (!Successors.Contains(successor))
-            {
-                Successors.Add(successor);
-                successor.AddPredecessor(this);
-                OnPropertyChanged(nameof(HasSuccessors));
-                OnPropertyChanged(nameof(SuccessorCount));
-                OnPropertyChanged(nameof(SuccessorDetails));
-                OnPropertyChanged(nameof(SuccessorDisplayText));
-            }
+            System.Diagnostics.Debug.WriteLine($"AddSuccessor: Adding successor {successor.Title} to {Title}");
+            Successors.Add(successor);
+            successor.AddPredecessor(this);
+            OnPropertyChanged(nameof(HasSuccessors));
+            OnPropertyChanged(nameof(SuccessorCount));
+            OnPropertyChanged(nameof(SuccessorDetails));
+            OnPropertyChanged(nameof(SuccessorDisplayText));
         }
 
         /// <summary>
