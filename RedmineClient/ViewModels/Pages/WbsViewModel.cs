@@ -3238,7 +3238,7 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
-                // 先行タスクを設定
+                // 先行タスクを設定（初期化時は循環参照チェックをスキップ）
                 if (issue.Predecessors != null)
                 {
                     foreach (var predecessor in issue.Predecessors)
@@ -3246,12 +3246,12 @@ namespace RedmineClient.ViewModels.Pages
                         if (convertedItems.ContainsKey(predecessor.Id))
                         {
                             var predecessorWbsItem = convertedItems[predecessor.Id];
-                            wbsItem.AddPredecessor(predecessorWbsItem);
+                            wbsItem.AddPredecessor(predecessorWbsItem, skipReciprocalCall: false, skipCycleCheck: true);
                         }
                     }
                 }
 
-                // 後続タスクを設定
+                // 後続タスクを設定（初期化時は循環参照チェックをスキップ）
                 if (issue.Successors != null)
                 {
                     foreach (var successor in issue.Successors)
@@ -3259,7 +3259,7 @@ namespace RedmineClient.ViewModels.Pages
                         if (convertedItems.ContainsKey(successor.Id))
                         {
                             var successorWbsItem = convertedItems[successor.Id];
-                            wbsItem.AddSuccessor(successorWbsItem);
+                            wbsItem.AddSuccessor(successorWbsItem, skipReciprocalCall: false, skipCycleCheck: true);
                         }
                     }
                 }
