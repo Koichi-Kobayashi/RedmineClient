@@ -33,11 +33,11 @@ namespace RedmineClient.Helpers
                 }
                 else
                 {
-                    return new SolidColorBrush(Colors.LightBlue); // 25%未満：薄青
+                    return new SolidColorBrush(Colors.LightGreen); // 25%未満：薄緑
                 }
             }
 
-            return new SolidColorBrush(Colors.LightBlue); // デフォルト：薄青
+            return new SolidColorBrush(Colors.LightGreen); // デフォルト：薄緑
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
