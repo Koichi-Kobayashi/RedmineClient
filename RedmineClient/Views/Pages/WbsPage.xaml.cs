@@ -1508,15 +1508,15 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// DataGridのLoadedイベントハンドラー（イベント用のラッパー）
         /// </summary>
-        private void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
+        private async void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
         {
-            if (sender is System.Windows.Controls.DataGrid dataGrid)
+            if (sender is DataGrid dataGrid)
             {
                 // 描画完了を待ってからプログレスバーとメッセージを非表示にする
-                WaitForRenderComplete(dataGrid);
+                await WaitForRenderComplete(dataGrid);
 
                 // 描画完了後にプログレスバーとメッセージを非表示にする
-                Dispatcher.InvokeAsync(() =>
+                await Dispatcher.InvokeAsync(() =>
                 {
                     if (ViewModel.IsWbsLoading)
                     {
@@ -1530,17 +1530,17 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// 「UIキューが描画まで進み、アイドルになる」まで待つユーティリティ
         /// </summary>
-        public static void WaitForRenderComplete(FrameworkElement element)
+        public static async Task WaitForRenderComplete(FrameworkElement element)
         {
             // レイアウト計算を一度進める
-            Dispatcher.Yield(DispatcherPriority.Background);
+            await Dispatcher.Yield(DispatcherPriority.Background);
             element.UpdateLayout();
 
             // Render 優先度の処理が流れ切るのを待つ
-            element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
             // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
-            element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         }
 
         /// <summary>
