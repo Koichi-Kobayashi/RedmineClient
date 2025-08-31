@@ -33,9 +33,6 @@ namespace RedmineClient.Views.Pages
             // 初期化完了後にタスク詳細の幅を設定
             this.Loaded += WbsPage_InitialLoaded;
 
-            // DataGridのLoadedイベントでも日付列の生成を試行
-            this.Loaded += WbsPage_DataGridLoaded;
-
             // 祝日データを初期化（非同期で実行、エラーが発生しても続行）
             _ = Task.Run(async () =>
             {
@@ -224,12 +221,7 @@ namespace RedmineClient.Views.Pages
             this.Loaded -= WbsPage_InitialLoaded;
         }
 
-        private void WbsPage_DataGridLoaded(object sender, RoutedEventArgs e)
-        {
-            // DataGridの初期化完了後に日付列を生成
-            // このイベントは一度だけ実行
-            this.Loaded -= WbsPage_DataGridLoaded;
-        }
+
 
         private void ScheduleStartYearMonthComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -749,9 +741,6 @@ namespace RedmineClient.Views.Pages
         protected override void OnInitialized(EventArgs e)
         {
             base.OnInitialized(e);
-
-            // ページが初期化された後にウィンドウのClosingイベントを登録
-            this.Loaded += WbsPage_Loaded;
         }
 
         private void WbsPage_Loaded(object sender, RoutedEventArgs e)
@@ -1517,61 +1506,17 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
-        /// DataGridの日付テキストボックスでフォーカスが失われた時の処理
+        /// DataGridのLoadedイベントハンドラー（イベント用のラッパー）
         /// </summary>
-        private void DateTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            // DatePickerを使用するため、このメソッドは不要
-            // 日付の検証はDatePickerで自動的に行われる
-        }
-
-        /// <summary>
-        /// 日付形式が有効かどうかをチェックする
-        /// </summary>
-        /// <param name="dateText">チェックする日付文字列</param>
-        /// <returns>有効な場合はtrue</returns>
-        private bool IsValidDateFormat(string dateText)
-        {
-            try
-            {
-                // DatePickerを使用するため、このメソッドは不要
-                // 日付の検証はDatePickerで自動的に行われる
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// タスクスケジュール変更イベントを発行する
-        /// </summary>
-        private void OnTaskScheduleChanged(WbsItem task, DateTime oldStartDate, DateTime newStartDate, DateTime newEndDate)
-        {
-            try
-            {
-                // DatePickerを使用するため、このメソッドは不要
-                // 日付の変更はDatePickerで自動的に処理される
-            }
-            catch (Exception)
-            {
-                // スケジュール変更イベント処理でエラーが発生した場合は無視
-            }
-        }
-
-        /// <summary>
-        /// DataGridのLoadedイベントハンドラー（非同期処理用）
-        /// </summary>
-        private async Task WbsDataGrid_LoadedAsync(object sender, RoutedEventArgs e)
+        private void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.DataGrid dataGrid)
             {
                 // 描画完了を待ってからプログレスバーとメッセージを非表示にする
-                await WaitForRenderComplete(dataGrid);
+                WaitForRenderComplete(dataGrid);
 
                 // 描画完了後にプログレスバーとメッセージを非表示にする
-                await Dispatcher.InvokeAsync(() =>
+                Dispatcher.InvokeAsync(() =>
                 {
                     if (ViewModel.IsWbsLoading)
                     {
@@ -1583,28 +1528,19 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
-        /// DataGridのLoadedイベントハンドラー（イベント用のラッパー）
-        /// </summary>
-        private void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
-        {
-            // 非同期処理を開始（完了を待たない）
-            _ = WbsDataGrid_LoadedAsync(sender, e);
-        }
-
-        /// <summary>
         /// 「UIキューが描画まで進み、アイドルになる」まで待つユーティリティ
         /// </summary>
-        public static async Task WaitForRenderComplete(FrameworkElement element)
+        public static void WaitForRenderComplete(FrameworkElement element)
         {
             // レイアウト計算を一度進める
-            await Dispatcher.Yield(DispatcherPriority.Background);
+            Dispatcher.Yield(DispatcherPriority.Background);
             element.UpdateLayout();
 
             // Render 優先度の処理が流れ切るのを待つ
-            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+            element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
             // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
-            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         }
 
         /// <summary>
