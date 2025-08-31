@@ -30,23 +30,9 @@ namespace RedmineClient.Views.Pages
 
             InitializeComponent();
 
-            // 初期化完了後にタスク詳細の幅を設定
+            // 基本的なイベントハンドラーのみ登録
             this.Loaded += WbsPage_InitialLoaded;
-
-            // 祝日データを初期化（非同期で実行、エラーが発生しても続行）
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await InitializeHolidayDataAsync();
-                }
-                catch (Exception)
-                {
-                    // 祝日データ初期化エラーが発生した場合は無視して続行
-                }
-            });
-
-            // プロジェクト選択変更時のイベントを登録
+            this.KeyDown += WbsPage_KeyDown;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             // 日付変更の監視を有効化
@@ -55,57 +41,31 @@ namespace RedmineClient.Views.Pages
             // ViewModelの初期化処理を開始
             _ = Task.Run(async () => 
             {
-                await ViewModel.InitializeViewModel();
-                
-                // 初期化完了後のデバッグ出力
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                try
                 {
-                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
-                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
-                });
+                    await ViewModel.InitializeViewModel();
+                    
+                    // 初期化完了後のデバッグ出力
+                    if (Application.Current != null)
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
+                            System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化エラー: {ex.Message}");
+                }
             });
 
-            // キーボードショートカットを設定
-            this.KeyDown += WbsPage_KeyDown;
-
-            // DataGridにフォーカスを設定してキーボードイベントを受け取れるようにする
-            this.Loaded += (s, e) =>
+            // アプリケーション終了時の処理を追加（安全にチェック）
+            if (Application.Current?.MainWindow != null)
             {
-                WbsDataGrid.Focus();
-                // DataGridのキーボードイベントを確実に設定
-                WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
-                WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
-
-                // DataGridのサイズ変更時に矢印を再描画
-                WbsDataGrid.SizeChanged += WbsDataGrid_SizeChanged;
-
-                // DataGridのLoadedイベントを登録（プログレス表示制御用）
-                WbsDataGrid.Loaded += WbsDataGrid_Loaded;
-
-                // DataGridの表示状態変更を監視してDependencyArrowCanvasと同期
-                WbsDataGrid.IsVisibleChanged += WbsDataGrid_IsVisibleChanged;
-
-                // プロジェクト選択の初期化
-                if (ViewModel?.AvailableProjects != null && ViewModel.AvailableProjects.Any())
-                {
-                    ProjectComboBox.SelectedIndex = 0;
-                }
-
-                // スケジュール開始年月の初期化
-                InitializeScheduleStartYearMonth();
-
-                // 依存関係矢印の初期化（重複初期化を防ぐ）
-                InitializeDependencyArrows();
-
-                // DependencyArrowCanvasの表示状態をDataGridと同期（初期化時のみ）
-                if (DependencyArrowCanvas != null && WbsDataGrid != null)
-                {
-                    DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
-                }
-            };
-
-            // アプリケーション終了時の処理を追加
-            Application.Current.MainWindow.Closing += MainWindow_Closing;
+                Application.Current.MainWindow.Closing += MainWindow_Closing;
+            }
 
             // DatePickerのプリロードを開始
             _ = Task.Run(async () => await PreloadDatePickersAsync());
@@ -218,59 +178,101 @@ namespace RedmineClient.Views.Pages
                 InitializeYearMonthOptions();
 
                 // プロジェクト選択の初期化
+                if (ViewModel?.AvailableProjects != null && ViewModel.AvailableProjects.Any())
+                {
+                    ProjectComboBox.SelectedIndex = 0;
+                }
 
-                // Redmineに接続してプロジェクトを取得
-                if (ViewModel.AvailableProjects.Count == 0)
+                // スケジュール開始年月の初期化
+                InitializeScheduleStartYearMonth();
+
+                // 依存関係矢印の初期化
+                InitializeDependencyArrows();
+
+                // DataGridの初期化処理を統合実行
+                InitializeDataGridAsync();
+
+                // 祝日データを初期化（非同期で実行、エラーが発生しても続行）
+                _ = Task.Run(async () =>
                 {
                     try
                     {
-                        // Redmine接続テストを実行してプロジェクトを取得（非同期で実行）
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await ViewModel.TestRedmineConnection();
-                            }
-                            catch
-                            {
-                                // Redmine接続テストに失敗
-                            }
-                        });
+                        await InitializeHolidayDataAsync();
                     }
-                    catch
+                    catch (Exception)
                     {
-                        // Redmine接続テストの開始に失敗
+                        // 祝日データ初期化エラーが発生した場合は無視して続行
                     }
-                }
+                });
 
-                // プロジェクトが選択されている場合、自動的にチケット一覧を取得
-                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
-                {
-                    try
-                    {
-                        ViewModel.LoadRedmineData();
-                    }
-                    catch
-                    {
-                        // チケット一覧の自動取得に失敗
-                    }
-                }
-
-                // DependencyArrowCanvasの表示状態をDataGridと同期（初期化時のみ）
-                if (DependencyArrowCanvas != null && WbsDataGrid != null)
-                {
-                    DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
-                }
+                // このイベントは一度だけ実行
+                this.Loaded -= WbsPage_InitialLoaded;
             }
             catch (Exception ex)
             {
                 // エラーが発生した場合はログ出力して処理を続行
                 System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded error: {ex.Message}");
             }
-            finally
+        }
+
+        /// <summary>
+        /// DataGridの初期化処理を統合実行する
+        /// </summary>
+        private async void InitializeDataGridAsync()
+        {
+            try
             {
-                // このイベントは一度だけ実行
-                this.Loaded -= WbsPage_InitialLoaded;
+                // DataGridのイベントハンドラーを設定
+                if (WbsDataGrid != null)
+                {
+                    WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
+                    WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
+                    WbsDataGrid.SizeChanged += WbsDataGrid_SizeChanged;
+                    WbsDataGrid.Loaded += WbsDataGrid_Loaded;
+                    WbsDataGrid.IsVisibleChanged += WbsDataGrid_IsVisibleChanged;
+                }
+
+                // ViewModelの初期化が完了するまで待機
+                while (ViewModel.FlattenedWbsItems == null)
+                {
+                    await Task.Delay(100);
+                }
+
+                // Redmineデータの読み込みと日付カラム生成を順次実行
+                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+                {
+                    try
+                    {
+                        // Redmineデータを読み込み
+                        await ViewModel.LoadRedmineDataAsync();
+                        
+                        // データ読み込み完了後、日付カラムを生成
+                        if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                        {
+                            GenerateDateColumns();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Redmineデータ読み込みエラー: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    // プロジェクトが選択されていない場合でも、日付カラムは生成
+                    if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                    {
+                        GenerateDateColumns();
+                    }
+                }
+
+                // 初期化完了後のデバッグ出力
+                System.Diagnostics.Debug.WriteLine($"DataGrid初期化完了: FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"DataGrid初期化完了: WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DataGrid初期化エラー: {ex.Message}");
             }
         }
 
@@ -1793,39 +1795,42 @@ namespace RedmineClient.Views.Pages
                     }
 
                     // UIスレッドでDatePickerの初期化を実行
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    if (Application.Current != null)
                     {
-                        try
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            // 基本的なDatePickerを初期化してカレンダーコンポーネントをプリロード
-                            var datePicker = new DatePicker
+                            try
                             {
-                                SelectedDate = DateTime.Today,
-                                FirstDayOfWeek = DayOfWeek.Monday,
-                                IsTodayHighlighted = true,
-                                SelectedDateFormat = DatePickerFormat.Short
-                            };
-
-                            // カレンダーを表示してプリロード
-                            datePicker.IsDropDownOpen = true;
-
-                            // 少し待ってから閉じる
-                            _ = Task.Delay(150).ContinueWith(_ =>
-                            {
-                                if (Application.Current != null)
+                                // 基本的なDatePickerを初期化してカレンダーコンポーネントをプリロード
+                                var datePicker = new DatePicker
                                 {
-                                    Application.Current.Dispatcher.Invoke(() =>
+                                    SelectedDate = DateTime.Today,
+                                    FirstDayOfWeek = DayOfWeek.Monday,
+                                    IsTodayHighlighted = true,
+                                    SelectedDateFormat = DatePickerFormat.Short
+                                };
+
+                                // カレンダーを表示してプリロード
+                                datePicker.IsDropDownOpen = true;
+
+                                // 少し待ってから閉じる
+                                _ = Task.Delay(150).ContinueWith(_ =>
+                                {
+                                    if (Application.Current != null)
                                     {
-                                        datePicker.IsDropDownOpen = false;
-                                    });
-                                }
-                            });
-                        }
-                        catch (Exception)
-                        {
-                            // 静的DatePickerプリロード中にエラーが発生した場合は無視
-                        }
-                    });
+                                        Application.Current.Dispatcher.Invoke(() =>
+                                        {
+                                            datePicker.IsDropDownOpen = false;
+                                        });
+                                    }
+                                });
+                            }
+                            catch (Exception)
+                            {
+                                // 静的DatePickerプリロード中にエラーが発生した場合は無視
+                            }
+                        });
+                    }
                 }
                 catch (Exception)
                 {
@@ -1843,6 +1848,9 @@ namespace RedmineClient.Views.Pages
             {
                 try
                 {
+                    // アプリケーションが終了している場合は何もしない
+                    if (Application.Current == null) return;
+
                     // UIスレッドでDatePickerの初期化を実行
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
@@ -1883,13 +1891,16 @@ namespace RedmineClient.Views.Pages
                             // 少し待ってから閉じる
                             _ = Task.Delay(200).ContinueWith(_ =>
                             {
-                                Application.Current.Dispatcher.Invoke(() =>
+                                if (Application.Current != null)
                                 {
-                                    foreach (var datePicker in datePickers)
+                                    Application.Current.Dispatcher.Invoke(() =>
                                     {
-                                        datePicker.IsDropDownOpen = false;
-                                    }
-                                });
+                                        foreach (var datePicker in datePickers)
+                                        {
+                                            datePicker.IsDropDownOpen = false;
+                                        }
+                                    });
+                                }
                             });
                         }
                         catch (Exception)
@@ -1912,6 +1923,9 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
+                // アプリケーションが既に終了している場合は何もしない
+                if (Application.Current == null) return;
+
                 // 未保存の変更がある場合は保存処理を実行
                 if (ViewModel != null)
                 {
@@ -1919,9 +1933,10 @@ namespace RedmineClient.Views.Pages
                     await ViewModel.SavePendingChangesAsync();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // アプリケーション終了時の保存処理でエラーが発生した場合は無視
+                // アプリケーション終了時の保存処理でエラーが発生した場合はログ出力のみ
+                System.Diagnostics.Debug.WriteLine($"MainWindow_Closing error: {ex.Message}");
             }
         }
 
