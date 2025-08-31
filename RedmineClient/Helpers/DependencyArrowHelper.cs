@@ -216,5 +216,146 @@ namespace RedmineClient.Helpers
             // 少なくとも一方が表示範囲内にあれば矢印を表示
             return predecessorEndVisible || successorStartVisible;
         }
+
+        /// <summary>
+        /// 循環参照の詳細情報を取得
+        /// </summary>
+        /// <param name="dependencies">依存関係辞書</param>
+        /// <returns>循環参照の詳細情報</returns>
+        public static CircularDependencyInfo GetCircularDependencyInfo(Dictionary<string, List<string>> dependencies)
+        {
+            var visited = new HashSet<string>();
+            var recursionStack = new HashSet<string>();
+            var cyclePath = new List<string>();
+
+            foreach (var taskId in dependencies.Keys)
+            {
+                if (FindCyclePath(taskId, dependencies, visited, recursionStack, cyclePath))
+                {
+                    return new CircularDependencyInfo
+                    {
+                        HasCycle = true,
+                        CyclePath = cyclePath
+                    };
+                }
+            }
+
+            return new CircularDependencyInfo
+            {
+                HasCycle = false,
+                CyclePath = new List<string>()
+            };
+        }
+
+        /// <summary>
+        /// 循環参照のパスを検索
+        /// </summary>
+        /// <param name="taskId">現在チェック中のタスクID</param>
+        /// <param name="dependencies">依存関係辞書</param>
+        /// <param name="visited">既に訪問済みのタスクID</param>
+        /// <param name="recursionStack">現在の再帰スタック</param>
+        /// <param name="cyclePath">循環参照のパス</param>
+        /// <returns>循環参照が存在する場合はtrue</returns>
+        private static bool FindCyclePath(
+            string taskId,
+            Dictionary<string, List<string>> dependencies,
+            HashSet<string> visited,
+            HashSet<string> recursionStack,
+            List<string> cyclePath)
+        {
+            if (recursionStack.Contains(taskId))
+            {
+                // 循環参照のパスを構築
+                var cycleStartIndex = cyclePath.IndexOf(taskId);
+                if (cycleStartIndex >= 0)
+                {
+                    cyclePath.RemoveRange(0, cycleStartIndex);
+                }
+                cyclePath.Add(taskId);
+                return true;
+            }
+
+            if (visited.Contains(taskId))
+                return false;
+
+            visited.Add(taskId);
+            recursionStack.Add(taskId);
+            cyclePath.Add(taskId);
+
+            try
+            {
+                if (dependencies.ContainsKey(taskId))
+                {
+                    foreach (var successorId in dependencies[taskId])
+                    {
+                        if (FindCyclePath(successorId, dependencies, visited, recursionStack, cyclePath))
+                            return true;
+                    }
+                }
+
+                cyclePath.RemoveAt(cyclePath.Count - 1);
+                return false;
+            }
+            finally
+            {
+                recursionStack.Remove(taskId);
+            }
+        }
+
+        /// <summary>
+        /// 循環参照の詳細情報を表すクラス
+        /// </summary>
+        public class CircularDependencyInfo
+        {
+            /// <summary>
+            /// 循環参照が存在するかどうか
+            /// </summary>
+            public bool HasCycle { get; set; }
+
+            /// <summary>
+            /// 循環参照のパス（循環参照が存在する場合）
+            /// </summary>
+            public List<string> CyclePath { get; set; } = new List<string>();
+
+            /// <summary>
+            /// 循環参照の説明メッセージ
+            /// </summary>
+            public string GetDescription()
+            {
+                if (!HasCycle) return "循環参照はありません。";
+
+                var pathDescription = string.Join(" → ", CyclePath);
+                return $"循環参照が検出されました: {pathDescription}";
+            }
+        }
+
+        /// <summary>
+        /// WbsItemのリスト全体で循環参照をチェック
+        /// </summary>
+        /// <param name="wbsItems">WbsItemのリスト</param>
+        /// <returns>循環参照の詳細情報</returns>
+        public static CircularDependencyInfo CheckCircularDependenciesInWbsItems(IEnumerable<WbsItem> wbsItems)
+        {
+            var dependencies = BuildDependencyDictionary(wbsItems);
+            return GetCircularDependencyInfo(dependencies);
+        }
+
+        /// <summary>
+        /// 特定のWbsItemを追加した際に循環参照が発生するかチェック
+        /// </summary>
+        /// <param name="existingItems">既存のWbsItemのリスト</param>
+        /// <param name="newItem">新しく追加しようとしているWbsItem</param>
+        /// <returns>循環参照の詳細情報</returns>
+        public static CircularDependencyInfo CheckCircularDependenciesForNewItem(IEnumerable<WbsItem> existingItems, WbsItem newItem)
+        {
+            if (newItem == null)
+                return new CircularDependencyInfo { HasCycle = false, CyclePath = new List<string>() };
+
+            // 既存アイテムと新規アイテムを組み合わせてチェック
+            var allItems = existingItems.Concat(new[] { newItem });
+            var dependencies = BuildDependencyDictionary(allItems);
+
+            return GetCircularDependencyInfo(dependencies);
+        }
     }
 }

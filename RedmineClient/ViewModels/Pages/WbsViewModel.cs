@@ -1597,9 +1597,21 @@ namespace RedmineClient.ViewModels.Pages
                     }
                 }
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException ex)
             {
-                // 循環参照などのエラーが発生した場合は無視
+                // 循環参照などのエラーが発生した場合はユーザーに通知
+                if (ex.Message.Contains("循環参照"))
+                {
+                    // スナックバーメッセージで循環参照エラーを表示
+                    var message = new SnackbarMessage
+                    {
+                        Title = "循環参照エラー",
+                        Message = ex.Message,
+                        appearance = Wpf.Ui.Controls.ControlAppearance.Danger,
+                        timeSpan = TimeSpan.FromSeconds(5)
+                    };
+                    SnackbarMessages.Add(message);
+                }
             }
             catch (Exception)
             {
