@@ -87,27 +87,99 @@ namespace RedmineClient.Services
         {
             try
             {
-                // 実行ファイルのディレクトリからAssetsフォルダーを検索
-                var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var assetsPath = Path.Combine(exeDir, "Assets", "syukujitsu.csv");
-
-                // プロジェクトルートのAssetsフォルダーもフォールバックとして検索
-                if (!File.Exists(assetsPath))
+                // 複数の方法でファイルパスを解決
+                string? assetsPath = null;
+                
+                // 方法1: 実行ファイルのディレクトリからAssetsフォルダーを検索
+                try
                 {
-                    var projectDir = Directory.GetCurrentDirectory();
-                    var fallbackPath = Path.Combine(projectDir, "Assets", "syukujitsu.csv");
-                    
-                    // フォールバックパスが存在する場合のみ設定
-                    if (File.Exists(fallbackPath))
+                    var assembly = Assembly.GetExecutingAssembly();
+                    if (assembly.Location != null)
                     {
-                        assetsPath = fallbackPath;
+                        var exeDir = Path.GetDirectoryName(assembly.Location);
+                        if (!string.IsNullOrEmpty(exeDir))
+                        {
+                            var path = Path.Combine(exeDir, "Assets", "syukujitsu.csv");
+                            if (File.Exists(path))
+                            {
+                                assetsPath = path;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"アセンブリの場所取得でエラー: {ex.Message}");
+                }
+
+                // 方法2: プロジェクトルートのAssetsフォルダーを検索
+                if (string.IsNullOrEmpty(assetsPath))
+                {
+                    try
+                    {
+                        var projectDir = Directory.GetCurrentDirectory();
+                        var path = Path.Combine(projectDir, "Assets", "syukujitsu.csv");
+                        if (File.Exists(path))
+                        {
+                            assetsPath = path;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"カレントディレクトリ取得でエラー: {ex.Message}");
+                    }
+                }
+
+                // 方法3: アプリケーションのベースディレクトリを検索
+                if (string.IsNullOrEmpty(assetsPath))
+                {
+                    try
+                    {
+                        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                        if (!string.IsNullOrEmpty(baseDir))
+                        {
+                            var path = Path.Combine(baseDir, "Assets", "syukujitsu.csv");
+                            if (File.Exists(path))
+                            {
+                                assetsPath = path;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"ベースディレクトリ取得でエラー: {ex.Message}");
+                    }
+                }
+
+                // 方法4: 環境変数からパスを取得
+                if (string.IsNullOrEmpty(assetsPath))
+                {
+                    try
+                    {
+                        var envPath = Environment.GetEnvironmentVariable("REDMINE_CLIENT_ASSETS");
+                        if (!string.IsNullOrEmpty(envPath))
+                        {
+                            var path = Path.Combine(envPath, "syukujitsu.csv");
+                            if (File.Exists(path))
+                            {
+                                assetsPath = path;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"環境変数取得でエラー: {ex.Message}");
                     }
                 }
 
                 // ファイルが存在しない場合は正常終了（エラーではない）
-                if (!File.Exists(assetsPath))
+                if (string.IsNullOrEmpty(assetsPath) || !File.Exists(assetsPath))
                 {
                     System.Diagnostics.Debug.WriteLine("祝日データファイルが見つかりません: syukujitsu.csv");
+                    System.Diagnostics.Debug.WriteLine("検索したパス:");
+                    System.Diagnostics.Debug.WriteLine($"  実行ファイルディレクトリ: {Assembly.GetExecutingAssembly().Location ?? "null"}");
+                    System.Diagnostics.Debug.WriteLine($"  カレントディレクトリ: {Directory.GetCurrentDirectory()}");
+                    System.Diagnostics.Debug.WriteLine($"  ベースディレクトリ: {AppDomain.CurrentDomain.BaseDirectory}");
                     return false;
                 }
 

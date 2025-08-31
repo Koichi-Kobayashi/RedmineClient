@@ -27,10 +27,22 @@ namespace RedmineClient
             .CreateDefaultBuilder()
             .ConfigureAppConfiguration(c =>
             {
-                var entryAssembly = Assembly.GetEntryAssembly();
-                if (entryAssembly?.Location != null)
+                try
                 {
-                    c.SetBasePath(Path.GetDirectoryName(entryAssembly.Location));
+                    var entryAssembly = Assembly.GetEntryAssembly();
+                    if (entryAssembly?.Location != null)
+                    {
+                        var basePath = Path.GetDirectoryName(entryAssembly.Location);
+                        if (!string.IsNullOrEmpty(basePath))
+                        {
+                            c.SetBasePath(basePath);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // アセンブリの場所取得でエラーが発生した場合は、デフォルトの設定を使用
+                    System.Diagnostics.Debug.WriteLine($"アプリケーション設定のベースパス設定でエラー: {ex.Message}");
                 }
             })
             .ConfigureServices((context, services) =>
