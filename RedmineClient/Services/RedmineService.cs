@@ -468,21 +468,62 @@ namespace RedmineClient.Services
         /// </summary>
         public async Task UpdateIssueAsync(Issue issue, CancellationToken cancellationToken = default)
         {
-            try
+            const int maxRetries = 3;
+            const int retryDelayMs = 1000;
+            
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+                try
+                {
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
 
-                // 修正: RedmineManager.Update<T> を使用
-                await Task.Run(() => _redmineManager.Update<Issue>(issue.Id.ToString(), issue), cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                throw new RedmineApiException($"チケットの更新がタイムアウトしました（{_timeoutSeconds}秒）");
-            }
-            catch (Exception ex)
-            {
-                throw new RedmineApiException($"チケットの更新に失敗しました: {ex.Message}", ex);
+                    // デバッグ情報を出力
+                    System.Diagnostics.Debug.WriteLine($"チケット更新試行 {attempt}/{maxRetries}: ID={issue.Id}, 開始日={issue.StartDate:yyyy/MM/dd}, 終了日={issue.DueDate:yyyy/MM/dd}");
+
+                    // 修正: RedmineManager.Update<T> を使用
+                    await Task.Run(() => _redmineManager.Update<Issue>(issue.Id.ToString(), issue), cts.Token);
+                    
+                    System.Diagnostics.Debug.WriteLine($"チケット更新成功: ID={issue.Id}");
+                    return; // 成功したらループを抜ける
+                }
+                catch (OperationCanceledException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"チケット更新タイムアウト (試行 {attempt}/{maxRetries}): ID={issue.Id}");
+                    if (attempt == maxRetries)
+                    {
+                        throw new RedmineApiException($"チケットの更新がタイムアウトしました（{_timeoutSeconds}秒、{maxRetries}回試行）");
+                    }
+                }
+                catch (Redmine.Net.Api.Exceptions.RedmineException redmineEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Redmine API エラー (試行 {attempt}/{maxRetries}): ID={issue.Id}, エラー: {redmineEx.Message}");
+                    if (attempt == maxRetries)
+                    {
+                        throw new RedmineApiException($"Redmine API エラー: {redmineEx.Message}", redmineEx);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"チケット更新で予期しないエラー (試行 {attempt}/{maxRetries}): ID={issue.Id}, エラー: {ex.Message}");
+                    if (attempt == maxRetries)
+                    {
+                        throw new RedmineApiException($"チケットの更新に失敗しました: {ex.Message}", ex);
+                    }
+                }
+                
+                // リトライ前の待機（最後の試行でない場合）
+                if (attempt < maxRetries)
+                {
+                    try
+                    {
+                        await Task.Delay(retryDelayMs, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw new RedmineApiException($"チケット更新のリトライ待機中にキャンセルされました");
+                    }
+                }
             }
         }
 
@@ -506,6 +547,43 @@ namespace RedmineClient.Services
             catch (Exception ex)
             {
                 throw new RedmineApiException($"チケットの削除に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// チケット間の依存関係を設定（非同期版）
+        /// </summary>
+        /// <param name="issueId">先行タスクのID</param>
+        /// <param name="relatedIssueId">後続タスクのID</param>
+        /// <param name="relationType">関係の種類（follows, precedes, blocks, blocked_by等）</param>
+        /// <param name="cancellationToken">キャンセレーショントークン</param>
+        public async Task CreateIssueRelationAsync(int issueId, int relatedIssueId, IssueRelationType relationType, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                // Redmine.Net.Apiライブラリの仕様に従ってIssueRelationを作成
+                var issueRelation = new IssueRelation();
+                issueRelation.Type = relationType; // 先行タスクなど
+                issueRelation.IssueToId = relatedIssueId; // 関連タスクのID
+
+                // RedmineManagerのCreateメソッドを使用して依存関係を作成
+                var createdRelation = await Task.Run(() => _redmineManager.Create<IssueRelation>(issueRelation, issueId.ToString()), cts.Token);
+
+                if (createdRelation == null)
+                {
+                    throw new RedmineApiException("依存関係の作成に失敗しました");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"依存関係の設定がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"依存関係の設定に失敗しました: {ex.Message}", ex);
             }
         }
 
@@ -568,4 +646,19 @@ namespace RedmineClient.Services
         public DateTime? CreatedOn { get; set; }
         public DateTime? LastLoginOn { get; set; }
     }
+
+    /// <summary>
+    /// Redmineのリレーションをラップするクラス
+    /// </summary>
+    public class RelationWrapper
+    {
+        public Relation relation { get; set; }
+    }
+
+    public class Relation
+    {
+        public int issue_to_id { get; set; }
+        public string relation_type { get; set; }
+    }
+
 }

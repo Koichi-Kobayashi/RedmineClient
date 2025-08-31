@@ -84,10 +84,157 @@ namespace RedmineClient
         }
 
         /// <summary>
+        /// グローバル例外ハンドラーを設定
+        /// </summary>
+        private void SetupGlobalExceptionHandling()
+        {
+            // UIスレッドでの未処理例外をキャッチ
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            
+            // 非UIスレッドでの未処理例外をキャッチ
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            
+            // タスクでの未処理例外をキャッチ
+            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+        }
+
+        /// <summary>
+        /// UIスレッドでの未処理例外を処理
+        /// </summary>
+        private void OnDispatcherUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"UIスレッド未処理例外: {e.Exception.Message}");
+                
+                // Redmine API関連の例外の場合は詳細ログを出力
+                if (e.Exception is RedmineClient.Services.RedmineApiException redmineEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Redmine API 例外: {redmineEx.Message}");
+                    if (redmineEx.InnerException != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"内部例外: {redmineEx.InnerException.Message}");
+                    }
+                }
+                
+                // 例外を処理済みとしてマーク（アプリケーションクラッシュを防ぐ）
+                e.Handled = true;
+                
+                // ユーザーにエラーメッセージを表示
+                ShowErrorMessage($"予期しないエラーが発生しました: {e.Exception.Message}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"例外ハンドラーでエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 非UIスレッドでの未処理例外を処理
+        /// </summary>
+        private void OnUnhandledException(object? sender, UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                if (e.ExceptionObject is Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"非UIスレッド未処理例外: {ex.Message}");
+                    
+                    // Redmine API関連の例外の場合は詳細ログを出力
+                    if (ex is RedmineClient.Services.RedmineApiException redmineEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Redmine API 例外: {redmineEx.Message}");
+                        if (redmineEx.InnerException != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"内部例外: {redmineEx.InnerException.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception handlerEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"例外ハンドラーでエラー: {handlerEx.Message}");
+            }
+        }
+
+        /// <summary>
+        /// タスクでの未処理例外を処理
+        /// </summary>
+        private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"タスク未処理例外: {e.Exception.Message}");
+                
+                // Redmine API関連の例外の場合は詳細ログを出力
+                foreach (var innerEx in e.Exception.InnerExceptions)
+                {
+                    if (innerEx is RedmineClient.Services.RedmineApiException redmineEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Redmine API 例外: {redmineEx.Message}");
+                        if (redmineEx.InnerException != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"内部例外: {redmineEx.InnerException.Message}");
+                        }
+                    }
+                }
+                
+                // 例外を処理済みとしてマーク
+                e.SetObserved();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"例外ハンドラーでエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// エラーメッセージをユーザーに表示
+        /// </summary>
+        /// <param name="message">表示するエラーメッセージ</param>
+        private void ShowErrorMessage(string message)
+        {
+            try
+            {
+                // UIスレッドでエラーメッセージを表示
+                if (MainWindow?.Dispatcher != null)
+                {
+                    MainWindow.Dispatcher.BeginInvoke(() =>
+                    {
+                        try
+                        {
+                            System.Windows.MessageBox.Show(
+                                message,
+                                "エラー",
+                                System.Windows.MessageBoxButton.OK,
+                                System.Windows.MessageBoxImage.Warning);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"エラーメッセージ表示でエラー: {ex.Message}");
+                        }
+                    }, System.Windows.Threading.DispatcherPriority.Normal);
+                }
+                else
+                {
+                    // メインウィンドウが取得できない場合はデバッグ出力のみ
+                    System.Diagnostics.Debug.WriteLine($"エラーメッセージ表示でメインウィンドウが取得できません: {message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"エラーメッセージ表示でエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Occurs when the application is loading.
         /// </summary>
         protected override async void OnStartup(StartupEventArgs e)
         {
+            // グローバル例外ハンドラーを設定
+            SetupGlobalExceptionHandling();
+            
             // SSL証明書の検証を無効化（開発環境や自己署名証明書を使用している場合）
             // 注意: 本番環境では適切な証明書を使用してください
             try
@@ -243,12 +390,6 @@ namespace RedmineClient
             _host.Dispose();
         }
 
-        /// <summary>
-        /// Occurs when an exception is thrown by an application but not handled.
-        /// </summary>
-        private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
-        {
-            // For more info see https://docs.microsoft.com/en-us/dotnet/api/system.windows.application.dispatcherunhandledexception?view=windowsdesktop-6.0
-        }
+
     }
 }

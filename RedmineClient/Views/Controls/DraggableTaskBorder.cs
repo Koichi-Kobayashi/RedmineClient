@@ -2,6 +2,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows;
+using System.Windows.Threading;
 using RedmineClient.ViewModels.Pages;
 
 namespace RedmineClient.Views.Controls
@@ -389,7 +391,6 @@ namespace RedmineClient.Views.Controls
                 if (newStartDate >= _originalEndDate.AddDays(-1))
                 {
                     newStartDate = _originalEndDate.AddDays(-1);
-                    System.Diagnostics.Debug.WriteLine($"  開始日制限: 最低期間を保つため調整: {newStartDate:yyyy/MM/dd}");
                 }
 
                 // プレビュー用の変数に設定（元の日付は保持）
@@ -415,7 +416,6 @@ namespace RedmineClient.Views.Controls
                 if (newEndDate <= _originalStartDate.AddDays(1))
                 {
                     newEndDate = _originalStartDate.AddDays(1);
-                    System.Diagnostics.Debug.WriteLine($"  終了日制限: 最低期間を保つため調整: {newEndDate:yyyy/MM/dd}");
                 }
 
                 // プレビュー用の変数に設定（元の日付は保持）
@@ -490,13 +490,6 @@ namespace RedmineClient.Views.Controls
                         var newTaskDuration = (finalEndDate - finalStartDate).TotalDays;
                         var originalTaskDuration = (oldEndDate - oldStartDate).TotalDays;
 
-                        System.Diagnostics.Debug.WriteLine($"日付変更完了: {_wbsItem.Title}");
-                        if (startDateChanged)
-                            System.Diagnostics.Debug.WriteLine($"  開始日: {oldStartDate:yyyy/MM/dd} -> {finalStartDate:yyyy/MM/dd}");
-                        if (endDateChanged)
-                            System.Diagnostics.Debug.WriteLine($"  終了日: {oldEndDate:yyyy/MM/dd} -> {finalEndDate:yyyy/MM/dd}");
-                        System.Diagnostics.Debug.WriteLine($"  タスク期間: {originalTaskDuration:F1}日 -> {newTaskDuration:F1}日 (差分: {newTaskDuration - originalTaskDuration:F1}日)");
-
                         // UIスレッドでViewModelの日付変更処理を呼び出し
                         try
                         {
@@ -514,32 +507,32 @@ namespace RedmineClient.Views.Controls
                                         {
                                             await viewModel.UpdateTaskScheduleAsync(_wbsItem, oldStartDate, oldEndDate);
                                         }
-                                        else
-                                        {
-                                            System.Diagnostics.Debug.WriteLine("日付変更の監視が無効のため、更新処理をスキップしました");
-                                        }
+                                    }
+                                    catch (RedmineClient.Services.RedmineApiException redmineEx)
+                                    {
+                                        // Redmine API固有のエラーの場合はログ出力
+                                        System.Diagnostics.Debug.WriteLine($"Redmine API エラー: {redmineEx.Message}");
+                                        // 必要に応じてユーザーに通知
+                                        ShowErrorMessage($"Redmineの更新に失敗しました: {redmineEx.Message}");
                                     }
                                     catch (Exception ex)
                                     {
+                                        // その他の予期しないエラーの場合はログ出力
                                         System.Diagnostics.Debug.WriteLine($"日付変更の更新処理でエラー: {ex.Message}");
-                                        System.Diagnostics.Debug.WriteLine($"スタックトレース: {ex.StackTrace}");
+                                        // 必要に応じてユーザーに通知
+                                        ShowErrorMessage($"更新処理でエラーが発生しました: {ex.Message}");
                                     }
                                 }, System.Windows.Threading.DispatcherPriority.Normal);
                             }
                             else
                             {
-                                System.Diagnostics.Debug.WriteLine("WbsViewModelの取得に失敗しました");
+                                // WbsViewModelの取得に失敗
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
-                            System.Diagnostics.Debug.WriteLine($"ViewModel取得でエラー: {ex.Message}");
-                            System.Diagnostics.Debug.WriteLine($"スタックトレース: {ex.StackTrace}");
+                            // ViewModel取得でエラーが発生した場合は無視
                         }
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"日付変更なし: {_wbsItem.Title}");
                     }
                 }
             }
@@ -1091,6 +1084,40 @@ namespace RedmineClient.Views.Controls
         }
 
         /// <summary>
+        /// エラーメッセージをユーザーに表示する
+        /// </summary>
+        /// <param name="message">表示するエラーメッセージ</param>
+        private void ShowErrorMessage(string message)
+        {
+            try
+            {
+                // UIスレッドでエラーメッセージを表示
+                Dispatcher.BeginInvoke(() =>
+                {
+                    try
+                    {
+                        // シンプルなメッセージボックスで表示
+                        System.Windows.MessageBox.Show(
+                            message,
+                            "エラー",
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Warning);
+                    }
+                    catch (Exception ex)
+                    {
+                        // メッセージボックス表示でエラーが発生した場合はデバッグ出力のみ
+                        System.Diagnostics.Debug.WriteLine($"エラーメッセージ表示でエラー: {ex.Message}");
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Normal);
+            }
+            catch (Exception ex)
+            {
+                // ディスパッチャー呼び出しでエラーが発生した場合はデバッグ出力のみ
+                System.Diagnostics.Debug.WriteLine($"エラーメッセージ表示のディスパッチャー呼び出しでエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// WbsViewModelを安全に取得する
         /// </summary>
         /// <returns>WbsViewModel、取得できない場合はnull</returns>
@@ -1126,9 +1153,8 @@ namespace RedmineClient.Views.Controls
 
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"WbsViewModel取得でエラー: {ex.Message}");
                 return null;
             }
         }

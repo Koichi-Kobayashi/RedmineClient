@@ -44,9 +44,9 @@ namespace RedmineClient.Views.Pages
                 {
                     await InitializeHolidayDataAsync();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー（無視して続行）: {ex.Message}");
+                    // 祝日データ初期化エラーが発生した場合は無視して続行
                 }
             });
 
@@ -84,10 +84,9 @@ namespace RedmineClient.Views.Pages
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // 祝日データの初期化に失敗しても処理を続行
-                System.Diagnostics.Debug.WriteLine($"祝日データの初期化でエラーが発生しましたが、処理を続行します: {ex.Message}");
             }
         }
 
@@ -124,23 +123,14 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void WbsDataGrid_KeyDown(object sender, KeyEventArgs e)
         {
-            // デバッグ用：キーイベントが発生しているかを確認
-            System.Diagnostics.Debug.WriteLine($"DataGrid KeyDown: {e.Key}");
-            
             switch (e.Key)
             {
                 case Key.Delete:
                     // Deleteキーで選択されたアイテムを削除
-                    System.Diagnostics.Debug.WriteLine("Delete key pressed in DataGrid");
                     if (ViewModel.SelectedItem != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"SelectedItem: {ViewModel.SelectedItem.Title}");
                         ViewModel.DeleteSelectedItemCommand.Execute(null);
                         e.Handled = true;
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("No item selected");
                     }
                     break;
                 case Key.Enter:
@@ -159,23 +149,14 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void WbsDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // デバッグ用：PreviewKeyDownイベントが発生しているかを確認
-            System.Diagnostics.Debug.WriteLine($"DataGrid PreviewKeyDown: {e.Key}");
-            
             switch (e.Key)
             {
                 case Key.Delete:
                     // Deleteキーで選択されたアイテムを削除
-                    System.Diagnostics.Debug.WriteLine("Delete key pressed in DataGrid PreviewKeyDown");
                     if (ViewModel.SelectedItem != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"SelectedItem: {ViewModel.SelectedItem.Title}");
                         ViewModel.DeleteSelectedItemCommand.Execute(null);
                         e.Handled = true;
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("No item selected in PreviewKeyDown");
                     }
                     break;
             }
@@ -268,10 +249,9 @@ namespace RedmineClient.Views.Pages
             {
                 await RedmineClient.Services.HolidayService.ForceUpdateAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // 祝日データの再初期化に失敗しても処理を続行
-                System.Diagnostics.Debug.WriteLine($"祝日データの再初期化でエラーが発生しましたが、処理を続行します: {ex.Message}");
             }
         }
 
@@ -521,7 +501,6 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void GenerateDateColumns()
         {
-            System.Diagnostics.Debug.WriteLine("=== GenerateDateColumns開始 ===");
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && WbsDataGrid.IsInitialized)
             {
 
@@ -1140,11 +1119,10 @@ namespace RedmineClient.Views.Pages
             {
                 // DatePickerを使用するため、このメソッドは不要
                 // 日付の変更はDatePickerで自動的に処理される
-                System.Diagnostics.Debug.WriteLine($"タスク '{task.Title}' のスケジュールが変更されました: {oldStartDate:yyyy/MM/dd} → {newStartDate:yyyy/MM/dd} - {newEndDate:yyyy/MM/dd}");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"スケジュール変更イベント処理エラー: {ex.Message}");
+                // スケジュール変更イベント処理でエラーが発生した場合は無視
             }
         }
 
@@ -1157,8 +1135,6 @@ namespace RedmineClient.Views.Pages
             {
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("静的DatePickerのプリロードを開始...");
-                    
                     // アプリケーションが起動していない場合は待機
                     while (Application.Current == null)
                     {
@@ -1193,18 +1169,16 @@ namespace RedmineClient.Views.Pages
                                     });
                                 }
                             });
-                            
-                            System.Diagnostics.Debug.WriteLine("静的DatePickerのプリロードが完了しました");
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
-                            System.Diagnostics.Debug.WriteLine($"静的DatePickerプリロード中にエラーが発生: {ex.Message}");
+                            // 静的DatePickerプリロード中にエラーが発生した場合は無視
                         }
                     });
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    System.Diagnostics.Debug.WriteLine($"静的DatePickerプリロードでエラーが発生: {ex.Message}");
+                    // 静的DatePickerプリロードでエラーが発生した場合は無視
                 }
             });
         }
@@ -1218,8 +1192,6 @@ namespace RedmineClient.Views.Pages
             {
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("DatePickerのプリロードを開始...");
-                    
                     // UIスレッドでDatePickerの初期化を実行
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
@@ -1268,18 +1240,16 @@ namespace RedmineClient.Views.Pages
                                     }
                                 });
                             });
-                            
-                            System.Diagnostics.Debug.WriteLine($"DatePickerのプリロードが完了しました（{datePickers.Count}個）");
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
-                            System.Diagnostics.Debug.WriteLine($"DatePickerプリロード中にエラーが発生: {ex.Message}");
+                            // DatePickerプリロード中にエラーが発生した場合は無視
                         }
                     });
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    System.Diagnostics.Debug.WriteLine($"DatePickerプリロードでエラーが発生: {ex.Message}");
+                    // DatePickerプリロードでエラーが発生した場合は無視
                 }
             });
         }
@@ -1294,15 +1264,13 @@ namespace RedmineClient.Views.Pages
                 // 未保存の変更がある場合は保存処理を実行
                 if (ViewModel != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("アプリケーション終了時の保存処理を実行中...");
-                    
                     // 未保存の変更を保存
                     await ViewModel.SavePendingChangesAsync();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"アプリケーション終了時の保存処理エラー: {ex.Message}");
+                // アプリケーション終了時の保存処理でエラーが発生した場合は無視
             }
         }
 
@@ -1386,9 +1354,9 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"DatePicker日付変更処理エラー: {ex.Message}");
+                // DatePicker日付変更処理でエラーが発生した場合は無視
             }
         }
 
@@ -1433,9 +1401,9 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"DataGridドロップ処理エラー: {ex.Message}");
+                // DataGridドロップ処理でエラーが発生した場合は無視
             }
         }
 
@@ -1561,9 +1529,9 @@ namespace RedmineClient.Views.Pages
                     border.CaptureMouse();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"タスク境界MouseLeftButtonDownエラー: {ex.Message}");
+                // タスク境界MouseLeftButtonDownでエラーが発生した場合は無視
             }
         }
 
@@ -1588,9 +1556,9 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"タスク境界MouseMoveエラー: {ex.Message}");
+                // タスク境界MouseMoveでエラーが発生した場合は無視
             }
         }
 
@@ -1607,9 +1575,9 @@ namespace RedmineClient.Views.Pages
                     _isDragging = false;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"タスク境界MouseLeftButtonUpエラー: {ex.Message}");
+                // タスク境界MouseLeftButtonUpでエラーが発生した場合は無視
             }
         }
 
@@ -1655,9 +1623,9 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"依存関係ドロップ処理エラー: {ex.Message}");
+                // 依存関係ドロップ処理でエラーが発生した場合は無視
             }
         }
 
@@ -1694,9 +1662,8 @@ namespace RedmineClient.Views.Pages
                 }
                 e.Handled = true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"依存関係ドラッグエンターエラー: {ex.Message}");
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
             }
@@ -1719,9 +1686,8 @@ namespace RedmineClient.Views.Pages
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"依存関係ドラッグリーブエラー: {ex.Message}");
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
             }
