@@ -1556,24 +1556,32 @@ namespace RedmineClient.ViewModels.Pages
         {
             if (sourceItem == null || targetItem == null || sourceItem == targetItem) return;
 
+            System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Starting dependency setup - Source: {sourceItem.Title}, Target: {targetItem.Title}, IsPredecessor: {isPredecessor}");
+
             try
             {
                 if (isPredecessor)
                 {
                     // 先行関係を設定
                     // タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになる
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Adding predecessor relationship - {targetItem.Title} -> {sourceItem.Title}");
                     sourceItem.AddPredecessor(targetItem);
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Predecessor relationship added successfully");
                 }
                 else
                 {
                     // 双方向の関係を設定
                     // sourceItemの先行がtargetItemになる
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Adding bidirectional relationship - {targetItem.Title} -> {sourceItem.Title}");
                     sourceItem.AddPredecessor(targetItem);
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: First part of bidirectional relationship added successfully");
                     // targetItemの後続がsourceItemになる
                     targetItem.AddSuccessor(sourceItem);
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Second part of bidirectional relationship added successfully");
                 }
 
                 // UIを更新
+                System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Updating UI");
                 OnPropertyChanged(nameof(FlattenedWbsItems));
 
                 // 個々のアイテムのプロパティ変更通知を強制的に発火
@@ -1583,6 +1591,7 @@ namespace RedmineClient.ViewModels.Pages
                 // Redmineに依存関係を登録
                 if (IsRedmineConnected && SelectedProject != null && _redmineService != null)
                 {
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Redmine is connected, proceeding to create issue relation");
                     try
                     {
                         if (int.TryParse(sourceItem.Id, out int sourceId) && int.TryParse(targetItem.Id, out int targetId))
@@ -1592,27 +1601,44 @@ namespace RedmineClient.ViewModels.Pages
                             var predecessorId = isPredecessor ? sourceId : targetId;
                             var successorId = isPredecessor ? targetId : sourceId;
 
+                            System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Creating Redmine issue relation - Predecessor: {predecessorId}, Successor: {successorId}");
+
                             // Redmineに依存関係を登録（先行タスクが完了するまで後続タスクは開始できない）
                             await _redmineService.CreateIssueRelationAsync(predecessorId, successorId, IssueRelationType.Precedes, CancellationToken.None);
+                            
+                            System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Redmine issue relation created successfully");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Failed to parse issue IDs - Source: {sourceItem.Id}, Target: {targetItem.Id}");
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Exception during Redmine API call: {ex.GetType().Name} - {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Redmine API exception stack trace: {ex.StackTrace}");
+                        
                         // Redmineへの登録に失敗した場合は未保存フラグを設定
                         sourceItem.HasUnsavedChanges = true;
                         targetItem.HasUnsavedChanges = true;
                     }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Redmine not connected or service not available - IsRedmineConnected: {IsRedmineConnected}, SelectedProject: {SelectedProject != null}, _redmineService: {_redmineService != null}");
                 }
             }
             catch (InvalidOperationException ex)
             {
                 // デバッグログ：例外の詳細を出力
                 System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: InvalidOperationException caught: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Exception type: {ex.GetType().Name}");
                 System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Stack trace: {ex.StackTrace}");
 
                 // 循環参照などのエラーが発生した場合はユーザーに通知
                 if (ex.Message.Contains("循環参照"))
                 {
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Circular dependency detected, showing error message");
                     // スナックバーメッセージで循環参照エラーを表示
                     var message = new SnackbarMessage
                     {
@@ -1625,6 +1651,7 @@ namespace RedmineClient.ViewModels.Pages
                 }
                 else
                 {
+                    System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Other InvalidOperationException detected, showing error message");
                     // その他のInvalidOperationExceptionもスナックバーで表示
                     var message = new SnackbarMessage
                     {
@@ -1653,6 +1680,8 @@ namespace RedmineClient.ViewModels.Pages
                 };
                 SnackbarMessages.Add(message);
             }
+
+            System.Diagnostics.Debug.WriteLine($"SetDependencyAsync: Method completed for {sourceItem?.Title} -> {targetItem?.Title}");
         }
 
         /// <summary>
