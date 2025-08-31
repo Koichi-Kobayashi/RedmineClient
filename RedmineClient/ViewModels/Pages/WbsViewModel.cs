@@ -314,7 +314,7 @@ namespace RedmineClient.ViewModels.Pages
                         AppConfig.SelectedProjectId = value.Id;
                         AppConfig.Save();
 
-                        // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
+                                                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                         if (IsRedmineConnected)
                         {
                             // 重複実行を防ぐためのロック
@@ -330,136 +330,28 @@ namespace RedmineClient.ViewModels.Pages
 
                             System.Diagnostics.Debug.WriteLine($"プロジェクト {value.Id} のデータ読み込みを開始します。");
 
-                            // より安全な非同期実行（UIスレッドをブロックしない）
-                            _ = Task.Run(async () =>
-                            {
-                                                            try
-                            {
-
-                                    // UIスレッドでの処理を避けるため、直接RedmineServiceを使用
-                                    await Task.Delay(100); // 短い遅延
-
-                                    // 既存のアイテムの親子関係をクリア
-                                    foreach (var existingItem in WbsItems)
-                                    {
-                                        existingItem.Children.Clear();
-                                    }
-
-                                    using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
-                                    {
-                                        var issues = await redmineService.GetIssuesWithHierarchyAsync(value.Id).ConfigureAwait(false);
-
-                                        // チケットが0個の場合でも適切に処理
-                                        if (issues == null || issues.Count == 0)
-                                        {
-                                            // UIスレッドで空の状態を設定
-                                            await Application.Current.Dispatcher.InvokeAsync(() =>
-                                            {
-                                                try
-                                                {
-                                                    WbsItems.Clear();
-                                                    FlattenedWbsItems.Clear();
-                                                    IsRedmineDataLoaded = true;
-                                                    ErrorMessage = string.Empty;
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    ErrorMessage = $"状態設定中にエラーが発生しました: {ex.Message}";
-                                                }
-                                            });
-                                            return;
-                                        }
-
-                                        // バックグラウンドでWBSアイテムの変換を実行
-                                        var wbsItems = await Task.Run(() =>
-                                        {
-                                            // すべてのルートチケットを一度に処理して依存関係を正しく設定
-                                            return ConvertMultipleRedmineIssuesToWbsItems(issues);
-                                        }).ConfigureAwait(false);
-
-                                        // UIスレッドでの更新は最後に一度だけ実行
-                                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                                        {
-                                            try
-                                            {
-                                                // WBSアイテムを完全にクリア（親子関係も含めて）
-                                                WbsItems.Clear();
-                                                foreach (var wbsItem in wbsItems)
-                                                {
-                                                    WbsItems.Add(wbsItem);
-                                                }
-
-                                                // 平坦化リストを更新（チケットがある場合のみ）
-                                                if (wbsItems.Count > 0)
-                                                {
-                                                    _ = Task.Run(async () => await UpdateFlattenedList());
-                                                }
-                                                else
-                                                {
-                                                    FlattenedWbsItems.Clear();
-                                                }
-
-                                                // Redmineデータ読み込み後、選択状態を復元
-                                                if (SelectedItem != null)
-                                                {
-                                                    // 選択されたアイテムがまだ存在するかチェック
-                                                    var currentSelectedItem = SelectedItem;
-                                                    var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
-                                                    if (foundItem != null)
-                                                    {
-                                                        SelectedItem = foundItem;
-                                                        CanAddChild = foundItem.IsParentTask;
-                                                    }
-                                                }
-
-                                                // 状態を更新
-                                                IsRedmineDataLoaded = true;
-                                                ErrorMessage = string.Empty;
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                ErrorMessage = $"UI更新中にエラーが発生しました: {ex.Message}";
-                                            }
-                                        });
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    // エラーもUIスレッドで表示
-                                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                                    {
-                                        ErrorMessage = $"チケットの読み込みに失敗しました: {ex.Message}";
-                                    });
-                                }
-                                finally
-                                {
-                                    lock (_dataLoadingLock)
-                                    {
-                                        _isLoadingRedmineData = false;
-                                    }
-                                    System.Diagnostics.Debug.WriteLine($"プロジェクト {value.Id} のデータ読み込みが完了しました。");
-                                }
-                            });
+                            // 非同期処理を開始（プロパティのsetter内ではawaitできないため）
+                            _ = LoadProjectDataAsync(value);
                         }
-                        else
-                        {
-                            // 接続されていない場合は接続テストを実行
-                            _ = TestRedmineConnection();
-                        }
-                    }
-                    else
-                    {
-                        // プロジェクト選択がクリアされた場合
-                        AppConfig.SelectedProjectId = null;
-                        AppConfig.Save();
-                        WbsItems.Clear();
-                        _ = Task.Run(async () => await UpdateFlattenedList());
-                        IsRedmineDataLoaded = false;
-                        ErrorMessage = string.Empty;
-                    }
-                }
-            }
-        }
+                     }
+                     else
+                     {
+                         // 接続されていない場合は接続テストを実行
+                         _ = TestRedmineConnection();
+                     }
+                 }
+                 else
+                 {
+                     // プロジェクト選択がクリアされた場合
+                     AppConfig.SelectedProjectId = null;
+                     AppConfig.Save();
+                     WbsItems.Clear();
+                     _ = Task.Run(async () => await UpdateFlattenedList());
+                     IsRedmineDataLoaded = false;
+                     ErrorMessage = string.Empty;
+                 }
+             }
+         }
 
         [ObservableProperty]
         private bool _isRedmineDataLoaded = false;
@@ -534,6 +426,11 @@ namespace RedmineClient.ViewModels.Pages
 
         public WbsViewModel()
         {
+            // 初期状態でプログレスバーを表示
+            IsWbsLoading = true;
+            WbsProgress = 0;
+            WbsProgressMessage = "初期化中...";
+
             // 設定からスケジュール開始年月を読み込み（getアクセサーを呼び出さない）
             _scheduleStartYearMonth = AppConfig.GetScheduleStartYearMonthForInitialization();
 
@@ -1215,6 +1112,195 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         /// <summary>
+        /// プロジェクトデータを読み込む（非同期）
+        /// </summary>
+        private async Task LoadProjectDataAsync(Project project)
+        {
+            try
+            {
+                // プログレスバーを表示
+                IsWbsLoading = true;
+                WbsProgress = 0;
+                WbsProgressMessage = $"プロジェクト {project.Name} のデータ読み込みを開始します...";
+
+                // 既存のアイテムの親子関係をクリア
+                foreach (var existingItem in WbsItems)
+                {
+                    existingItem.Children.Clear();
+                }
+
+                using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                {
+                    // データ取得開始
+                    WbsProgress = 20;
+                    WbsProgressMessage = "Redmineからデータを取得中...";
+
+                    var issues = await redmineService.GetIssuesWithHierarchyAsync(project.Id).ConfigureAwait(false);
+
+                    // チケットが0個の場合でも適切に処理
+                    if (issues == null || issues.Count == 0)
+                    {
+                        // UIスレッドで空の状態を設定
+                        try
+                        {
+                            WbsItems.Clear();
+                            FlattenedWbsItems.Clear();
+                            IsRedmineDataLoaded = true;
+                            ErrorMessage = string.Empty;
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorMessage = $"状態設定中にエラーが発生しました: {ex.Message}";
+                        }
+                        return;
+                    }
+
+                    // チケットデータ変換開始
+                    WbsProgress = 40;
+                    WbsProgressMessage = "チケットデータを変換中...";
+
+                    // バックグラウンドでWBSアイテムの変換を実行
+                    var wbsItems = await Task.Run(() =>
+                    {
+                        // すべてのルートチケットを一度に処理して依存関係を正しく設定
+                        return ConvertMultipleRedmineIssuesToWbsItems(issues);
+                    }).ConfigureAwait(false);
+
+                    // UIコレクション更新開始
+                    WbsProgress = 60;
+                    WbsProgressMessage = "UIコレクションを更新中...";
+
+                    try
+                    {
+                        // WBSアイテムを完全にクリア（親子関係も含めて）
+                        WbsItems.Clear();
+                        foreach (var wbsItem in wbsItems)
+                        {
+                            WbsItems.Add(wbsItem);
+                        }
+
+                        // 平坦化リスト更新開始
+                        WbsProgress = 80;
+                        WbsProgressMessage = "平坦化リストを更新中...";
+
+                        // 平坦化リストを更新（チケットがある場合のみ）
+                        if (wbsItems.Count > 0)
+                        {
+                            // プログレスバーの状態を変更せずに平坦化リストを更新
+                            await UpdateFlattenedListWithoutProgressBar();
+                        }
+                        else
+                        {
+                            FlattenedWbsItems.Clear();
+                            // チケットがない場合は進捗を100%に設定
+                            WbsProgress = 100;
+                            WbsProgressMessage = "データ読み込み完了";
+                        }
+
+                        // Redmineデータ読み込み後、選択状態を復元
+                        if (SelectedItem != null)
+                        {
+                            // 選択されたアイテムがまだ存在するかチェック
+                            var currentSelectedItem = SelectedItem;
+                            var foundItem = WbsItems.FirstOrDefault(item => item.Id == currentSelectedItem.Id);
+                            if (foundItem != null)
+                            {
+                                SelectedItem = foundItem;
+                                CanAddChild = foundItem.IsParentTask;
+                            }
+                        }
+
+                        // 状態を更新
+                        IsRedmineDataLoaded = true;
+                        ErrorMessage = string.Empty;
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorMessage = $"UI更新中にエラーが発生しました: {ex.Message}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // エラーもUIスレッドで表示
+                ErrorMessage = $"チケットの読み込みに失敗しました: {ex.Message}";
+            }
+            finally
+            {
+                // プログレスバーを完了
+                WbsProgress = 100;
+                WbsProgressMessage = "データ読み込み完了";
+
+                // 完了メッセージを少し表示してから非表示
+                await Task.Delay(1000);
+
+                IsWbsLoading = false;
+                WbsProgress = 0;
+
+                lock (_dataLoadingLock)
+                {
+                    _isLoadingRedmineData = false;
+                }
+                System.Diagnostics.Debug.WriteLine($"プロジェクト {project.Id} のデータ読み込みが完了しました。");
+            }
+        }
+
+        /// <summary>
+        /// 階層構造を平坦化したリストを更新（プログレスバーの状態を変更しない）
+        /// </summary>
+        private async Task UpdateFlattenedListWithoutProgressBar()
+        {
+            try
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    FlattenedWbsItems.Clear();
+
+                    // 重複チェック用のHashSet
+                    var addedItems = new HashSet<WbsItem>();
+
+                    var totalItems = WbsItems.Count;
+                    var processedItems = 0;
+
+                    foreach (var rootItem in WbsItems)
+                    {
+                        AddItemToFlattened(rootItem, addedItems);
+                        processedItems++;
+
+                        // 進捗を更新（10アイテムごと）
+                        if (processedItems % 10 == 0 || processedItems == totalItems)
+                        {
+                            var progress = 80 + (double)processedItems / totalItems * 15; // 80%から95%まで
+                            WbsProgress = progress;
+                            WbsProgressMessage = $"WBSリストを更新中... {processedItems}/{totalItems}";
+                        }
+                    }
+                });
+
+                // スケジュール表も更新（非同期版を使用）
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 95;
+                    WbsProgressMessage = "スケジュール表を更新中...";
+                });
+
+                await UpdateScheduleItemsAsync();
+
+                // 最終的な進捗を設定（メイン処理で制御される）
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WbsProgress = 100;
+                    WbsProgressMessage = "データ読み込み完了";
+                });
+            }
+            catch (Exception ex)
+            {
+                // エラーが発生してもプログレスバーの状態は変更しない
+                System.Diagnostics.Debug.WriteLine($"平坦化リスト更新中にエラーが発生しました: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// 階層構造を平坦化したリストを更新
         /// </summary>
         private async Task UpdateFlattenedList()
@@ -1248,7 +1334,7 @@ namespace RedmineClient.ViewModels.Pages
                         {
                             var progress = (double)processedItems / totalItems * 50; // 50%まで
                             WbsProgress = progress;
-                            WbsProgressMessage = $"WBSリストを更新中... {processedItems}/{totalItems}";
+                            WbsProgressMessage = $"WBSリストを更新中... {WbsItems.Count} アイテムを処理中...";
                         }
                     }
                 });
@@ -1958,6 +2044,9 @@ namespace RedmineClient.ViewModels.Pages
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
+                    IsWbsLoading = false;
+                    WbsProgress = 100;
+                    WbsProgressMessage = "Redmineデータの読み込みが完了しました";
                     IsLoading = false;
                 });
             }

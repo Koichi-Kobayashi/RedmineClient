@@ -1,24 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using RedmineClient.Helpers;
 using RedmineClient.ViewModels.Pages;
-using RedmineClient.Models;
 using RedmineClient.Views.Controls;
-using Wpf.Ui.Controls;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.Views.Pages
@@ -43,8 +30,6 @@ namespace RedmineClient.Views.Pages
 
             InitializeComponent();
 
-
-
             // 初期化完了後にタスク詳細の幅を設定
             this.Loaded += WbsPage_InitialLoaded;
 
@@ -52,7 +37,7 @@ namespace RedmineClient.Views.Pages
             this.Loaded += WbsPage_DataGridLoaded;
 
             // 祝日データを初期化（非同期で実行、エラーが発生しても続行）
-            _ = Task.Run(async () => 
+            _ = Task.Run(async () =>
             {
                 try
                 {
@@ -66,28 +51,28 @@ namespace RedmineClient.Views.Pages
 
             // プロジェクト選択変更時のイベントを登録
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-            
+
             // 日付変更の監視を有効化
             ViewModel.StartDateChangeWatching();
 
             // キーボードショートカットを設定
             this.KeyDown += WbsPage_KeyDown;
-            
+
             // DataGridにフォーカスを設定してキーボードイベントを受け取れるようにする
-            this.Loaded += (s, e) => 
+            this.Loaded += (s, e) =>
             {
                 WbsDataGrid.Focus();
                 // DataGridのキーボードイベントを確実に設定
                 WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
                 WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
-                
+
                 // DataGridのサイズ変更時に矢印を再描画
                 WbsDataGrid.SizeChanged += WbsDataGrid_SizeChanged;
             };
-            
+
             // アプリケーション終了時の処理を追加
             Application.Current.MainWindow.Closing += MainWindow_Closing;
-            
+
             // DatePickerのプリロードを開始
             _ = Task.Run(async () => await PreloadDatePickersAsync());
         }
@@ -107,8 +92,6 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-
-
         /// <summary>
         /// キーボードショートカットを処理する
         /// </summary>
@@ -124,6 +107,7 @@ namespace RedmineClient.Views.Pages
                         e.Handled = true;
                     }
                     break;
+
                 case Key.F5:
                     // F5キーでデータを更新
                     if (ViewModel.RefreshRedmineDataCommand.CanExecute(null))
@@ -150,6 +134,7 @@ namespace RedmineClient.Views.Pages
                         e.Handled = true;
                     }
                     break;
+
                 case Key.Enter:
                     // Enterキーで選択されたアイテムを編集
                     if (ViewModel.SelectedItem != null)
@@ -197,7 +182,7 @@ namespace RedmineClient.Views.Pages
             InitializeYearMonthOptions();
 
             // プロジェクト選択の初期化
-            
+
             // Redmineに接続してプロジェクトを取得
             if (ViewModel.AvailableProjects.Count == 0)
             {
@@ -235,19 +220,15 @@ namespace RedmineClient.Views.Pages
                 }
             }
 
-            // 日付列の生成を遅延実行（DataGridの完全な初期化を待つ）
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                GenerateDateColumns();
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-
             // このイベントは一度だけ実行
             this.Loaded -= WbsPage_InitialLoaded;
         }
 
         private void WbsPage_DataGridLoaded(object sender, RoutedEventArgs e)
         {
-            GenerateDateColumns();
+            // DataGridの初期化完了後に日付列を生成
+            // このイベントは一度だけ実行
+            this.Loaded -= WbsPage_DataGridLoaded;
         }
 
         private void ScheduleStartYearMonthComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -260,10 +241,10 @@ namespace RedmineClient.Views.Pages
                 {
                     ViewModel.ScheduleStartYearMonth = selectedYearMonth;
                 }
-                
+
                 // 祝日データを再初期化（色設定のため）
                 _ = Task.Run(() => RefreshHolidayDataAsync());
-                
+
                 // 日付列を再生成
                 GenerateDateColumns();
             }
@@ -286,12 +267,7 @@ namespace RedmineClient.Views.Pages
 
         public Task OnNavigatedToAsync()
         {
-            // 日付列の生成も遅延実行で試行
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                GenerateDateColumns();
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-
+            // ページ遷移時は何もしない（DataGridのLoadedイベントで処理される）
             return Task.CompletedTask;
         }
 
@@ -353,25 +329,25 @@ namespace RedmineClient.Views.Pages
 
                 ScheduleStartYearMonthComboBox.ItemsSource = yearMonthOptions;
 
-                                 // 保存された年月がある場合はそれを選択、ない場合は当月を選択
-                 var savedYearMonth = AppConfig.ScheduleStartYearMonth;
-                 
-                 if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
-                 {
-                     ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
-                     // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
-                     ViewModel.ScheduleStartYearMonth = savedYearMonth;
-                 }
-                 else
-                 {
-                     var currentYearMonth = DateTime.Now.ToString("yyyy/MM");
-                     ScheduleStartYearMonthComboBox.SelectedItem = currentYearMonth;
-                     // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
-                     ViewModel.ScheduleStartYearMonth = currentYearMonth;
-                 }
+                // 保存された年月がある場合はそれを選択、ない場合は当月を選択
+                var savedYearMonth = AppConfig.ScheduleStartYearMonth;
 
-                 // 今日の日付ライン表示設定を初期化
-                 ViewModel.ShowTodayLine = AppConfig.ShowTodayLine;
+                if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
+                {
+                    ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
+                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                    ViewModel.ScheduleStartYearMonth = savedYearMonth;
+                }
+                else
+                {
+                    var currentYearMonth = DateTime.Now.ToString("yyyy/MM");
+                    ScheduleStartYearMonthComboBox.SelectedItem = currentYearMonth;
+                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                    ViewModel.ScheduleStartYearMonth = currentYearMonth;
+                }
+
+                // 今日の日付ライン表示設定を初期化
+                ViewModel.ShowTodayLine = AppConfig.ShowTodayLine;
             }
             catch
             {
@@ -528,194 +504,247 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// 日付列を生成する
         /// </summary>
-        private void GenerateDateColumns()
+        private bool _isGeneratingColumns = false;
+
+        private async void GenerateDateColumns()
         {
+            // 無限ループを防ぐためのフラグ
+            if (_isGeneratingColumns)
+            {
+                return;
+            }
+
             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && WbsDataGrid.IsInitialized)
             {
+                _isGeneratingColumns = true;
 
-                // 既存のスケジュール列を削除
-                var existingColumns = WbsDataGrid.Columns.Where(c => c.Header is StackPanel || c.Header is System.Windows.Controls.TextBlock).ToList();
-                foreach (var column in existingColumns)
+                try
                 {
-                    WbsDataGrid.Columns.Remove(column);
-                }
+                                            // プログレスバーを表示
+                        ViewModel.IsWbsLoading = true;
+                        ViewModel.WbsProgressMessage = "日付列を生成中...";
+                        ViewModel.WbsProgress = 0;
+                        
+                        // UIの更新を確実にするために少し待機
+                        await Task.Delay(100);
 
-                                 // 設定された年月の1日から開始
-                 
-                 DateTime startDate;
-                 if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
-                 {
-                     startDate = startDate.AddDays(-startDate.Day + 1); // 月の1日に設定
-                 }
-                 else
-                 {
-                     startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1); // デフォルトは今月の1日
-                 }
-                 
-                 // タスクの開始日が設定された開始日より前の場合は、タスクの開始日から表示
-                 if (ViewModel.WbsItems != null && ViewModel.WbsItems.Count > 0)
-                 {
-                     var earliestStartDate = ViewModel.WbsItems.Min(item => item.StartDate);
-                     if (earliestStartDate < startDate)
-                     {
-                         startDate = earliestStartDate.AddDays(-7); // タスク開始日の1週間前から表示
-                     }
-                 }
-                 
-                 var endDate = startDate.AddMonths(2).AddDays(-1); // 2か月分表示（タスク期間をカバー）
+                    // ItemsSourceを一時的にクリアして列の操作を可能にする
+                    var currentItemsSource = WbsDataGrid.ItemsSource;
+                    WbsDataGrid.ItemsSource = null;
 
-                var currentDate = startDate;
-                var lastMonth = -1;
-
-                // 固定列の数を取得（ID、タスク名、説明、開始日、終了日、進捗、ステータス、優先度、担当者、先行・後続）
-                var fixedColumnCount = 10;
-
-                // 日付列の総数を計算
-                var totalColumns = (int)((endDate - startDate).TotalDays) + 1;
-
-                for (int columnCount = 0; columnCount < totalColumns; columnCount++)
-                {
-                    var loopDate = startDate.AddDays(columnCount);
-                    // 月が変わったかどうかをチェック
-                    var isMonthStart = loopDate.Month != lastMonth;
-                    if (isMonthStart)
+                    try
                     {
-                        lastMonth = loopDate.Month;
-                    }
-
-                    var dateColumn = new DataGridTemplateColumn
-                    {
-                        Width = 40, // 幅を少し広げて3行表示に対応
-                        Header = CreateThreeRowHeader(loopDate, isMonthStart),
-                        IsReadOnly = true,
-                        HeaderStyle = CreateDateHeaderStyle()
-                    };
-
-                    // 日付列用のセルテンプレート
-                    var cellTemplate = new DataTemplate();
-                    var factory = new FrameworkElementFactory(typeof(Grid));
-
-                    // Gridの設定
-                    factory.SetValue(Grid.WidthProperty, 30.0);
-                    factory.SetValue(Grid.HeightProperty, 20.0);
-
-                    // 背景用のBorder（土曜日は青色、日曜日はピンク色）
-                    var backgroundFactory = new FrameworkElementFactory(typeof(Border));
-                    backgroundFactory.SetValue(Border.WidthProperty, 30.0);
-                    backgroundFactory.SetValue(Border.HeightProperty, 20.0);
-                    backgroundFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Gray);
-                    backgroundFactory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
-                    backgroundFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(2));
-                    backgroundFactory.SetValue(Grid.ZIndexProperty, 0);
-
-                    var backgroundBinding = new System.Windows.Data.Binding
-                    {
-                        Source = loopDate,
-                        Converter = new RedmineClient.Helpers.DateToBackgroundColorConverter()
-                    };
-                    backgroundFactory.SetValue(Border.BackgroundProperty, backgroundBinding);
-
-                    // 今日の日付ライン表示（設定が有効な場合のみ）
-                    if (ViewModel.ShowTodayLine && loopDate.Date == DateTime.Today)
-                    {
-                        var todayLineFactory = new FrameworkElementFactory(typeof(Border));
-                        todayLineFactory.SetValue(Border.WidthProperty, 30.0);
-                        todayLineFactory.SetValue(Border.HeightProperty, 20.0);
-                        todayLineFactory.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
-                        todayLineFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Red);
-                        todayLineFactory.SetValue(Border.BorderThicknessProperty, new Thickness(3));
-                        todayLineFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
-                        todayLineFactory.SetValue(Grid.ZIndexProperty, 3);
-                        factory.AppendChild(todayLineFactory);
-                    }
-
-                    // タスク期間表示用のDraggableTaskBorder（開始日から終了日まで）
-                    var taskPeriodFactory = new FrameworkElementFactory(typeof(DraggableTaskBorder));
-                    taskPeriodFactory.SetValue(DraggableTaskBorder.WidthProperty, 30.0);
-                    taskPeriodFactory.SetValue(DraggableTaskBorder.HeightProperty, 20.0);
-                    taskPeriodFactory.SetValue(Grid.ZIndexProperty, 1);
-
-                    // タスク期間の表示/非表示を制御（MultiBindingを使用）
-                    var multiBinding = new System.Windows.Data.MultiBinding();
-                    multiBinding.Converter = new TaskPeriodMultiBindingConverter(loopDate);
-                    
-                    // 開始日（WbsItemから直接取得）
-                    var startDateBinding = new System.Windows.Data.Binding
-                    {
-                        Path = new System.Windows.PropertyPath("StartDate")
-                    };
-                    multiBinding.Bindings.Add(startDateBinding);
-                    
-                    // 終了日（WbsItemから直接取得）
-                    var endDateBinding = new System.Windows.Data.Binding
-                    {
-                        Path = new System.Windows.PropertyPath("EndDate")
-                    };
-                    multiBinding.Bindings.Add(endDateBinding);
-                    
-                    taskPeriodFactory.SetValue(DraggableTaskBorder.VisibilityProperty, multiBinding);
-
-                    // 進捗に応じた背景色の設定（WbsItemから直接取得）
-                    // ただし、土日祝の場合は日付の背景色を優先するため、透明度を下げる
-                    var progressBinding = new System.Windows.Data.Binding
-                    {
-                        Path = new System.Windows.PropertyPath("Progress"),
-                        Converter = new TaskProgressToColorConverter()
-                    };
-                    taskPeriodFactory.SetValue(DraggableTaskBorder.BackgroundProperty, progressBinding);
-                    
-                    // 土日祝の場合は背景色の透明度を下げて、日付の背景色が見えるようにする
-                    var opacityBinding = new System.Windows.Data.Binding
-                    {
-                        Source = loopDate,
-                        Converter = new RedmineClient.Helpers.DateToOpacityConverter()
-                    };
-                    taskPeriodFactory.SetValue(DraggableTaskBorder.OpacityProperty, opacityBinding);
-
-                    // タスク情報を設定するためのイベントハンドラーを追加
-                    var loadedEvent = new System.Windows.RoutedEventHandler((sender, args) =>
-                    {
-                        if (sender is DraggableTaskBorder border)
+                        // 既存のスケジュール列を削除
+                        var existingColumns = WbsDataGrid.Columns.Where(c => c.Header is StackPanel || c.Header is System.Windows.Controls.TextBlock).ToList();
+                        foreach (var column in existingColumns)
                         {
-                            var dataContext = border.DataContext as WbsItem;
-                            if (dataContext != null)
+                            WbsDataGrid.Columns.Remove(column);
+                        }
+
+                        // 設定された年月の1日から開始
+
+                        DateTime startDate;
+                        if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
+                        {
+                            startDate = startDate.AddDays(-startDate.Day + 1); // 月の1日に設定
+                        }
+                        else
+                        {
+                            startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1); // デフォルトは今月の1日
+                        }
+
+                        // タスクの開始日が設定された開始日より前の場合は、タスクの開始日から表示
+                        if (ViewModel.WbsItems != null && ViewModel.WbsItems.Count > 0)
+                        {
+                            var earliestStartDate = ViewModel.WbsItems.Min(item => item.StartDate);
+                            if (earliestStartDate < startDate)
                             {
-                                                                 // 現在の列の実際のインデックスを計算
-                                 // columnCountは日付列のインデックス（0から始まる）
-                                 // 固定列9個 + 日付列の位置（columnCount）
-                                 var actualColumnIndex = 9 + columnCount;
-                                 
-                                 // 列0の日付（表示開始日）を基準として渡す
-                                 // これにより、各列での日付計算が正しく行われる
-                                 // totalColumnsには固定列9個 + 日付列の総数を渡す必要がある
-                                 var actualTotalColumns = 9 + totalColumns;
-                                 
-                                 // 境界条件の確認：actualColumnIndexがactualTotalColumnsの範囲内にあることを確認
-                                 if (actualColumnIndex >= actualTotalColumns)
-                                 {
-                                     actualColumnIndex = actualTotalColumns - 1;
-                                 }
-                                 
-                                 border.SetTaskInfo(dataContext, startDate, loopDate, actualColumnIndex, actualTotalColumns);
+                                startDate = earliestStartDate.AddDays(-7); // タスク開始日の1週間前から表示
                             }
                         }
-                    });
-                    taskPeriodFactory.AddHandler(DraggableTaskBorder.LoadedEvent, loadedEvent);
 
-                    // Gridに要素を追加
-                    factory.AppendChild(backgroundFactory);
-                    factory.AppendChild(taskPeriodFactory);
+                        var endDate = startDate.AddMonths(2).AddDays(-1); // 2か月分表示（タスク期間をカバー）
 
-                    cellTemplate.VisualTree = factory;
-                    dateColumn.CellTemplate = cellTemplate;
+                        var currentDate = startDate;
+                        var lastMonth = -1;
 
-                    // 固定列の後ろに日付列を追加
-                    WbsDataGrid.Columns.Insert(fixedColumnCount + columnCount, dateColumn);
+                        // 固定列の数を取得（ID、タスク名、説明、開始日、終了日、進捗、ステータス、優先度、担当者、先行・後続）
+                        var fixedColumnCount = 10;
+
+                        // 日付列の総数を計算
+                        var totalColumns = (int)((endDate - startDate).TotalDays) + 1;
+
+                        for (int columnCount = 0; columnCount < totalColumns; columnCount++)
+                        {
+                            // プログレスメッセージを更新（10列ごと）
+                            if (columnCount % 10 == 0)
+                            {
+                                var progressPercent = (int)((double)columnCount / totalColumns * 100);
+                                ViewModel.WbsProgress = progressPercent;
+                                ViewModel.WbsProgressMessage = $"日付列を生成中... ({progressPercent}%)";
+                                
+                                // UIの更新を確実にするために少し待機
+                                await Task.Delay(10);
+                            }
+                            
+                            var loopDate = startDate.AddDays(columnCount);
+                            // 月が変わったかどうかをチェック
+                            var isMonthStart = loopDate.Month != lastMonth;
+                            if (isMonthStart)
+                            {
+                                lastMonth = loopDate.Month;
+                            }
+
+                            var dateColumn = new DataGridTemplateColumn
+                            {
+                                Width = 40, // 幅を少し広げて3行表示に対応
+                                Header = CreateThreeRowHeader(loopDate, isMonthStart),
+                                IsReadOnly = true,
+                                HeaderStyle = CreateDateHeaderStyle()
+                            };
+
+                            // 日付列用のセルテンプレート
+                            var cellTemplate = new DataTemplate();
+                            var factory = new FrameworkElementFactory(typeof(Grid));
+
+                            // Gridの設定
+                            factory.SetValue(Grid.WidthProperty, 30.0);
+                            factory.SetValue(Grid.HeightProperty, 20.0);
+
+                            // 背景用のBorder（土曜日は青色、日曜日はピンク色）
+                            var backgroundFactory = new FrameworkElementFactory(typeof(Border));
+                            backgroundFactory.SetValue(Border.WidthProperty, 30.0);
+                            backgroundFactory.SetValue(Border.HeightProperty, 20.0);
+                            backgroundFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Gray);
+                            backgroundFactory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+                            backgroundFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(2));
+                            backgroundFactory.SetValue(Grid.ZIndexProperty, 0);
+
+                            var backgroundBinding = new System.Windows.Data.Binding
+                            {
+                                Source = loopDate,
+                                Converter = new RedmineClient.Helpers.DateToBackgroundColorConverter()
+                            };
+                            backgroundFactory.SetValue(Border.BackgroundProperty, backgroundBinding);
+
+                            // 今日の日付ライン表示（設定が有効な場合のみ）
+                            if (ViewModel.ShowTodayLine && loopDate.Date == DateTime.Today)
+                            {
+                                var todayLineFactory = new FrameworkElementFactory(typeof(Border));
+                                todayLineFactory.SetValue(Border.WidthProperty, 30.0);
+                                todayLineFactory.SetValue(Border.HeightProperty, 20.0);
+                                todayLineFactory.SetValue(Border.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+                                todayLineFactory.SetValue(Border.BorderBrushProperty, System.Windows.Media.Brushes.Red);
+                                todayLineFactory.SetValue(Border.BorderThicknessProperty, new Thickness(3));
+                                todayLineFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+                                todayLineFactory.SetValue(Grid.ZIndexProperty, 3);
+                                factory.AppendChild(todayLineFactory);
+                            }
+
+                            // タスク期間表示用のDraggableTaskBorder（開始日から終了日まで）
+                            var taskPeriodFactory = new FrameworkElementFactory(typeof(DraggableTaskBorder));
+                            taskPeriodFactory.SetValue(DraggableTaskBorder.WidthProperty, 30.0);
+                            taskPeriodFactory.SetValue(DraggableTaskBorder.HeightProperty, 20.0);
+                            taskPeriodFactory.SetValue(Grid.ZIndexProperty, 1);
+
+                            // タスク期間の表示/非表示を制御（MultiBindingを使用）
+                            var multiBinding = new System.Windows.Data.MultiBinding();
+                            multiBinding.Converter = new TaskPeriodMultiBindingConverter(loopDate);
+
+                            // 開始日（WbsItemから直接取得）
+                            var startDateBinding = new System.Windows.Data.Binding
+                            {
+                                Path = new System.Windows.PropertyPath("StartDate")
+                            };
+                            multiBinding.Bindings.Add(startDateBinding);
+
+                            // 終了日（WbsItemから直接取得）
+                            var endDateBinding = new System.Windows.Data.Binding
+                            {
+                                Path = new System.Windows.PropertyPath("EndDate")
+                            };
+                            multiBinding.Bindings.Add(endDateBinding);
+
+                            taskPeriodFactory.SetValue(DraggableTaskBorder.VisibilityProperty, multiBinding);
+
+                            // 進捗に応じた背景色の設定（WbsItemから直接取得）
+                            // ただし、土日祝の場合は日付の背景色を優先するため、透明度を下げる
+                            var progressBinding = new System.Windows.Data.Binding
+                            {
+                                Path = new System.Windows.PropertyPath("Progress"),
+                                Converter = new TaskProgressToColorConverter()
+                            };
+                            taskPeriodFactory.SetValue(DraggableTaskBorder.BackgroundProperty, progressBinding);
+
+                            // 土日祝の場合は背景色の透明度を下げて、日付の背景色が見えるようにする
+                            var opacityBinding = new System.Windows.Data.Binding
+                            {
+                                Source = loopDate,
+                                Converter = new RedmineClient.Helpers.DateToOpacityConverter()
+                            };
+                            taskPeriodFactory.SetValue(DraggableTaskBorder.OpacityProperty, opacityBinding);
+
+                            // タスク情報を設定するためのイベントハンドラーを追加
+                            var loadedEvent = new System.Windows.RoutedEventHandler((sender, args) =>
+                            {
+                                if (sender is DraggableTaskBorder border)
+                                {
+                                    var dataContext = border.DataContext as WbsItem;
+                                    if (dataContext != null)
+                                    {
+                                        // 現在の列の実際のインデックスを計算
+                                        // columnCountは日付列のインデックス（0から始まる）
+                                        // 固定列9個 + 日付列の位置（columnCount）
+                                        var actualColumnIndex = 9 + columnCount;
+
+                                        // 列0の日付（表示開始日）を基準として渡す
+                                        // これにより、各列での日付計算が正しく行われる
+                                        // totalColumnsには固定列9個 + 日付列の総数を渡す必要がある
+                                        var actualTotalColumns = 9 + totalColumns;
+
+                                        // 境界条件の確認：actualColumnIndexがactualTotalColumnsの範囲内にあることを確認
+                                        if (actualColumnIndex >= actualTotalColumns)
+                                        {
+                                            actualColumnIndex = actualTotalColumns - 1;
+                                        }
+
+                                        border.SetTaskInfo(dataContext, startDate, loopDate, actualColumnIndex, actualTotalColumns);
+                                    }
+                                }
+                            });
+                            taskPeriodFactory.AddHandler(DraggableTaskBorder.LoadedEvent, loadedEvent);
+
+                            // Gridに要素を追加
+                            factory.AppendChild(backgroundFactory);
+                            factory.AppendChild(taskPeriodFactory);
+
+                            cellTemplate.VisualTree = factory;
+                            dateColumn.CellTemplate = cellTemplate;
+
+                            // 固定列の後ろに日付列を追加
+                            WbsDataGrid.Columns.Insert(fixedColumnCount + columnCount, dateColumn);
+                        }
+
+                        // ItemsSourceを復元
+                        WbsDataGrid.ItemsSource = currentItemsSource;
+                    }
+                    catch (Exception)
+                    {
+                        // エラーが発生した場合でもItemsSourceを復元
+                        WbsDataGrid.ItemsSource = currentItemsSource;
+                        throw;
+                    }
+
+                    // 完了メッセージを表示
+                    ViewModel.WbsProgress = 100;
+                    ViewModel.WbsProgressMessage = "日付列の生成が完了しました";
+                }
+                finally
+                {
+                    _isGeneratingColumns = false;
                 }
             }
         }
-
-
 
         protected override void OnInitialized(EventArgs e)
         {
@@ -760,7 +789,7 @@ namespace RedmineClient.Views.Pages
                 ScheduleStartYearMonthComboBox.ItemsSource = yearMonthOptions;
 
                 var savedYearMonth = AppConfig.ScheduleStartYearMonth;
-                
+
                 if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
                 {
                     ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
@@ -808,7 +837,7 @@ namespace RedmineClient.Views.Pages
                         {
                             _arrowDrawingCancellation?.Cancel();
                         }
-                        
+
                         // スクロール停止後、少し遅延して矢印を再描画
                         Task.Delay(300).ContinueWith(_ =>
                         {
@@ -918,8 +947,8 @@ namespace RedmineClient.Views.Pages
                 // DataGridの行の位置を取得
                 var fromRow = GetRowIndex(from);
                 var toRow = GetRowIndex(to);
-                
-                if (fromRow == -1 || toRow == -1) 
+
+                if (fromRow == -1 || toRow == -1)
                 {
                     return;
                 }
@@ -930,17 +959,17 @@ namespace RedmineClient.Views.Pages
 
                 // 行の高さを取得（DataGridの実際の行高さを使用）
                 var rowHeight = WbsDataGrid.RowHeight > 0 ? WbsDataGrid.RowHeight : 30.0;
-                
+
                 // 行の位置を計算（DataGridの実際の位置を考慮）
                 var fromY = dataGridBounds.Top + fromRow * rowHeight + rowHeight / 2;
                 var toY = dataGridBounds.Top + toRow * rowHeight + rowHeight / 2;
-                
+
                 // スケジュール表の開始位置を計算（固定列の後ろから）
                 var scheduleStartX = CalculateScheduleStartX();
-                
+
                 // 先行タスクの終了日位置を計算
                 var fromEndDateX = CalculateDateColumnX(from.EndDate, scheduleStartX);
-                
+
                 // 後続タスクの開始日位置を計算
                 var toStartDateX = CalculateDateColumnX(to.StartDate, scheduleStartX);
 
@@ -948,7 +977,7 @@ namespace RedmineClient.Views.Pages
                 // 1. 先行タスクの終了日から水平に右へ
                 var horizontalStartX = fromEndDateX;
                 var horizontalEndX = toStartDateX;
-                
+
                 // 2. 垂直線のX座標（先行タスクと後続タスクの中間）
                 var verticalX = (horizontalStartX + horizontalEndX) / 2;
 
@@ -1071,13 +1100,13 @@ namespace RedmineClient.Views.Pages
 
                 // 日付列の幅（40px）
                 var dateColumnWidth = 40.0;
-                
+
                 // 指定された日付までの日数を計算
                 var daysDiff = (int)((date - startDate).TotalDays);
-                
+
                 // 日付列の位置を計算
                 var dateColumnIndex = Math.Max(0, daysDiff);
-                
+
                 return scheduleStartX + (dateColumnIndex * dateColumnWidth) + (dateColumnWidth / 2);
             }
             catch
@@ -1092,7 +1121,7 @@ namespace RedmineClient.Views.Pages
         private int GetRowIndex(WbsItem item)
         {
             if (ViewModel?.FlattenedWbsItems == null) return -1;
-            
+
             var flattenedItems = ViewModel.FlattenedWbsItems;
             for (int i = 0; i < flattenedItems.Count; i++)
             {
@@ -1127,7 +1156,7 @@ namespace RedmineClient.Views.Pages
             {
                 // プレースメントターゲットからWbsItemのDataContextを取得
                 var wbsItem = target.DataContext as WbsItem;
-                
+
                 if (wbsItem == null) return;
 
                 // コンテキストメニューの各MenuItemにViewModelとWbsItemの両方を設定
@@ -1145,10 +1174,12 @@ namespace RedmineClient.Views.Pages
                             // 親タスクでない場合は無効化
                             menuItem.IsEnabled = wbsItem.IsParentTask;
                             break;
+
                         case "編集":
                             menuItem.Command = ViewModel.EditItemCommand;
                             menuItem.CommandParameter = wbsItem;
                             break;
+
                         case "削除":
                             menuItem.Command = ViewModel.DeleteItemCommand;
                             menuItem.CommandParameter = wbsItem;
@@ -1157,8 +1188,6 @@ namespace RedmineClient.Views.Pages
                 }
             }
         }
-
-
 
         /// <summary>
         /// 日付テキストボックスのキーイベントハンドラー
@@ -1449,25 +1478,24 @@ namespace RedmineClient.Views.Pages
         {
             if (e.PropertyName == nameof(ViewModel.SelectedProject))
             {
-                                 
-                 // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
-                 if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
-                 {
-                     ViewModel.LoadRedmineData();
-                 }
+                // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
+                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+                {
+                    ViewModel.LoadRedmineData();
+                }
             }
-                         else if (e.PropertyName == nameof(ViewModel.AvailableProjects))
-             {
-                 // プロジェクト一覧が更新された場合の処理
-             }
-             else if (e.PropertyName == nameof(ViewModel.ShowTodayLine))
-             {
-                 // 今日の日付ライン表示設定が変更された場合、スケジュール表を再生成
-                 if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
-                 {
-                     GenerateDateColumns();
-                 }
-             }
+            else if (e.PropertyName == nameof(ViewModel.AvailableProjects))
+            {
+                // プロジェクト一覧が更新された場合の処理
+            }
+            else if (e.PropertyName == nameof(ViewModel.ShowTodayLine))
+            {
+                // 今日の日付ライン表示設定が変更された場合、スケジュール表を再生成
+                if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                {
+                    GenerateDateColumns();
+                }
+            }
         }
 
         /// <summary>
@@ -1479,10 +1507,10 @@ namespace RedmineClient.Views.Pages
             {
                 // 展開状態を切り替え
                 item.IsExpanded = !item.IsExpanded;
-                
+
                 // ViewModelの更新処理を実行
                 ViewModel.ToggleExpansion(item);
-                
+
                 // UIを即座に更新
                 WbsDataGrid.Items.Refresh();
             }
@@ -1533,6 +1561,53 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
+        /// DataGridのLoadedイベントハンドラー（非同期処理用）
+        /// </summary>
+        private async Task WbsDataGrid_LoadedAsync(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.DataGrid dataGrid)
+            {
+                // 描画完了を待ってからプログレスバーとメッセージを非表示にする
+                await WaitForRenderComplete(dataGrid);
+
+                // 描画完了後にプログレスバーとメッセージを非表示にする
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (ViewModel.IsWbsLoading)
+                    {
+                        ViewModel.IsWbsLoading = false;
+                        ViewModel.WbsProgressMessage = ""; // プログレスメッセージも消す
+                    }
+                }, DispatcherPriority.Loaded);
+            }
+        }
+
+        /// <summary>
+        /// DataGridのLoadedイベントハンドラー（イベント用のラッパー）
+        /// </summary>
+        private void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
+        {
+            // 非同期処理を開始（完了を待たない）
+            _ = WbsDataGrid_LoadedAsync(sender, e);
+        }
+
+        /// <summary>
+        /// 「UIキューが描画まで進み、アイドルになる」まで待つユーティリティ
+        /// </summary>
+        public static async Task WaitForRenderComplete(FrameworkElement element)
+        {
+            // レイアウト計算を一度進める
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            element.UpdateLayout();
+
+            // Render 優先度の処理が流れ切るのを待つ
+            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+            // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
+            await element.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        }
+
+        /// <summary>
         /// 静的DatePickerのプリロードを実行する
         /// </summary>
         private static Task StaticPreloadDatePickersAsync()
@@ -1546,7 +1621,7 @@ namespace RedmineClient.Views.Pages
                     {
                         await Task.Delay(100);
                     }
-                    
+
                     // UIスレッドでDatePickerの初期化を実行
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
@@ -1560,12 +1635,12 @@ namespace RedmineClient.Views.Pages
                                 IsTodayHighlighted = true,
                                 SelectedDateFormat = DatePickerFormat.Short
                             };
-                            
+
                             // カレンダーを表示してプリロード
                             datePicker.IsDropDownOpen = true;
-                            
+
                             // 少し待ってから閉じる
-                            Task.Delay(150).ContinueWith(_ =>
+                            _ = Task.Delay(150).ContinueWith(_ =>
                             {
                                 if (Application.Current != null)
                                 {
@@ -1605,7 +1680,7 @@ namespace RedmineClient.Views.Pages
                         {
                             // 複数のDatePickerをプリロードして、カレンダーコンポーネントを初期化
                             var datePickers = new List<DatePicker>();
-                            
+
                             // 現在の日付、前月、翌月の日付でプリロード
                             var dates = new[]
                             {
@@ -1613,7 +1688,7 @@ namespace RedmineClient.Views.Pages
                                 DateTime.Today.AddMonths(-1),
                                 DateTime.Today.AddMonths(1)
                             };
-                            
+
                             foreach (var date in dates)
                             {
                                 var datePicker = new DatePicker
@@ -1625,18 +1700,18 @@ namespace RedmineClient.Views.Pages
                                     DisplayDateEnd = new DateTime(2100, 12, 31),
                                     SelectedDateFormat = DatePickerFormat.Short
                                 };
-                                
+
                                 datePickers.Add(datePicker);
                             }
-                            
+
                             // カレンダーを表示してプリロード
                             foreach (var datePicker in datePickers)
                             {
                                 datePicker.IsDropDownOpen = true;
                             }
-                            
+
                             // 少し待ってから閉じる
-                            Task.Delay(200).ContinueWith(_ =>
+                            _ = Task.Delay(200).ContinueWith(_ =>
                             {
                                 Application.Current.Dispatcher.Invoke(() =>
                                 {
@@ -1712,21 +1787,19 @@ namespace RedmineClient.Views.Pages
                         return;
                     }
 
-                                                                // 日付が変更された場合のみ処理
+                    // 日付が変更された場合のみ処理
                     if (datePicker.SelectedDate.HasValue)
                     {
                         var newDate = datePicker.SelectedDate.Value;
-                        
+
                         // キャッシュから変更前の値を取得
                         var oldValues = _dateChangeCache.GetValueOrDefault(datePicker, (task.StartDate, task.EndDate));
                         var oldStartDate = oldValues.StartDate;
                         var oldEndDate = oldValues.EndDate;
 
-
-
                         // タグを使用して列を識別
                         string? columnType = datePicker.Tag?.ToString();
-                        
+
                         // 日付変更の検出と処理
                         bool dateChanged = false;
                         DateTime originalStartDate = oldStartDate;
@@ -1767,12 +1840,13 @@ namespace RedmineClient.Views.Pages
         }
 
         #region ドラッグ&ドロップ機能（タスクの順番変更）
+
         // このセクションではタスクのドラッグ&ドロップによる順番変更機能を実装しています。
         // 使い方：
         // 1. タスク名のセルを左クリックしてドラッグ開始
         // 2. 同じ階層レベルの他のタスクの上にドロップ
         // 3. 自動的にタスクの順番が変更されます
-        // 
+        //
         // 制限事項：
         // - 同じ階層レベルで同じ親を持つタスク間でのみ移動可能
         // - 異なる階層や親が異なるタスクへの移動は無効
@@ -1795,7 +1869,7 @@ namespace RedmineClient.Views.Pages
                         // ドロップ位置からターゲットアイテムを取得
                         var dropPoint = e.GetPosition(WbsDataGrid);
                         var targetRow = GetRowAtPoint(dropPoint);
-                        
+
                         if (targetRow != null && targetRow.DataContext is WbsItem targetItem)
                         {
                             // 同じ階層レベルで同じ親を持つタスク間での順番変更のみ許可
@@ -1987,9 +2061,10 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        #endregion
+        #endregion ドラッグ&ドロップ機能（タスクの順番変更）
 
         #region 先行・後続の依存関係設定（ドラッグ&ドロップ）
+
         // このセクションでは先行・後続の関係性をドラッグ&ドロップで設定する機能を実装しています。
         // 使い方：
         // 1. タスク名のセルを左クリックしてドラッグ開始
@@ -2018,14 +2093,13 @@ namespace RedmineClient.Views.Pages
                         // 先行・後続の関係性を設定
                         // タスクAをタスクBにドロップしたとき、タスクAがタスクBの先行タスクになる
                         ViewModel.SetDependency(sourceItem, targetItem, true);
-                        
+
                         // 背景色をリセット
                         border.Background = System.Windows.Media.Brushes.Transparent;
                         border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                         border.BorderThickness = new Thickness(1);
 
                         // Redmineへの更新を非同期で実行
-                        
                     }
                 }
             }
@@ -2099,6 +2173,6 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        #endregion
+        #endregion 先行・後続の依存関係設定（ドラッグ&ドロップ）
     }
 }
