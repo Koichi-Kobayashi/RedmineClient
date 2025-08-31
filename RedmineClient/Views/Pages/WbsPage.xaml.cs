@@ -626,7 +626,7 @@ namespace RedmineClient.Views.Pages
                             if (columnCount % 5 == 0)
                             {
                                 // プログレス計算を修正：左端から正しく表示されるように
-                                var progressPercent = (int)((double)columnCount / totalColumns * 100);
+                                var progressPercent = (int)((double)columnCount / totalColumns * 50) + 50; // 50%から100%の範囲で計算
                                 // 100%を超えないように制限
                                 progressPercent = Math.Min(progressPercent, 100);
                                 ViewModel.WbsProgress = progressPercent;
@@ -1605,6 +1605,13 @@ namespace RedmineClient.Views.Pages
                     if (ViewModel.FlattenedWbsItems?.Count > 0)
                     {
                         System.Diagnostics.Debug.WriteLine($"First item: {ViewModel.FlattenedWbsItems[0].Title}");
+                        
+                        // DataGridのItemsSourceを更新
+                        if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                        {
+                            WbsDataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
+                            System.Diagnostics.Debug.WriteLine($"PropertyChangedでItemsSource更新: {ViewModel.FlattenedWbsItems.Count}件");
+                        }
                     }
                 }
                 else if (e.PropertyName == nameof(ViewModel.WbsItems))
@@ -1651,7 +1658,7 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// DataGridのLoadedイベントハンドラー
         /// </summary>
-        private void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
+        private async void WbsDataGrid_Loaded(object sender, RoutedEventArgs e)
         {
             if (sender is DataGrid dataGrid)
             {
@@ -1665,6 +1672,73 @@ namespace RedmineClient.Views.Pages
                 
                 // DependencyArrowCanvasの表示状態をDataGridと同期
                 SynchronizeDependencyArrowCanvasVisibility();
+                
+                // ViewModelの初期化が完了するまで待機
+                while (ViewModel.FlattenedWbsItems == null || ViewModel.FlattenedWbsItems.Count == 0)
+                {
+                    await Task.Delay(100);
+                    System.Diagnostics.Debug.WriteLine("ViewModel初期化完了を待機中...");
+                }
+                
+                // DataGridのItemsSourceを設定（これが重要！）
+                if (ViewModel.FlattenedWbsItems != null && ViewModel.FlattenedWbsItems.Count > 0)
+                {
+                    dataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
+                    System.Diagnostics.Debug.WriteLine($"DataGrid ItemsSource設定完了: {ViewModel.FlattenedWbsItems.Count}件");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("ViewModel.FlattenedWbsItemsが空またはnullのため、ItemsSourceを設定できません");
+                }
+                
+                // Redmineデータの読み込みと日付カラム生成を実行
+                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
+                {
+                    try
+                    {
+                        // プログレスバーを表示
+                        ViewModel.IsWbsLoading = true;
+                        ViewModel.WbsProgressMessage = "Redmineデータを読み込み中...";
+                        ViewModel.WbsProgress = 0;
+                        
+                        // Redmineデータを読み込み
+                        await ViewModel.LoadRedmineDataAsync();
+                        
+                        // データ読み込み完了後、ItemsSourceを再設定（データが更新された可能性があるため）
+                        if (ViewModel.FlattenedWbsItems != null && ViewModel.FlattenedWbsItems.Count > 0)
+                        {
+                            dataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
+                            System.Diagnostics.Debug.WriteLine($"Redmineデータ読み込み後、ItemsSource再設定: {ViewModel.FlattenedWbsItems.Count}件");
+                        }
+                        
+                        // 日付カラムを生成
+                        ViewModel.WbsProgressMessage = "日付カラムを生成中...";
+                        ViewModel.WbsProgress = 50;
+                        
+                        if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                        {
+                            GenerateDateColumns();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Redmineデータ読み込みエラー: {ex.Message}");
+                        
+                        // エラーが発生した場合でも、日付カラムは生成
+                        if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                        {
+                            GenerateDateColumns();
+                        }
+                    }
+                }
+                else
+                {
+                    // プロジェクトが選択されていない場合でも、日付カラムは生成
+                    if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                    {
+                        GenerateDateColumns();
+                    }
+                }
                 
                 // 描画完了を待ってからプログレスバーとメッセージを非表示にする
                 _ = Task.Run(async () =>

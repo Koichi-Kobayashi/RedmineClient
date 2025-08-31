@@ -1162,7 +1162,7 @@ namespace RedmineClient.ViewModels.Pages
                         if (processedItems % 10 == 0 || processedItems == totalItems)
                         {
                             var progress = 80 + (double)processedItems / totalItems * 15; // 80%から95%まで
-                            WbsProgress = progress;
+                            WbsProgress = Math.Min(progress, 95); // 95%を超えないように制限
                             WbsProgressMessage = $"WBSリストを更新中... {processedItems}/{totalItems}";
                         }
                     }
@@ -1224,7 +1224,7 @@ namespace RedmineClient.ViewModels.Pages
                         if (processedItems % 10 == 0 || processedItems == totalItems)
                         {
                             var progress = (double)processedItems / totalItems * 50; // 50%まで
-                            WbsProgress = progress;
+                            WbsProgress = Math.Min(progress, 50); // 50%を超えないように制限
                             WbsProgressMessage = $"WBSリストを更新中... {WbsItems.Count} アイテムを処理中...";
                         }
                     }
@@ -2453,7 +2453,7 @@ namespace RedmineClient.ViewModels.Pages
                         if (processedItems % 10 == 0 || processedItems == totalItems)
                         {
                             var progress = (double)processedItems / totalItems * 50; // 50%まで
-                            WbsProgress = progress;
+                            WbsProgress = Math.Min(progress, 50); // 50%を超えないように制限
                             WbsProgressMessage = $"WBSリストを安全に更新中... {processedItems}/{totalItems}";
                         }
                     }
