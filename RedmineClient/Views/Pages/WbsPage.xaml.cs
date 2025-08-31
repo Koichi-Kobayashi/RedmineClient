@@ -239,11 +239,20 @@ namespace RedmineClient.Views.Pages
                     WbsDataGrid.IsVisibleChanged += WbsDataGrid_IsVisibleChanged;
                 }
 
-                // ViewModelの初期化が完了するまで待機
+                // ViewModelの初期化が完了するまで待機（タイムアウト付き）
+                var waitCount = 0;
                 while (ViewModel.FlattenedWbsItems == null || ViewModel.FlattenedWbsItems.Count == 0)
                 {
                     await Task.Delay(100);
-                    System.Diagnostics.Debug.WriteLine("ViewModel初期化完了を待機中...");
+                    waitCount++;
+                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了を待機中... ({waitCount}回目)");
+                    
+                    // 無限ループを防ぐ（最大100回まで待機）
+                    if (waitCount >= 100)
+                    {
+                        System.Diagnostics.Debug.WriteLine("ViewModel初期化完了の待機がタイムアウトしました");
+                        break;
+                    }
                 }
 
                 // 初期化完了後のデバッグ出力
@@ -1653,11 +1662,20 @@ namespace RedmineClient.Views.Pages
                 // DependencyArrowCanvasの表示状態をDataGridと同期
                 SynchronizeDependencyArrowCanvasVisibility();
                 
-                // ViewModelの初期化が完了するまで待機
+                // ViewModelの初期化が完了するまで待機（タイムアウト付き）
+                var waitCount = 0;
                 while (ViewModel.FlattenedWbsItems == null || ViewModel.FlattenedWbsItems.Count == 0)
                 {
                     await Task.Delay(100);
-                    System.Diagnostics.Debug.WriteLine("ViewModel初期化完了を待機中...");
+                    waitCount++;
+                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了を待機中... ({waitCount}回目)");
+                    
+                    // 無限ループを防ぐ（最大100回まで待機）
+                    if (waitCount >= 100)
+                    {
+                        System.Diagnostics.Debug.WriteLine("ViewModel初期化完了の待機がタイムアウトしました");
+                        break;
+                    }
                 }
                 
                 // DataGridのItemsSourceを設定（これが重要！）

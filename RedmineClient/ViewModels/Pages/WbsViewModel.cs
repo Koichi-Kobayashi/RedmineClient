@@ -541,6 +541,11 @@ namespace RedmineClient.ViewModels.Pages
                         ErrorMessage = "Redmineに接続されていません。設定画面で接続情報を設定してください。";
                         WbsItems.Clear();
                         FlattenedWbsItems.Clear();
+                        
+                        // 空の状態でもFlattenedWbsItemsを初期化完了とみなすために、ダミーアイテムを追加してから削除
+                        var dummyItem = new WbsItem { Title = "初期化中..." };
+                        FlattenedWbsItems.Add(dummyItem);
+                        FlattenedWbsItems.Remove(dummyItem);
                     });
                 }
 
