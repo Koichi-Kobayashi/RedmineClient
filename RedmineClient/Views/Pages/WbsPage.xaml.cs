@@ -80,6 +80,12 @@ namespace RedmineClient.Views.Pages
 
                 // 依存関係矢印の初期化
                 InitializeDependencyArrows();
+
+                // DependencyArrowCanvasの表示状態をDataGridと同期
+                if (DependencyArrowCanvas != null)
+                {
+                    DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
+                }
             };
 
             // アプリケーション終了時の処理を追加
@@ -230,6 +236,12 @@ namespace RedmineClient.Views.Pages
                 {
                     // チケット一覧の自動取得に失敗
                 }
+            }
+
+            // DependencyArrowCanvasの表示状態をDataGridと同期
+            if (DependencyArrowCanvas != null && WbsDataGrid != null)
+            {
+                DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
             }
 
             // このイベントは一度だけ実行
@@ -747,11 +759,25 @@ namespace RedmineClient.Views.Pages
                     // 完了メッセージを表示
                     ViewModel.WbsProgress = 100;
                     ViewModel.WbsProgressMessage = "日付列の生成が完了しました";
-                    
-                    // 完了後、少し待ってからプログレス表示を非表示にする
-                    await Task.Delay(500);
-                    ViewModel.IsWbsLoading = false;
-                    ViewModel.WbsProgressMessage = "";
+
+                    // DataGridの描画完了を待ってからプログレス表示を非表示にする
+                    await Dispatcher.InvokeAsync(async () =>
+                    {
+                        // レイアウト計算を一度進める
+                        await Dispatcher.Yield(DispatcherPriority.Background);
+                        WbsDataGrid.UpdateLayout();
+
+                        // Render 優先度の処理が流れ切るのを待つ
+                        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                        // さらに ApplicationIdle になるまで待つ（微妙な残り処理対策）
+                        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+
+                        // 描画完了後にプログレス表示を非表示にする
+                        await Task.Delay(500); // 完了メッセージを確認できるように少し待機
+                        ViewModel.IsWbsLoading = false;
+                        ViewModel.WbsProgressMessage = "";
+                    }, DispatcherPriority.Loaded);
                 }
                 finally
                 {
@@ -835,9 +861,19 @@ namespace RedmineClient.Views.Pages
                 };
             }
 
-            // スクロール中の描画処理を最適化
+            // DataGridの表示状態変更を監視
             if (WbsDataGrid != null)
             {
+                WbsDataGrid.IsVisibleChanged += (s, e) =>
+                {
+                    // DataGridの表示状態が変更された場合、矢印も同期して表示/非表示を制御
+                    if (DependencyArrowCanvas != null)
+                    {
+                        DependencyArrowCanvas.Visibility = WbsDataGrid.Visibility;
+                    }
+                };
+
+                // スクロール中の描画処理を最適化
                 var scrollViewer = GetScrollViewer(WbsDataGrid);
                 if (scrollViewer != null)
                 {
@@ -892,6 +928,13 @@ namespace RedmineClient.Views.Pages
                 return;
             }
 
+            // DependencyArrowCanvasが非表示の場合は矢印を描画しない
+            if (DependencyArrowCanvas.Visibility != Visibility.Visible)
+            {
+                ClearDependencyArrows();
+                return;
+            }
+
             _isDrawingArrows = true;
             _arrowDrawingCancellation = new CancellationTokenSource();
 
@@ -919,6 +962,9 @@ namespace RedmineClient.Views.Pages
         private void DrawDependencyArrowsLightweight()
         {
             if (DependencyArrowCanvas == null || ViewModel?.FlattenedWbsItems == null) return;
+
+            // DependencyArrowCanvasが非表示の場合は矢印を描画しない
+            if (DependencyArrowCanvas.Visibility != Visibility.Visible) return;
 
             // 既存の矢印をクリア
             DependencyArrowCanvas.Children.Clear();
@@ -1538,6 +1584,12 @@ namespace RedmineClient.Views.Pages
             {
                 // このイベントは一度だけ実行
                 dataGrid.Loaded -= WbsDataGrid_Loaded;
+                
+                // DependencyArrowCanvasの表示状態をDataGridと同期
+                if (DependencyArrowCanvas != null)
+                {
+                    DependencyArrowCanvas.Visibility = dataGrid.Visibility;
+                }
                 
                 // 描画完了を待ってからプログレスバーとメッセージを非表示にする
                 _ = Task.Run(async () =>
