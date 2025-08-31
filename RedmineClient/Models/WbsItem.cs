@@ -721,27 +721,14 @@ namespace RedmineClient.Models
             var recursionStack = new HashSet<WbsItem>();
             var cyclePath = new List<WbsItem>();
             
-            // 新しい依存関係を一時的に追加してチェック
-            Predecessors.Add(newDependency);
-            newDependency.Successors.Add(this);
+            // 新しく追加される依存関係から開始して循環参照をチェック
+            var hasCycle = FindCyclePathFromNewDependency(newDependency, visited, recursionStack, cyclePath);
             
-            try
-            {
-                // 新しく追加された依存関係から開始して循環参照をチェック
-                var hasCycle = FindCyclePathFromNewDependency(newDependency, visited, recursionStack, cyclePath);
-                
-                return new CircularDependencyInfo 
-                { 
-                    HasCycle = hasCycle, 
-                    CyclePath = cyclePath 
-                };
-            }
-            finally
-            {
-                // 一時的な依存関係を削除
-                Predecessors.Remove(newDependency);
-                newDependency.Successors.Remove(this);
-            }
+            return new CircularDependencyInfo 
+            { 
+                HasCycle = hasCycle, 
+                CyclePath = cyclePath 
+            };
         }
 
         /// <summary>
@@ -841,6 +828,13 @@ namespace RedmineClient.Models
                 {
                     if (FindCyclePathFromNewDependency(predecessor, visited, recursionStack, cyclePath))
                         return true;
+                }
+
+                // 新しく追加される依存関係が現在のアイテムに戻ってくるかをチェック
+                if (newDependency == this)
+                {
+                    cyclePath.Add(this);
+                    return true;
                 }
 
                 cyclePath.RemoveAt(cyclePath.Count - 1);
