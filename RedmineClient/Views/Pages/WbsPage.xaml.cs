@@ -1598,7 +1598,18 @@ namespace RedmineClient.Views.Pages
                     // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                     if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
                     {
-                        ViewModel.LoadRedmineData();
+                        // 非同期版を使用してUIをブロックしないようにする
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await ViewModel.LoadRedmineDataAsync();
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"プロジェクト選択時のデータ読み込みエラー: {ex.Message}");
+                            }
+                        });
                     }
                 }
                 else if (e.PropertyName == nameof(ViewModel.AvailableProjects))

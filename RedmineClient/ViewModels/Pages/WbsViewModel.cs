@@ -548,6 +548,47 @@ namespace RedmineClient.ViewModels.Pages
                         FlattenedWbsItems.Remove(dummyItem);
                     });
                 }
+                else
+                {
+                    // Redmineに接続されている場合はプロジェクト一覧を取得
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 30;
+                        WbsProgressMessage = "プロジェクト一覧を取得中...";
+                    });
+                    
+                    try
+                    {
+                        using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                        {
+                            var projects = await redmineService.GetProjectsAsync();
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                AvailableProjects = projects;
+                                System.Diagnostics.Debug.WriteLine($"プロジェクト一覧を取得しました: {projects.Count}件");
+                                
+                                // 保存されたプロジェクトIDがある場合はそのプロジェクトを選択
+                                if (AppConfig.SelectedProjectId.HasValue)
+                                {
+                                    var savedProject = projects.FirstOrDefault(p => p.Id == AppConfig.SelectedProjectId.Value);
+                                    if (savedProject != null)
+                                    {
+                                        SelectedProject = savedProject;
+                                        System.Diagnostics.Debug.WriteLine($"保存されたプロジェクトを選択しました: {savedProject.Name} (ID: {savedProject.Id})");
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            ErrorMessage = $"プロジェクト一覧の取得に失敗しました: {ex.Message}";
+                            System.Diagnostics.Debug.WriteLine($"プロジェクト一覧取得エラー: {ex.Message}");
+                        });
+                    }
+                }
 
                 // 平坦化リストを初期化（UIスレッドで実行）
                 await Application.Current.Dispatcher.InvokeAsync(() =>
