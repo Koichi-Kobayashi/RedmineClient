@@ -577,6 +577,20 @@ namespace RedmineClient.ViewModels.Pages
                                         System.Diagnostics.Debug.WriteLine($"保存されたプロジェクトを選択しました: {savedProject.Name} (ID: {savedProject.Id})");
                                     }
                                 }
+                                
+                                // FlattenedWbsItemsを初期化（プロジェクト一覧取得完了後）
+                                if (FlattenedWbsItems == null)
+                                {
+                                    FlattenedWbsItems = new ObservableCollection<WbsItem>();
+                                }
+                                FlattenedWbsItems.Clear();
+                                
+                                // 空の状態でもFlattenedWbsItemsを初期化完了とみなすために、ダミーアイテムを追加してから削除
+                                var dummyItem = new WbsItem { Title = "プロジェクト一覧取得完了" };
+                                FlattenedWbsItems.Add(dummyItem);
+                                FlattenedWbsItems.Remove(dummyItem);
+                                
+                                System.Diagnostics.Debug.WriteLine("プロジェクト一覧取得後: FlattenedWbsItemsを初期化しました");
                             });
                         }
                     }
@@ -611,6 +625,10 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     WbsProgress = 100;
                     WbsProgressMessage = "初期化完了！";
+                    
+                    // 初期化完了後のデバッグ出力
+                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: FlattenedWbsItems.Count = {FlattenedWbsItems?.Count ?? 0}");
+                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: WbsItems.Count = {WbsItems?.Count ?? 0}");
                 });
 
                 // 完了メッセージを少し表示してから非表示

@@ -264,6 +264,8 @@ namespace RedmineClient.Views.Pages
                     if (waitCount >= 100)
                     {
                         System.Diagnostics.Debug.WriteLine("ViewModel初期化完了の待機がタイムアウトしました");
+                        
+
                         break;
                     }
                 }
@@ -1711,6 +1713,16 @@ namespace RedmineClient.Views.Pages
                     if (waitCount >= 100)
                     {
                         System.Diagnostics.Debug.WriteLine("ViewModel初期化完了の待機がタイムアウトしました");
+                        
+                        // タイムアウト後の処理：空のリストでもItemsSourceを設定
+                        if (ViewModel.FlattenedWbsItems == null)
+                        {
+                            ViewModel.FlattenedWbsItems = new ObservableCollection<WbsItem>();
+                        }
+                        
+                        // 空のリストでもItemsSourceを設定してDataGridを初期化
+                        dataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
+                        System.Diagnostics.Debug.WriteLine("タイムアウト後、空のリストでItemsSourceを設定しました");
                         break;
                     }
                 }
