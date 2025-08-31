@@ -692,5 +692,20 @@ namespace RedmineClient.Models
             get => _hasUnsavedChanges;
             set => SetProperty(ref _hasUnsavedChanges, value);
         }
+
+        /// <summary>
+        /// 依存関係の変更通知を強制的に発火させる
+        /// </summary>
+        public void NotifyDependencyChanged()
+        {
+            OnPropertyChanged(nameof(HasPredecessors));
+            OnPropertyChanged(nameof(HasSuccessors));
+            OnPropertyChanged(nameof(PredecessorCount));
+            OnPropertyChanged(nameof(SuccessorCount));
+            OnPropertyChanged(nameof(PredecessorDetails));
+            OnPropertyChanged(nameof(PredecessorDisplayText));
+            OnPropertyChanged(nameof(SuccessorDetails));
+            OnPropertyChanged(nameof(SuccessorDisplayText));
+        }
     }
 }

@@ -1562,7 +1562,7 @@ namespace RedmineClient.ViewModels.Pages
         /// <remarks>
         /// ドラッグ&ドロップで先行・後続の関係性を設定します。
         /// 循環参照が発生する場合は設定を拒否します。
-        /// タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになり、タスクAがタスクBの後続タスクになります。
+        /// タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになります。
         /// </remarks>
         public async Task SetDependencyAsync(WbsItem sourceItem, WbsItem targetItem, bool isPredecessor)
         {
@@ -1572,8 +1572,9 @@ namespace RedmineClient.ViewModels.Pages
             {
                 if (isPredecessor)
                 {
-                    // 先行関係を設定（sourceItemがtargetItemの先行タスクになる）
-                    targetItem.AddPredecessor(sourceItem);
+                    // 先行関係を設定
+                    // タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになる
+                    sourceItem.AddPredecessor(targetItem);
                 }
                 else
                 {
@@ -1586,6 +1587,10 @@ namespace RedmineClient.ViewModels.Pages
 
                 // UIを更新
                 OnPropertyChanged(nameof(FlattenedWbsItems));
+
+                // 個々のアイテムのプロパティ変更通知を強制的に発火
+                sourceItem.NotifyDependencyChanged();
+                targetItem.NotifyDependencyChanged();
 
                 // Redmineに依存関係を登録
                 if (IsRedmineConnected && SelectedProject != null && _redmineService != null)

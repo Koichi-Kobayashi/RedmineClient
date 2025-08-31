@@ -98,10 +98,8 @@
 
             <!--  先行・後続の関係性設定説明  -->
             <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
-                <ui:TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="先行・後続設定:" />
-                <ui:TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="Orange" Text="↑先行" />
-                <ui:TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="11" Foreground="Blue" Text="↓後続" />
-                <ui:TextBlock Margin="0,0,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="タスク名をドラッグして先行・後続列にドロップ" />
+                <ui:TextBlock Margin="0,8,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="先行タスク:" />
+                <ui:TextBlock Margin="0,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="先行タスク列にドロップしたタスクが後続になる" />
             </StackPanel>
 
             <!--  依存関係矢印の表示設定  -->
@@ -196,13 +194,13 @@
                     CanUserSortColumns="True" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave" Drop="WbsDataGrid_Drop" EnableColumnVirtualization="True"
                     EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All" HeadersVisibility="Column"
                     ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
+                    Loaded="WbsDataGrid_Loaded"
                     RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     RowHeaderWidth="0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.IsDeferredScrollingEnabled="False" ScrollViewer.PanningMode="Both"
                     ScrollViewer.VerticalScrollBarVisibility="Auto"
                     SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
                     SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.CacheLength="3,3" VirtualizingPanel.CacheLengthUnit="Page" VirtualizingPanel.IsContainerVirtualizable="True"
-                    VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.VirtualizationMode="Recycling"
-                    Loaded="WbsDataGrid_Loaded">
+                    VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.VirtualizationMode="Recycling">
 
 
 
@@ -487,7 +485,7 @@
                         <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
 
                         <!--  先行・後続列  -->
-                        <DataGridTemplateColumn Width="120" Header="先行・後続&#x0d;&#x0a;D&amp;D" IsReadOnly="True">
+                        <DataGridTemplateColumn Width="120" Header="先行タスク&#x0d;&#x0a;D&amp;D" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -501,11 +499,10 @@
                                             <ui:TextBlock Foreground="Orange" Text="{Binding Predecessors, Converter={x:Static helpers:PredecessorsToIdStringConverter.Instance}}" />
                                         </StackPanel>
 
-                                        <!--  ドロップターゲット（先行・後続設定用）- 先行タスクがない場合のみ表示  -->
+                                        <!--  ドロップターゲット（先行・後続設定用）- 常に表示  -->
                                         <Border
                                             Grid.Column="0" Padding="4,2" AllowDrop="True" Background="Transparent" BorderBrush="Transparent"
-                                            BorderThickness="1" CornerRadius="2" DragEnter="DependencyDrop_DragEnter" DragLeave="DependencyDrop_DragLeave" Drop="DependencyDrop_Drop"
-                                            Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanInverseConverter.Instance}}" />
+                                            BorderThickness="1" CornerRadius="2" DragEnter="DependencyDrop_DragEnter" DragLeave="DependencyDrop_DragLeave" Drop="DependencyDrop_Drop" />
 
                                         <!--  ツールチップ（詳細情報表示）  -->
                                         <Grid.ToolTip>
@@ -598,14 +595,10 @@
                 <Canvas x:Name="DependencyArrowCanvas" Grid.Row="0" Panel.ZIndex="1000" Background="Transparent" IsHitTestVisible="False" />
 
                 <!--  WBSデータ読み込み中のプログレスバーオーバーレイ  -->
-                <Border Grid.Row="0" Background="#80000066"
-                        Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}">
+                <Border Grid.Row="0" Background="#80000066" Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding ViewModel.WbsProgressMessage}" HorizontalAlignment="Center" Foreground="White" FontSize="14" Margin="0,0,0,8"/>
-                        <ProgressBar IsIndeterminate="{Binding ViewModel.IsWbsLoading}" 
-                                   Value="{Binding ViewModel.WbsProgress}" 
-                                   Maximum="100"
-                                   Width="240" Height="8"/>
+                        <TextBlock Margin="0,0,0,8" HorizontalAlignment="Center" FontSize="14" Foreground="White" Text="{Binding ViewModel.WbsProgressMessage}" />
+                        <ProgressBar Width="240" Height="8" IsIndeterminate="{Binding ViewModel.IsWbsLoading}" Maximum="100" Value="{Binding ViewModel.WbsProgress}" />
                     </StackPanel>
                 </Border>
             </Grid>

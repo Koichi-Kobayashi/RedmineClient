@@ -2099,6 +2099,9 @@ namespace RedmineClient.Views.Pages
                         border.BorderBrush = System.Windows.Media.Brushes.Transparent;
                         border.BorderThickness = new Thickness(1);
 
+                        // UIを強制的に更新
+                        WbsDataGrid.Items.Refresh();
+
                         // Redmineへの更新を非同期で実行
                     }
                 }
