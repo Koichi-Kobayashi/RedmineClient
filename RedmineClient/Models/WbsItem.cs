@@ -515,8 +515,9 @@ namespace RedmineClient.Models
         /// </summary>
         /// <param name="predecessor">先行タスク</param>
         /// <param name="skipReciprocalCall">相互呼び出しをスキップするかどうか</param>
+        /// <param name="skipCycleCheck">循環参照チェックをスキップするかどうか</param>
         /// <returns>依存関係が追加された場合はtrue、既に存在するか循環参照の場合はfalse</returns>
-        public bool AddPredecessor(WbsItem predecessor, bool skipReciprocalCall = false)
+        public bool AddPredecessor(WbsItem predecessor, bool skipReciprocalCall = false, bool skipCycleCheck = false)
         {
             if (predecessor == null || predecessor == this) return false;
 
@@ -531,13 +532,20 @@ namespace RedmineClient.Models
                 return false;
             }
 
-            // 循環参照をチェック（Predecessorsに追加する前に行う）
-            System.Diagnostics.Debug.WriteLine($"AddPredecessor: Checking circular dependency for {Title} -> {predecessor.Title}");
-            var cycleInfo = GetCircularDependencyInfo(predecessor);
-            if (cycleInfo.HasCycle)
+            // 循環参照をチェック（Predecessorsに追加する前に行う、ただしスキップ可能）
+            if (!skipCycleCheck)
             {
-                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Circular dependency detected: {cycleInfo.GetDescription()}");
-                throw new InvalidOperationException($"先行タスク「{predecessor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
+                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Checking circular dependency for {Title} -> {predecessor.Title}");
+                var cycleInfo = GetCircularDependencyInfo(predecessor);
+                if (cycleInfo.HasCycle)
+                {
+                    System.Diagnostics.Debug.WriteLine($"AddPredecessor: Circular dependency detected: {cycleInfo.GetDescription()}");
+                    throw new InvalidOperationException($"先行タスク「{predecessor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Skipping circular dependency check for {Title} -> {predecessor.Title}");
             }
 
             System.Diagnostics.Debug.WriteLine($"AddPredecessor: Adding predecessor {predecessor.Title} to {Title}");
@@ -603,8 +611,9 @@ namespace RedmineClient.Models
         /// </summary>
         /// <param name="successor">後続タスク</param>
         /// <param name="skipReciprocalCall">相互呼び出しをスキップするかどうか</param>
+        /// <param name="skipCycleCheck">循環参照チェックをスキップするかどうか</param>
         /// <returns>依存関係が追加された場合はtrue、既に存在するか循環参照の場合はfalse</returns>
-        public bool AddSuccessor(WbsItem successor, bool skipReciprocalCall = false)
+        public bool AddSuccessor(WbsItem successor, bool skipReciprocalCall = false, bool skipCycleCheck = false)
         {
             if (successor == null || successor == this) return false;
 
@@ -619,13 +628,20 @@ namespace RedmineClient.Models
                 return false;
             }
 
-            // 循環参照をチェック（Successorsに追加する前に行う）
-            System.Diagnostics.Debug.WriteLine($"AddSuccessor: Checking circular dependency for {Title} -> {successor.Title}");
-            var cycleInfo = GetCircularDependencyInfo(successor);
-            if (cycleInfo.HasCycle)
+            // 循環参照をチェック（Successorsに追加する前に行う、ただしスキップ可能）
+            if (!skipCycleCheck)
             {
-                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Circular dependency detected: {cycleInfo.GetDescription()}");
-                throw new InvalidOperationException($"後続タスク「{successor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
+                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Checking circular dependency for {Title} -> {successor.Title}");
+                var cycleInfo = GetCircularDependencyInfo(successor);
+                if (cycleInfo.HasCycle)
+                {
+                    System.Diagnostics.Debug.WriteLine($"AddSuccessor: Circular dependency detected: {cycleInfo.GetDescription()}");
+                    throw new InvalidOperationException($"後続タスク「{successor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Skipping circular dependency check for {Title} -> {successor.Title}");
             }
 
             System.Diagnostics.Debug.WriteLine($"AddSuccessor: Adding successor {successor.Title} to {Title}");
@@ -715,6 +731,7 @@ namespace RedmineClient.Models
             {
                 // 現在のアイテムから開始して循環参照をチェック
                 // ただし、新しく追加される依存関係自体は除外してチェック
+                // また、既存の依存関係を通じて循環が発生するかもチェック
                 return HasCycleFromCurrentItemExcluding(visited, recursionStack, newDependency);
             }
             finally
@@ -915,6 +932,7 @@ namespace RedmineClient.Models
             }
 
             // 実際の循環参照チェック：新しく追加される依存関係を一時的に追加した状態で循環を検出
+            // ただし、既存の依存関係がある場合は、それらを通じて循環が発生するかをチェック
             if (WouldCreateCycle(newDependency))
             {
                 // 循環参照のパスを構築
