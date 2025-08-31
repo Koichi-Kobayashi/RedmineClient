@@ -38,7 +38,7 @@ namespace RedmineClient.Views.Pages
             // 日付変更の監視を有効化
             ViewModel.StartDateChangeWatching();
 
-            // ViewModelの初期化処理を開始
+            // ViewModelの初期化処理を開始（完了を待機）
             _ = Task.Run(async () => 
             {
                 try
@@ -52,6 +52,13 @@ namespace RedmineClient.Views.Pages
                         {
                             System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
                             System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+                            
+                            // 初期化完了後にDataGridのItemsSourceを設定
+                            if (WbsDataGrid != null && WbsDataGrid.IsLoaded && ViewModel.FlattenedWbsItems?.Count > 0)
+                            {
+                                WbsDataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
+                                System.Diagnostics.Debug.WriteLine($"コンストラクタでItemsSource設定: {ViewModel.FlattenedWbsItems.Count}件");
+                            }
                         });
                     }
                 }
@@ -233,37 +240,10 @@ namespace RedmineClient.Views.Pages
                 }
 
                 // ViewModelの初期化が完了するまで待機
-                while (ViewModel.FlattenedWbsItems == null)
+                while (ViewModel.FlattenedWbsItems == null || ViewModel.FlattenedWbsItems.Count == 0)
                 {
                     await Task.Delay(100);
-                }
-
-                // Redmineデータの読み込みと日付カラム生成を順次実行
-                if (ViewModel.SelectedProject != null && ViewModel.IsRedmineConnected)
-                {
-                    try
-                    {
-                        // Redmineデータを読み込み
-                        await ViewModel.LoadRedmineDataAsync();
-                        
-                        // データ読み込み完了後、日付カラムを生成
-                        if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
-                        {
-                            GenerateDateColumns();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Redmineデータ読み込みエラー: {ex.Message}");
-                    }
-                }
-                else
-                {
-                    // プロジェクトが選択されていない場合でも、日付カラムは生成
-                    if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
-                    {
-                        GenerateDateColumns();
-                    }
+                    System.Diagnostics.Debug.WriteLine("ViewModel初期化完了を待機中...");
                 }
 
                 // 初期化完了後のデバッグ出力
