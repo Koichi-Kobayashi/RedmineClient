@@ -715,17 +715,33 @@ namespace RedmineClient.Models
             if (newDependency == null) 
                 return new CircularDependencyInfo { HasCycle = false, CyclePath = new List<WbsItem>() };
 
+            // 新しく追加しようとしている依存関係が循環参照を作成するかをチェック
+            // 既存の依存関係は無視し、新しい依存関係のみでチェック
             var visited = new HashSet<WbsItem>();
             var recursionStack = new HashSet<WbsItem>();
             var cyclePath = new List<WbsItem>();
             
-            var hasCycle = FindCyclePath(newDependency, visited, recursionStack, cyclePath);
+            // 新しい依存関係を一時的に追加してチェック
+            Predecessors.Add(newDependency);
+            newDependency.Successors.Add(this);
             
-            return new CircularDependencyInfo 
-            { 
-                HasCycle = hasCycle, 
-                CyclePath = cyclePath 
-            };
+            try
+            {
+                // 新しく追加された依存関係から開始して循環参照をチェック
+                var hasCycle = FindCyclePathFromNewDependency(newDependency, visited, recursionStack, cyclePath);
+                
+                return new CircularDependencyInfo 
+                { 
+                    HasCycle = hasCycle, 
+                    CyclePath = cyclePath 
+                };
+            }
+            finally
+            {
+                // 一時的な依存関係を削除
+                Predecessors.Remove(newDependency);
+                newDependency.Successors.Remove(this);
+            }
         }
 
         /// <summary>
@@ -759,14 +775,14 @@ namespace RedmineClient.Models
 
             try
             {
-                // 後続タスクをチェック
+                // 後続タスクをチェック（新しく追加される依存関係のみ）
                 foreach (var successor in current.Successors)
                 {
                     if (FindCyclePath(successor, visited, recursionStack, cyclePath))
                         return true;
                 }
 
-                // 先行タスクもチェック
+                // 先行タスクもチェック（新しく追加される依存関係のみ）
                 foreach (var predecessor in current.Predecessors)
                 {
                     if (FindCyclePath(predecessor, visited, recursionStack, cyclePath))
@@ -779,6 +795,60 @@ namespace RedmineClient.Models
             finally
             {
                 recursionStack.Remove(current);
+            }
+        }
+
+        /// <summary>
+        /// 新しく追加される依存関係から循環参照のパスを検索
+        /// </summary>
+        /// <param name="newDependency">新しく追加される依存関係</param>
+        /// <param name="visited">既に訪問済みのアイテム</param>
+        /// <param name="recursionStack">現在の再帰スタック</param>
+        /// <param name="cyclePath">循環参照のパス</param>
+        /// <returns>循環参照が存在する場合はtrue</returns>
+        private bool FindCyclePathFromNewDependency(WbsItem newDependency, HashSet<WbsItem> visited, HashSet<WbsItem> recursionStack, List<WbsItem> cyclePath)
+        {
+            if (recursionStack.Contains(newDependency))
+            {
+                // 循環参照のパスを構築
+                var cycleStartIndex = cyclePath.IndexOf(newDependency);
+                if (cycleStartIndex >= 0)
+                {
+                    cyclePath.RemoveRange(0, cycleStartIndex);
+                }
+                cyclePath.Add(newDependency);
+                return true;
+            }
+
+            if (visited.Contains(newDependency))
+                return false;
+
+            visited.Add(newDependency);
+            recursionStack.Add(newDependency);
+            cyclePath.Add(newDependency);
+
+            try
+            {
+                // 新しく追加される依存関係の後続タスクのみをチェック
+                foreach (var successor in newDependency.Successors)
+                {
+                    if (FindCyclePathFromNewDependency(successor, visited, recursionStack, cyclePath))
+                        return true;
+                }
+
+                // 新しく追加される依存関係の先行タスクのみをチェック
+                foreach (var predecessor in newDependency.Predecessors)
+                {
+                    if (FindCyclePathFromNewDependency(predecessor, visited, recursionStack, cyclePath))
+                        return true;
+                }
+
+                cyclePath.RemoveAt(cyclePath.Count - 1);
+                return false;
+            }
+            finally
+            {
+                recursionStack.Remove(newDependency);
             }
         }
 
