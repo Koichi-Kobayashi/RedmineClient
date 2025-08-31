@@ -3,6 +3,15 @@ using Redmine.Net.Api.Types;
 namespace RedmineClient.Models
 {
     /// <summary>
+    /// 依存関係の種類
+    /// </summary>
+    public enum DependencyType
+    {
+        Predecessor,  // 先行タスク
+        Successor     // 後続タスク
+    }
+
+    /// <summary>
     /// 階層構造を持つIssueクラス
     /// Redmine.Net.Api.Types.Issueを包含してChildrenプロパティを追加
     /// </summary>
@@ -18,6 +27,16 @@ namespace RedmineClient.Models
         /// 子チケットのリスト
         /// </summary>
         public List<HierarchicalIssue> Children { get; set; } = new List<HierarchicalIssue>();
+
+        /// <summary>
+        /// 先行タスクのリスト
+        /// </summary>
+        public List<HierarchicalIssue> Predecessors { get; set; } = new List<HierarchicalIssue>();
+
+        /// <summary>
+        /// 後続タスクのリスト
+        /// </summary>
+        public List<HierarchicalIssue> Successors { get; set; } = new List<HierarchicalIssue>();
 
         // Issueのプロパティにアクセスするためのプロパティ
         public int Id => Issue.Id;
@@ -80,6 +99,40 @@ namespace RedmineClient.Models
         public HierarchicalIssue? Parent { get; set; }
 
         /// <summary>
+        /// 依存関係を追加
+        /// </summary>
+        /// <param name="relatedIssue">関連するチケット</param>
+        /// <param name="dependencyType">依存関係の種類</param>
+        public void AddDependency(HierarchicalIssue relatedIssue, DependencyType dependencyType)
+        {
+            if (relatedIssue == null || relatedIssue == this) return;
+
+            switch (dependencyType)
+            {
+                case DependencyType.Predecessor:
+                    if (!Predecessors.Contains(relatedIssue))
+                    {
+                        Predecessors.Add(relatedIssue);
+                        if (!relatedIssue.Successors.Contains(this))
+                        {
+                            relatedIssue.Successors.Add(this);
+                        }
+                    }
+                    break;
+                case DependencyType.Successor:
+                    if (!Successors.Contains(relatedIssue))
+                    {
+                        Successors.Add(relatedIssue);
+                        if (!relatedIssue.Predecessors.Contains(this))
+                        {
+                            relatedIssue.Predecessors.Add(this);
+                        }
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
         /// 子チケットを持っているかどうか
         /// </summary>
         public bool HasChildren => Children.Count > 0;
@@ -88,6 +141,16 @@ namespace RedmineClient.Models
         /// 親チケットを持っているかどうか
         /// </summary>
         public bool HasParent => Parent != null;
+
+        /// <summary>
+        /// 先行タスクを持っているかどうか
+        /// </summary>
+        public bool HasPredecessors => Predecessors.Count > 0;
+
+        /// <summary>
+        /// 後続タスクを持っているかどうか
+        /// </summary>
+        public bool HasSuccessors => Successors.Count > 0;
 
         /// <summary>
         /// 階層の深さ（ルートが0）

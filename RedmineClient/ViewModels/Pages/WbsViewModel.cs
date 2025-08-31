@@ -98,6 +98,14 @@ namespace RedmineClient.ViewModels.Pages
         /// true: タスク詳細を表示
         /// false: タスク詳細を非表示
         /// </summary>
+        
+        /// <summary>
+        /// 依存関係矢印の表示/非表示
+        /// true: 依存関係矢印を表示
+        /// false: 依存関係矢印を非表示
+        /// </summary>
+        [ObservableProperty]
+        private bool _showDependencyArrows = true;
         [ObservableProperty]
         private bool _isTaskDetailVisible = false;
 
@@ -309,18 +317,24 @@ namespace RedmineClient.ViewModels.Pages
                         // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                         if (IsRedmineConnected)
                         {
-                            // 重複実行を防ぐためのフラグ
-                            if (_isLoadingRedmineData)
+                            // 重複実行を防ぐためのロック
+                            lock (_dataLoadingLock)
                             {
-                                return;
+                                if (_isLoadingRedmineData)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"プロジェクト {value.Id} のデータ読み込みは既に実行中です。重複実行をスキップします。");
+                                    return;
+                                }
+                                _isLoadingRedmineData = true;
                             }
+
+                            System.Diagnostics.Debug.WriteLine($"プロジェクト {value.Id} のデータ読み込みを開始します。");
 
                             // より安全な非同期実行（UIスレッドをブロックしない）
                             _ = Task.Run(async () =>
                             {
-                                try
-                                {
-                                    _isLoadingRedmineData = true;
+                                                            try
+                            {
 
                                     // UIスレッドでの処理を避けるため、直接RedmineServiceを使用
                                     await Task.Delay(100); // 短い遅延
@@ -359,16 +373,8 @@ namespace RedmineClient.ViewModels.Pages
                                         // バックグラウンドでWBSアイテムの変換を実行
                                         var wbsItems = await Task.Run(() =>
                                         {
-                                            var tempItems = new List<WbsItem>();
-                                            // ルートレベルのチケットのみを処理
-                                            var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
-
-                                            foreach (var rootIssue in rootIssues)
-                                            {
-                                                var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
-                                                tempItems.Add(wbsItem);
-                                            }
-                                            return tempItems;
+                                            // すべてのルートチケットを一度に処理して依存関係を正しく設定
+                                            return ConvertMultipleRedmineIssuesToWbsItems(issues);
                                         }).ConfigureAwait(false);
 
                                         // UIスレッドでの更新は最後に一度だけ実行
@@ -427,7 +433,11 @@ namespace RedmineClient.ViewModels.Pages
                                 }
                                 finally
                                 {
-                                    _isLoadingRedmineData = false;
+                                    lock (_dataLoadingLock)
+                                    {
+                                        _isLoadingRedmineData = false;
+                                    }
+                                    System.Diagnostics.Debug.WriteLine($"プロジェクト {value.Id} のデータ読み込みが完了しました。");
                                 }
                             });
                         }
@@ -476,6 +486,11 @@ namespace RedmineClient.ViewModels.Pages
         /// Redmineデータ読み込み中かどうか（重複実行防止用）
         /// </summary>
         private bool _isLoadingRedmineData = false;
+
+        /// <summary>
+        /// データ読み込みの重複実行を防ぐためのロックオブジェクト
+        /// </summary>
+        private readonly object _dataLoadingLock = new object();
 
         /// <summary>
         /// 登録ボタンのコマンド
@@ -1990,6 +2005,17 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         private void LoadRedmineIssues(int projectId)
         {
+            // 重複実行を防ぐためのロック
+            lock (_dataLoadingLock)
+            {
+                if (_isLoadingRedmineData)
+                {
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト {projectId} のデータ読み込みは既に実行中です。重複実行をスキップします。");
+                    return;
+                }
+                _isLoadingRedmineData = true;
+            }
+
             try
             {
                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
@@ -2000,12 +2026,10 @@ namespace RedmineClient.ViewModels.Pages
                     // WBSアイテムを完全にクリア（親子関係も含めて）
                     WbsItems.Clear();
 
-                    // ルートレベルのチケットのみを処理
-                    var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
-
-                    foreach (var rootIssue in rootIssues)
+                    // すべてのルートチケットを一度に処理して依存関係を正しく設定
+                    var wbsItems = ConvertMultipleRedmineIssuesToWbsItems(issues);
+                    foreach (var wbsItem in wbsItems)
                     {
-                        var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
                         WbsItems.Add(wbsItem);
                     }
 
@@ -2045,6 +2069,13 @@ namespace RedmineClient.ViewModels.Pages
                 ErrorMessage = errorMessage;
                 IsRedmineDataLoaded = false;
             }
+            finally
+            {
+                lock (_dataLoadingLock)
+                {
+                    _isLoadingRedmineData = false;
+                }
+            }
         }
 
         /// <summary>
@@ -2060,6 +2091,17 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         private async Task LoadRedmineIssuesAsync(int projectId)
         {
+            // 重複実行を防ぐためのロック
+            lock (_dataLoadingLock)
+            {
+                if (_isLoadingRedmineData)
+                {
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト {projectId} のデータ読み込みは既に実行中です。重複実行をスキップします。");
+                    return;
+                }
+                _isLoadingRedmineData = true;
+            }
+
             try
             {
                 // プログレスバーを開始
@@ -2087,16 +2129,8 @@ namespace RedmineClient.ViewModels.Pages
                     // バックグラウンドスレッドでWBSアイテムの変換を実行（40%）
                     var wbsItems = await Task.Run(() =>
                     {
-                        var tempItems = new List<WbsItem>();
-                        // ルートレベルのチケットのみを処理
-                        var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
-
-                        foreach (var rootIssue in rootIssues)
-                        {
-                            var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
-                            tempItems.Add(wbsItem);
-                        }
-                        return tempItems;
+                        // すべてのルートチケットを一度に処理して依存関係を正しく設定
+                        return ConvertMultipleRedmineIssuesToWbsItems(issues);
                     }).ConfigureAwait(false);
 
                     await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -2167,11 +2201,57 @@ namespace RedmineClient.ViewModels.Pages
                     IsWbsLoading = false;
                     WbsProgress = 0;
                 });
+
+                // 重複実行防止フラグをリセット
+                lock (_dataLoadingLock)
+                {
+                    _isLoadingRedmineData = false;
+                }
             }
         }
 
         /// <summary>
-        /// RedmineチケットをWBSアイテムに変換
+        /// 複数のRedmineチケットをWBSアイテムに変換（依存関係を正しく設定）
+        /// </summary>
+        private List<WbsItem> ConvertMultipleRedmineIssuesToWbsItems(List<HierarchicalIssue> issues)
+        {
+            var convertedItems = new Dictionary<int, WbsItem>();
+            var rootWbsItems = new List<WbsItem>();
+
+            // データの整合性を事前チェック
+            foreach (var issue in issues)
+            {
+                ValidateIssueHierarchy(issue);
+            }
+
+            // まず、すべてのWBSアイテムを変換
+            var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
+            
+            foreach (var rootIssue in rootIssues)
+            {
+                var wbsItem = ConvertRedmineIssueToWbsItemInternal(rootIssue, convertedItems);
+                if (wbsItem != null)
+                {
+                    rootWbsItems.Add(wbsItem);
+                }
+            }
+
+            // すべての変換が完了した後、依存関係を設定
+            foreach (var kvp in convertedItems)
+            {
+                var wbsItem = kvp.Value;
+                var originalIssue = FindOriginalIssueInList(issues, kvp.Key);
+                if (originalIssue != null)
+                {
+                    SetDependencies(wbsItem, originalIssue, convertedItems);
+                }
+            }
+
+            return rootWbsItems;
+        }
+
+        /// <summary>
+        /// RedmineチケットをWBSアイテムに変換（単一チケット用）
         /// </summary>
         private WbsItem ConvertRedmineIssueToWbsItem(HierarchicalIssue issue)
         {
@@ -2180,7 +2260,56 @@ namespace RedmineClient.ViewModels.Pages
             // データの整合性を事前チェック
             ValidateIssueHierarchy(issue);
 
-            return ConvertRedmineIssueToWbsItemInternal(issue, convertedItems);
+            // まず、すべてのWBSアイテムを変換
+            var result = ConvertRedmineIssueToWbsItemInternal(issue, convertedItems);
+            
+            // すべての変換が完了した後、依存関係を設定
+            foreach (var kvp in convertedItems)
+            {
+                var wbsItem = kvp.Value;
+                var originalIssue = FindOriginalIssue(issue, kvp.Key);
+                if (originalIssue != null)
+                {
+                    SetDependencies(wbsItem, originalIssue, convertedItems);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 指定されたIDのHierarchicalIssueを見つける（単一ルート用）
+        /// </summary>
+        private HierarchicalIssue? FindOriginalIssue(HierarchicalIssue rootIssue, int targetId)
+        {
+            if (rootIssue.Id == targetId)
+                return rootIssue;
+
+            if (rootIssue.Children != null)
+            {
+                foreach (var child in rootIssue.Children)
+                {
+                    var found = FindOriginalIssue(child, targetId);
+                    if (found != null)
+                        return found;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 指定されたIDのHierarchicalIssueを見つける（複数ルート用）
+        /// </summary>
+        private HierarchicalIssue? FindOriginalIssueInList(List<HierarchicalIssue> issues, int targetId)
+        {
+            foreach (var issue in issues)
+            {
+                var found = FindOriginalIssue(issue, targetId);
+                if (found != null)
+                    return found;
+            }
+            return null;
         }
 
         /// <summary>
@@ -2254,6 +2383,8 @@ namespace RedmineClient.ViewModels.Pages
 
                 // 親チェーンから削除
                 parentChain.Remove(issue.Id);
+                
+                // 依存関係は後で一括設定するため、ここでは設定しない
 
                 return existingItem;
             }
@@ -2300,6 +2431,8 @@ namespace RedmineClient.ViewModels.Pages
 
             // 親チェーンから削除
             parentChain.Remove(issue.Id);
+            
+            // 依存関係は後で一括設定するため、ここでは設定しない
 
             return wbsItem;
         }
@@ -2715,6 +2848,17 @@ namespace RedmineClient.ViewModels.Pages
             if (!IsRedmineConnected || SelectedProject == null)
                 return;
 
+            // 重複実行を防ぐためのロック
+            lock (_dataLoadingLock)
+            {
+                if (_isLoadingRedmineData)
+                {
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト {SelectedProject.Id} のデータ読み込みは既に実行中です。重複実行をスキップします。");
+                    return;
+                }
+                _isLoadingRedmineData = true;
+            }
+
             try
             {
                 var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
@@ -2723,12 +2867,10 @@ namespace RedmineClient.ViewModels.Pages
                 // 既存のアイテムを完全にクリア
                 WbsItems.Clear();
 
-                // ルートレベルのチケットのみを処理
-                var rootIssues = issues.Where(issue => issue.Parent == null).ToList();
-
-                foreach (var rootIssue in rootIssues)
+                // すべてのルートチケットを一度に処理して依存関係を正しく設定
+                var wbsItems = ConvertMultipleRedmineIssuesToWbsItems(issues);
+                foreach (var wbsItem in wbsItems)
                 {
-                    var wbsItem = ConvertRedmineIssueToWbsItem(rootIssue);
                     WbsItems.Add(wbsItem);
                 }
 
@@ -2738,6 +2880,13 @@ namespace RedmineClient.ViewModels.Pages
             catch (Exception ex)
             {
                 ErrorMessage = $"チケットの読み込み中にエラーが発生しました: {ex.Message}";
+            }
+            finally
+            {
+                lock (_dataLoadingLock)
+                {
+                    _isLoadingRedmineData = false;
+                }
             }
         }
 
@@ -2944,11 +3093,10 @@ namespace RedmineClient.ViewModels.Pages
 
                 // UIを更新
                 OnPropertyChanged(nameof(FlattenedWbsItems));
-                System.Diagnostics.Debug.WriteLine($"先行タスク削除完了: '{selectedItem.Title}' の先行タスクをすべて削除しました");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"先行タスク削除エラー: {ex.Message}");
+                // 先行タスク削除でエラーが発生した場合は無視
             }
         }
 
@@ -2971,11 +3119,77 @@ namespace RedmineClient.ViewModels.Pages
 
                 // UIを更新
                 OnPropertyChanged(nameof(FlattenedWbsItems));
-                System.Diagnostics.Debug.WriteLine($"後続タスク削除完了: '{selectedItem.Title}' の後続タスクをすべて削除しました");
+            }
+            catch
+            {
+                // 後続タスク削除でエラーが発生した場合は無視
+            }
+        }
+
+        /// <summary>
+        /// 依存関係を設定
+        /// </summary>
+        /// <param name="wbsItem">設定対象のWbsItem</param>
+        /// <param name="issue">参照元のHierarchicalIssue</param>
+        /// <param name="convertedItems">変換済みアイテムの辞書</param>
+        private void SetDependencies(WbsItem wbsItem, HierarchicalIssue issue, Dictionary<int, WbsItem> convertedItems)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"WbsItem ID {wbsItem.Id} の依存関係を設定中...");
+                System.Diagnostics.Debug.WriteLine($"HierarchicalIssue ID {issue.Id} の先行タスク数: {issue.Predecessors?.Count ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"HierarchicalIssue ID {issue.Id} の後続タスク数: {issue.Successors?.Count ?? 0}");
+                
+                // 先行タスクを設定
+                if (issue.Predecessors != null)
+                {
+                    foreach (var predecessor in issue.Predecessors)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"先行タスク ID {predecessor.Id} を処理中...");
+                        
+                        if (convertedItems.ContainsKey(predecessor.Id))
+                        {
+                            var predecessorWbsItem = convertedItems[predecessor.Id];
+                            System.Diagnostics.Debug.WriteLine($"先行タスク WbsItem ID {predecessorWbsItem.Id} が見つかりました");
+                            
+                            wbsItem.AddPredecessor(predecessorWbsItem);
+                            System.Diagnostics.Debug.WriteLine($"先行タスク ID {predecessorWbsItem.Id} を WbsItem ID {wbsItem.Id} に追加しました");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"先行タスク ID {predecessor.Id} のWbsItemが見つかりません");
+                        }
+                    }
+                }
+
+                // 後続タスクを設定
+                if (issue.Successors != null)
+                {
+                    foreach (var successor in issue.Successors)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"後続タスク ID {successor.Id} を処理中...");
+                        
+                        if (convertedItems.ContainsKey(successor.Id))
+                        {
+                            var successorWbsItem = convertedItems[successor.Id];
+                            System.Diagnostics.Debug.WriteLine($"後続タスク WbsItem ID {successorWbsItem.Id} が見つかりました");
+                            
+                            wbsItem.AddSuccessor(successorWbsItem);
+                            System.Diagnostics.Debug.WriteLine($"後続タスク ID {successorWbsItem.Id} を WbsItem ID {wbsItem.Id} に追加しました");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"後続タスク ID {successor.Id} のWbsItemが見つかりません");
+                        }
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"WbsItem ID {wbsItem.Id} の依存関係設定完了: 先行タスク={wbsItem.Predecessors.Count}件, 後続タスク={wbsItem.Successors.Count}件");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"後続タスク削除エラー: {ex.Message}");
+                // 依存関係の設定でエラーが発生した場合は詳細ログを出力
+                System.Diagnostics.Debug.WriteLine($"WbsItem ID {wbsItem.Id} の依存関係設定でエラー: {ex.Message}");
             }
         }
     }

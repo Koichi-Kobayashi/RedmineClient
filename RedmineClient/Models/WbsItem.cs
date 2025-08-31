@@ -518,20 +518,33 @@ namespace RedmineClient.Models
         {
             if (predecessor == null || predecessor == this) return;
 
+            System.Diagnostics.Debug.WriteLine($"WbsItem ID {Id} に先行タスク ID {predecessor.Id} を追加中...");
+
             // 循環参照をチェック
             if (WouldCreateCycle(predecessor))
             {
+                System.Diagnostics.Debug.WriteLine($"WbsItem ID {Id} に先行タスク ID {predecessor.Id} を追加すると循環参照が発生します");
                 throw new InvalidOperationException("先行タスクを追加すると循環参照が発生します。");
             }
 
             if (!Predecessors.Contains(predecessor))
             {
                 Predecessors.Add(predecessor);
+                System.Diagnostics.Debug.WriteLine($"WbsItem ID {Id} に先行タスク ID {predecessor.Id} を追加しました");
+                
                 predecessor.AddSuccessor(this);
+                System.Diagnostics.Debug.WriteLine($"先行タスク ID {predecessor.Id} に後続タスク ID {Id} を追加しました");
+                
                 OnPropertyChanged(nameof(HasPredecessors));
                 OnPropertyChanged(nameof(PredecessorCount));
                 OnPropertyChanged(nameof(PredecessorDetails));
                 OnPropertyChanged(nameof(PredecessorDisplayText));
+                
+                System.Diagnostics.Debug.WriteLine($"WbsItem ID {Id} の先行タスク数: {Predecessors.Count}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"WbsItem ID {Id} には既に先行タスク ID {predecessor.Id} が存在します");
             }
         }
 

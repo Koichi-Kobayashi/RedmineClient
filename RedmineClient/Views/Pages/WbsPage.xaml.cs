@@ -1,10 +1,24 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
+using System.Windows.Threading;
 using RedmineClient.Helpers;
 using RedmineClient.ViewModels.Pages;
+using RedmineClient.Models;
 using RedmineClient.Views.Controls;
-
+using Wpf.Ui.Controls;
 using Wpf.Ui.Abstractions.Controls;
 
 namespace RedmineClient.Views.Pages
@@ -66,6 +80,9 @@ namespace RedmineClient.Views.Pages
                 // DataGridのキーボードイベントを確実に設定
                 WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
                 WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
+                
+                // DataGridのサイズ変更時に矢印を再描画
+                WbsDataGrid.SizeChanged += WbsDataGrid_SizeChanged;
             };
             
             // アプリケーション終了時の処理を追加
@@ -142,6 +159,18 @@ namespace RedmineClient.Views.Pages
                     }
                     break;
             }
+        }
+
+        /// <summary>
+        /// DataGridのサイズ変更時に矢印を再描画する
+        /// </summary>
+        private void WbsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // サイズ変更後に矢印を再描画
+            WbsDataGrid?.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+            {
+                DrawDependencyArrowsLightweight();
+            }));
         }
 
         /// <summary>
@@ -538,8 +567,8 @@ namespace RedmineClient.Views.Pages
                 var currentDate = startDate;
                 var lastMonth = -1;
 
-                // 固定列の数を取得（タスク名、ID、説明、開始日、終了日、進捗、ステータス、優先度、担当者）
-                var fixedColumnCount = 9;
+                // 固定列の数を取得（ID、タスク名、説明、開始日、終了日、進捗、ステータス、優先度、担当者、先行・後続）
+                var fixedColumnCount = 10;
 
                 // 日付列の総数を計算
                 var totalColumns = (int)((endDate - startDate).TotalDays) + 1;
@@ -698,11 +727,388 @@ namespace RedmineClient.Views.Pages
 
         private void WbsPage_Loaded(object sender, RoutedEventArgs e)
         {
-            // ウィンドウが閉じられる際のイベントを登録
-            var window = Window.GetWindow(this);
-            if (window != null)
+            // プロジェクト選択の初期化
+            if (ViewModel?.AvailableProjects != null && ViewModel.AvailableProjects.Any())
             {
-                window.Closing += Window_Closing;
+                ProjectComboBox.SelectedIndex = 0;
+            }
+
+            // スケジュール開始年月の初期化
+            InitializeScheduleStartYearMonth();
+
+            // 依存関係矢印の初期化
+            InitializeDependencyArrows();
+        }
+
+        private void InitializeScheduleStartYearMonth()
+        {
+            try
+            {
+                // 設定ファイルから値を読み込み
+                AppConfig.Load();
+
+                var yearMonthOptions = new List<string>();
+                var currentDate = DateTime.Now.AddYears(-2); // 2年前から
+                var endDate = DateTime.Now.AddYears(3); // 3年後まで
+
+                while (currentDate <= endDate)
+                {
+                    yearMonthOptions.Add(currentDate.ToString("yyyy/MM"));
+                    currentDate = currentDate.AddMonths(1);
+                }
+
+                ScheduleStartYearMonthComboBox.ItemsSource = yearMonthOptions;
+
+                var savedYearMonth = AppConfig.ScheduleStartYearMonth;
+                
+                if (!string.IsNullOrEmpty(savedYearMonth) && yearMonthOptions.Contains(savedYearMonth))
+                {
+                    ScheduleStartYearMonthComboBox.SelectedItem = savedYearMonth;
+                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                    ViewModel.ScheduleStartYearMonth = savedYearMonth;
+                }
+                else
+                {
+                    var currentYearMonth = DateTime.Now.ToString("yyyy/MM");
+                    ScheduleStartYearMonthComboBox.SelectedItem = currentYearMonth;
+                    // ViewModelに直接値を設定（AppConfigのsetアクセサーを呼び出さない）
+                    ViewModel.ScheduleStartYearMonth = currentYearMonth;
+                }
+            }
+            catch
+            {
+                // エラー処理は必要に応じて実装
+            }
+        }
+
+        private void InitializeDependencyArrows()
+        {
+            // 依存関係矢印の表示/非表示を制御
+            if (ViewModel != null)
+            {
+                ViewModel.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(ViewModel.ShowDependencyArrows))
+                    {
+                        UpdateDependencyArrowsAsync();
+                    }
+                };
+            }
+
+            // スクロール中の描画処理を最適化
+            if (WbsDataGrid != null)
+            {
+                var scrollViewer = GetScrollViewer(WbsDataGrid);
+                if (scrollViewer != null)
+                {
+                    scrollViewer.ScrollChanged += (s, e) =>
+                    {
+                        // スクロール中は矢印描画を一時停止
+                        if (_isDrawingArrows)
+                        {
+                            _arrowDrawingCancellation?.Cancel();
+                        }
+                        
+                        // スクロール停止後、少し遅延して矢印を再描画
+                        Task.Delay(300).ContinueWith(_ =>
+                        {
+                            if (ViewModel?.ShowDependencyArrows == true)
+                            {
+                                Dispatcher.BeginInvoke(() => UpdateDependencyArrowsAsync());
+                            }
+                        });
+                    };
+                }
+            }
+        }
+
+        private ScrollViewer GetScrollViewer(DependencyObject depObj)
+        {
+            if (depObj is ScrollViewer scrollViewer)
+                return scrollViewer;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                var child = VisualTreeHelper.GetChild(depObj, i);
+                var result = GetScrollViewer(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private bool _isDrawingArrows = false;
+        private CancellationTokenSource _arrowDrawingCancellation;
+
+        private async void UpdateDependencyArrowsAsync()
+        {
+            if (_isDrawingArrows)
+            {
+                _arrowDrawingCancellation?.Cancel();
+            }
+
+            if (!ViewModel?.ShowDependencyArrows == true || DependencyArrowCanvas == null)
+            {
+                ClearDependencyArrows();
+                return;
+            }
+
+            _isDrawingArrows = true;
+            _arrowDrawingCancellation = new CancellationTokenSource();
+
+            try
+            {
+                await Task.Run(async () =>
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (_arrowDrawingCancellation.Token.IsCancellationRequested) return;
+                        DrawDependencyArrowsLightweight();
+                    }, DispatcherPriority.Background);
+                }, _arrowDrawingCancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // 描画がキャンセルされた場合は何もしない
+            }
+            finally
+            {
+                _isDrawingArrows = false;
+            }
+        }
+
+        private void DrawDependencyArrowsLightweight()
+        {
+            if (DependencyArrowCanvas == null || ViewModel?.FlattenedWbsItems == null) return;
+
+            // 既存の矢印をクリア
+            DependencyArrowCanvas.Children.Clear();
+
+            // DataGridのレイアウトが完了するまで待機
+            WbsDataGrid?.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+            {
+                try
+                {
+                    // 表示されている範囲のみを描画（パフォーマンス向上）
+                    var visibleItems = ViewModel.FlattenedWbsItems.Take(50).ToList(); // 最初の50件のみ描画
+
+                    foreach (var item in visibleItems)
+                    {
+                        if (item.Predecessors?.Any() == true)
+                        {
+                            foreach (var predecessor in item.Predecessors)
+                            {
+                                DrawSimpleArrow(predecessor, item);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // 矢印描画エラーは無視
+                }
+            }));
+        }
+
+        private void DrawSimpleArrow(WbsItem from, WbsItem to)
+        {
+            if (DependencyArrowCanvas == null || WbsDataGrid == null) return;
+
+            try
+            {
+                // DataGridの行の位置を取得
+                var fromRow = GetRowIndex(from);
+                var toRow = GetRowIndex(to);
+                
+                if (fromRow == -1 || toRow == -1) 
+                {
+                    return;
+                }
+
+                // DataGridの実際の位置とサイズを取得
+                var dataGridBounds = WbsDataGrid.TransformToVisual(DependencyArrowCanvas).TransformBounds(
+                    new Rect(0, 0, WbsDataGrid.ActualWidth, WbsDataGrid.ActualHeight));
+
+                // 行の高さを取得（DataGridの実際の行高さを使用）
+                var rowHeight = WbsDataGrid.RowHeight > 0 ? WbsDataGrid.RowHeight : 30.0;
+                
+                // 行の位置を計算（DataGridの実際の位置を考慮）
+                var fromY = dataGridBounds.Top + fromRow * rowHeight + rowHeight / 2;
+                var toY = dataGridBounds.Top + toRow * rowHeight + rowHeight / 2;
+                
+                // スケジュール表の開始位置を計算（固定列の後ろから）
+                var scheduleStartX = CalculateScheduleStartX();
+                
+                // 先行タスクの終了日位置を計算
+                var fromEndDateX = CalculateDateColumnX(from.EndDate, scheduleStartX);
+                
+                // 後続タスクの開始日位置を計算
+                var toStartDateX = CalculateDateColumnX(to.StartDate, scheduleStartX);
+
+                // L字型の矢印を描画
+                // 1. 先行タスクの終了日から水平に右へ
+                var horizontalStartX = fromEndDateX;
+                var horizontalEndX = toStartDateX;
+                
+                // 2. 垂直線のX座標（先行タスクと後続タスクの中間）
+                var verticalX = (horizontalStartX + horizontalEndX) / 2;
+
+                // 水平線1（先行タスクの終了日から垂直線まで）
+                var horizontalLine1 = new Line
+                {
+                    Stroke = Brushes.DarkBlue,
+                    StrokeThickness = 2.0,
+                    X1 = horizontalStartX,
+                    Y1 = fromY,
+                    X2 = verticalX,
+                    Y2 = fromY
+                };
+
+                // 垂直線
+                var verticalLine = new Line
+                {
+                    Stroke = Brushes.DarkBlue,
+                    StrokeThickness = 2.0,
+                    X1 = verticalX,
+                    Y1 = fromY,
+                    X2 = verticalX,
+                    Y2 = toY
+                };
+
+                // 水平線2（垂直線から後続タスクの開始日まで）
+                var horizontalLine2 = new Line
+                {
+                    Stroke = Brushes.DarkBlue,
+                    StrokeThickness = 2.0,
+                    X1 = verticalX,
+                    Y1 = toY,
+                    X2 = horizontalEndX,
+                    Y2 = toY
+                };
+
+                // 矢印ヘッド
+                var arrowHead = new Polygon
+                {
+                    Fill = Brushes.DarkBlue,
+                    Points = new PointCollection
+                    {
+                        new Point(horizontalEndX - 6, toY - 6),
+                        new Point(horizontalEndX + 6, toY),
+                        new Point(horizontalEndX - 6, toY + 6)
+                    }
+                };
+
+                // Canvasに追加
+                DependencyArrowCanvas.Children.Add(horizontalLine1);
+                DependencyArrowCanvas.Children.Add(verticalLine);
+                DependencyArrowCanvas.Children.Add(horizontalLine2);
+                DependencyArrowCanvas.Children.Add(arrowHead);
+            }
+            catch
+            {
+                // 描画エラーは無視
+            }
+        }
+
+        /// <summary>
+        /// スケジュール表の開始X座標を計算する
+        /// </summary>
+        private double CalculateScheduleStartX()
+        {
+            if (WbsDataGrid == null) return 0.0;
+
+            try
+            {
+                // 固定列の幅を累積して計算
+                double x = 0;
+                for (int i = 0; i < WbsDataGrid.Columns.Count; i++)
+                {
+                    var column = WbsDataGrid.Columns[i];
+                    // 日付列（StackPanelヘッダーを持つ列）の前まで
+                    // 固定列: ID, タスク名, 説明, 開始日, 終了日, 進捗, ステータス, 優先度, 担当者, 先行・後続
+                    if (i >= 10) // 固定列は10個
+                    {
+                        break;
+                    }
+                    x += column.Width.Value;
+                }
+                return x;
+            }
+            catch
+            {
+                return 0.0;
+            }
+        }
+
+        /// <summary>
+        /// 指定された日付の列のX座標を計算する
+        /// </summary>
+        private double CalculateDateColumnX(DateTime date, double scheduleStartX)
+        {
+            if (WbsDataGrid == null || ViewModel?.ScheduleStartYearMonth == null) return scheduleStartX;
+
+            try
+            {
+                // 設定された年月の1日から開始
+                DateTime startDate;
+                if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
+                {
+                    startDate = startDate.AddDays(-startDate.Day + 1); // 月の1日に設定
+                }
+                else
+                {
+                    startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                }
+
+                // タスクの開始日が設定された開始日より前の場合は、タスクの開始日から表示
+                if (ViewModel.WbsItems != null && ViewModel.WbsItems.Count > 0)
+                {
+                    var earliestStartDate = ViewModel.WbsItems.Min(item => item.StartDate);
+                    if (earliestStartDate < startDate)
+                    {
+                        startDate = earliestStartDate.AddDays(-7); // タスク開始日の1週間前から表示
+                    }
+                }
+
+                // 日付列の幅（40px）
+                var dateColumnWidth = 40.0;
+                
+                // 指定された日付までの日数を計算
+                var daysDiff = (int)((date - startDate).TotalDays);
+                
+                // 日付列の位置を計算
+                var dateColumnIndex = Math.Max(0, daysDiff);
+                
+                return scheduleStartX + (dateColumnIndex * dateColumnWidth) + (dateColumnWidth / 2);
+            }
+            catch
+            {
+                return scheduleStartX;
+            }
+        }
+
+        /// <summary>
+        /// WbsItemの行インデックスを取得する
+        /// </summary>
+        private int GetRowIndex(WbsItem item)
+        {
+            if (ViewModel?.FlattenedWbsItems == null) return -1;
+            
+            var flattenedItems = ViewModel.FlattenedWbsItems;
+            for (int i = 0; i < flattenedItems.Count; i++)
+            {
+                if (flattenedItems[i] == item)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        private void ClearDependencyArrows()
+        {
+            if (DependencyArrowCanvas != null)
+            {
+                DependencyArrowCanvas.Children.Clear();
             }
         }
 
@@ -1069,7 +1475,7 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void ExpansionText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is TextBlock textBlock && textBlock.DataContext is WbsItem item)
+            if (sender is System.Windows.Controls.TextBlock textBlock && textBlock.DataContext is WbsItem item)
             {
                 // 展開状態を切り替え
                 item.IsExpanded = !item.IsExpanded;
@@ -1610,8 +2016,8 @@ namespace RedmineClient.Views.Pages
                         if (sourceItem == targetItem) return;
 
                         // 先行・後続の関係性を設定
-                        // タスクAをタスクBにドロップしたとき、タスクBがタスクAの先行タスクになる
-                        ViewModel.SetDependency(sourceItem, targetItem, false);
+                        // タスクAをタスクBにドロップしたとき、タスクAがタスクBの先行タスクになる
+                        ViewModel.SetDependency(sourceItem, targetItem, true);
                         
                         // 背景色をリセット
                         border.Background = System.Windows.Media.Brushes.Transparent;

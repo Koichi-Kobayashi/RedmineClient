@@ -221,6 +221,9 @@ namespace RedmineClient.Services
                 // 親子関係を構築
                 BuildHierarchy(hierarchicalIssues);
                 
+                // 依存関係を構築
+                BuildDependencies(hierarchicalIssues);
+                
                 return hierarchicalIssues;
             }
             catch (OperationCanceledException)
@@ -304,6 +307,120 @@ namespace RedmineClient.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 依存関係を構築する
+        /// </summary>
+        /// <param name="issues">チケットのリスト</param>
+        private void BuildDependencies(List<HierarchicalIssue> issues)
+        {
+            var issueDict = issues.ToDictionary(i => i.Id, i => i);
+            
+            foreach (var issue in issues)
+            {
+                try
+                {
+                    // RedmineのIssueオブジェクトから依存関係を取得
+                    var relations = GetRelationsFromIssue(issue.Issue);
+                    
+                    foreach (var relation in relations)
+                    {
+                        // 自分自身のIDがIssueIdと同じ場合は無視
+                        if (relation.issue_to_id == issue.Id)
+                        {
+                            continue;
+                        }
+                        
+                        if (relation.issue_to_id > 0 && issueDict.ContainsKey(relation.issue_to_id))
+                        {
+                            var relatedIssue = issueDict[relation.issue_to_id];
+                            
+                            // 関係の種類に基づいて依存関係を設定
+                            switch (relation.relation_type?.ToLower())
+                            {
+                                case "precedes":
+                                case "blocks":
+                                    // precedes/blocks: 現在のチケットが関連チケットの前に来る
+                                    // つまり、現在のチケットが関連チケットの先行タスク
+                                    System.Diagnostics.Debug.WriteLine($"precedes/blocks関係を処理中: Issue {issue.Id} -> Issue {relation.issue_to_id}");
+                                    relatedIssue.AddDependency(issue, DependencyType.Predecessor);
+                                    System.Diagnostics.Debug.WriteLine($"依存関係を設定: Issue {relatedIssue.Id}.AddDependency({issue.Id}, Predecessor)");
+                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {issue.Id} の先行タスク数={issue.Predecessors.Count}, 後続タスク数={issue.Successors.Count}");
+                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {relatedIssue.Id} の先行タスク数={relatedIssue.Predecessors.Count}, 後続タスク数={relatedIssue.Successors.Count}");
+                                    break;
+                                case "follows":
+                                case "blocked_by":
+                                    // follows/blocked_by: 現在のチケットが関連チケットの後に来る
+                                    // つまり、関連チケットが現在のチケットの先行タスク
+                                    System.Diagnostics.Debug.WriteLine($"follows/blocked_by関係を処理中: Issue {issue.Id} -> Issue {relation.issue_to_id}");
+                                    issue.AddDependency(relatedIssue, DependencyType.Predecessor);
+                                    System.Diagnostics.Debug.WriteLine($"依存関係を設定: Issue {issue.Id}.AddDependency({relatedIssue.Id}, Predecessor)");
+                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {issue.Id} の先行タスク数={issue.Predecessors.Count}, 後続タスク数={issue.Successors.Count}");
+                                    System.Diagnostics.Debug.WriteLine($"設定後の状態: Issue {relatedIssue.Id} の先行タスク数={relatedIssue.Predecessors.Count}, 後続タスク数={relatedIssue.Successors.Count}");
+                                    break;
+                                default:
+                                    System.Diagnostics.Debug.WriteLine($"未知の関係の種類: {relation.relation_type}");
+                                    break;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // 依存関係の処理でエラーが発生した場合は無視して続行
+                }
+            }
+        }
+
+        /// <summary>
+        /// Issueオブジェクトから依存関係を取得
+        /// </summary>
+        /// <param name="issue">Issueオブジェクト</param>
+        /// <returns>依存関係のリスト</returns>
+        private List<Relation> GetRelationsFromIssue(Issue issue)
+        {
+            var relations = new List<Relation>();
+            
+            try
+            {
+                // 複数のプロパティ名を試行して依存関係を取得
+                var propertyNames = new[] { "Relations", "relations", "IssueRelations", "issue_relations" };
+
+                foreach (var propertyName in propertyNames)
+                {
+                    var property = issue.GetType().GetProperty(propertyName);
+                    if (property != null)
+                    {
+                        var value = property.GetValue(issue);
+                        if (value is IEnumerable<object> relationsEnumerable)
+                        {
+                            foreach (var relation in relationsEnumerable)
+                            {
+                                if (relation is IssueRelation issueRelation)
+                                {
+                                    relations.Add(new Relation
+                                    {
+                                        issue_to_id = issueRelation.IssueToId,
+                                        relation_type = issueRelation.Type.ToString()
+                                    });
+                                }
+                                else if (relation is Relation directRelation)
+                                {
+                                    relations.Add(directRelation);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                // 依存関係の取得でエラーが発生した場合は無視
+            }
+            
+            return relations;
         }
 
         /// <summary>
@@ -662,3 +779,4 @@ namespace RedmineClient.Services
     }
 
 }
+

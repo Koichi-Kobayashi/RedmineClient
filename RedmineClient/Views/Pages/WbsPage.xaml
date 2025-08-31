@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:helpers="clr-namespace:RedmineClient.Helpers"
-    
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="clr-namespace:RedmineClient.Models"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -105,6 +104,12 @@
                 <ui:TextBlock Margin="0,0,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="タスク名をドラッグして先行・後続列にドロップ" />
             </StackPanel>
 
+            <!--  依存関係矢印の表示設定  -->
+            <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
+                <ui:ToggleSwitch Margin="0,0,8,0" Content="依存関係矢印" IsChecked="{Binding ViewModel.ShowDependencyArrows, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:矢印表示、OFF:矢印非表示" />
+            </StackPanel>
+
             <!--  管理機能ボタン  -->
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.UpdateProgressCommand}" Content="進捗更新" Icon="Refresh" />
             <ui:Button Margin="0,0,8,0" Command="{Binding ViewModel.LimitHierarchyCommand}" Content="階層制限" Icon="Settings" />
@@ -173,452 +178,422 @@
                 <ColumnDefinition x:Name="TaskDetailColumn" Width="16" />
             </Grid.ColumnDefinitions>
 
-            <!--  左側：DataGrid  -->
-            <DataGrid
-                x:Name="WbsDataGrid" Grid.Column="0" MinHeight="200"
-                MaxHeight="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualHeight}"
-                Margin="0,0,8,0" VerticalAlignment="Stretch"
-                AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
-                AutoGenerateColumns="False"
-                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                BorderThickness="1" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
-                CanUserSortColumns="True" EnableColumnVirtualization="True" EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All"
-                HeadersVisibility="Column"
-                ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
-                RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                RowHeaderWidth="0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.IsDeferredScrollingEnabled="False" ScrollViewer.PanningMode="Both"
-                ScrollViewer.VerticalScrollBarVisibility="Auto"
-                SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
-                SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.CacheLength="3,3" VirtualizingPanel.CacheLengthUnit="Page" VirtualizingPanel.IsContainerVirtualizable="True"
-                VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.VirtualizationMode="Recycling"
-                AllowDrop="True" Drop="WbsDataGrid_Drop" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave">
+            <!--  左側：DataGridと依存関係矢印の重ね表示  -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <!--  DataGrid  -->
+                <DataGrid
+                    x:Name="WbsDataGrid" Grid.Row="0" MinHeight="200"
+                    MaxHeight="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualHeight}"
+                    Margin="0,0,8,0" VerticalAlignment="Stretch" AllowDrop="True"
+                    AlternatingRowBackground="{DynamicResource SubtleFillColorTertiaryBrush}"
+                    AutoGenerateColumns="False"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="1" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
+                    CanUserSortColumns="True" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave" Drop="WbsDataGrid_Drop" EnableColumnVirtualization="True"
+                    EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All" HeadersVisibility="Column"
+                    ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
+                    RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    RowHeaderWidth="0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.IsDeferredScrollingEnabled="False" ScrollViewer.PanningMode="Both"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
+                    SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.CacheLength="3,3" VirtualizingPanel.CacheLengthUnit="Page" VirtualizingPanel.IsContainerVirtualizable="True"
+                    VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.VirtualizationMode="Recycling">
 
-                <DataGrid.Resources>
-                    <Style TargetType="DataGridCell">
-                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
-                        <Setter Property="BorderThickness" Value="0,0,1,1" />
-                        <Setter Property="Padding" Value="4,2" />
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="DataGridCell">
-                                    <Border
-                                        Margin="0,0,0,0"
-                                        Padding="{TemplateBinding Padding}"
-                                        Background="{TemplateBinding Background}"
-                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        ClipToBounds="False">
-                                        <ContentPresenter />
+                    <!--  依存関係の矢印を表示するレイヤー（最前面、スクロールバーの操作を妨げない）  -->
+
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                            <Setter Property="Padding" Value="4,2" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridCell">
+                                        <Border
+                                            Margin="0,0,0,0"
+                                            Padding="{TemplateBinding Padding}"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            ClipToBounds="True">
+                                            <ContentPresenter />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                            <Setter Property="Padding" Value="8,4" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridColumnHeader">
+                                        <Border
+                                            Margin="0,0,0,0"
+                                            Padding="{TemplateBinding Padding}"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            ClipToBounds="True">
+                                            <ContentPresenter />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,0,1" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                        <Style TargetType="ScrollBar">
+                            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </Style>
+                        <Style TargetType="Thumb">
+                            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                        <Style TargetType="RepeatButton">
+                            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+
+                        <!--  日付ヘッダー用のスタイル  -->
+                        <Style x:Key="DateHeaderStyle" TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                            <Setter Property="Padding" Value="2,2" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="FontSize" Value="8" />
+                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                            <Setter Property="Height" Value="40" />
+                        </Style>
+                    </DataGrid.Resources>
+
+                    <DataGrid.Columns>
+                        <!--  ID列  -->
+                        <DataGridTextColumn Width="80" Binding="{Binding Id}" Header="ID" IsReadOnly="True" />
+
+                        <!--  タスク名列  -->
+                        <DataGridTemplateColumn Width="300" Header="タスク名">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!--  展開/折りたたみテキストとサブタスク数表示（軽量化版）  -->
+                                        <StackPanel Grid.Column="0" Margin="0,0,8,0" Orientation="Horizontal" Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
+                                            <TextBlock
+                                                Margin="0,0,4,0" VerticalAlignment="Center" Cursor="Hand" FontSize="12" FontWeight="Bold"
+                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                MouseLeftButtonDown="ExpansionText_MouseLeftButtonDown"
+                                                Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}" />
+                                            <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
+                                        </StackPanel>
+
+                                        <!--  階層レベル表示  -->
+                                        <Border
+                                            Grid.Column="1" Padding="4,2" AllowDrop="True"
+                                            Background="{Binding IsSelected, Converter={x:Static helpers:SelectionHighlightConverter.Instance}}"
+                                            BorderBrush="{Binding IsSelected, Converter={x:Static helpers:SelectionBorderConverter.Instance}}"
+                                            BorderThickness="1" CornerRadius="3" Cursor="Hand" DragEnter="TaskBorder_DragEnter" DragLeave="TaskBorder_DragLeave"
+                                            Drop="TaskBorder_Drop" MouseLeftButtonDown="TaskBorder_MouseLeftButtonDown" MouseLeftButtonUp="TaskBorder_MouseLeftButtonUp" MouseMove="TaskBorder_MouseMove">
+                                            <Border.InputBindings>
+                                                <MouseBinding Command="{Binding DataContext.ViewModel.SelectItemCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" MouseAction="LeftClick" />
+                                            </Border.InputBindings>
+                                            <StackPanel Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}" Orientation="Horizontal">
+                                                <!--  階層インデント表示  -->
+                                                <ui:TextBlock VerticalAlignment="Center" FontFamily="Consolas, Courier New, monospace" FontSize="11" Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
+                                                <!--  タスクタイトル  -->
+                                                <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!--  コンテキストメニュー  -->
+                                        <Grid.ContextMenu>
+                                            <ContextMenu Opened="ContextMenu_Opened">
+                                                <ui:MenuItem Header="サブタスク追加">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="Add16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
+                                                <ui:MenuItem Header="編集">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="Edit16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
+                                                <Separator />
+                                                <ui:MenuItem Header="依存関係管理">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="Link16" />
+                                                    </ui:MenuItem.Icon>
+                                                    <ui:MenuItem Command="{Binding ViewModel.RemovePredecessorCommand}" CommandParameter="{Binding}" Header="先行タスクを削除" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                        <ui:MenuItem.Icon>
+                                                            <ui:SymbolIcon Symbol="ArrowUp16" />
+                                                        </ui:MenuItem.Icon>
+                                                    </ui:MenuItem>
+                                                    <ui:MenuItem Command="{Binding ViewModel.RemoveSuccessorCommand}" CommandParameter="{Binding}" Header="後続タスクを削除" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                        <ui:MenuItem.Icon>
+                                                            <ui:SymbolIcon Symbol="ArrowDown16" />
+                                                        </ui:MenuItem.Icon>
+                                                    </ui:MenuItem>
+                                                </ui:MenuItem>
+                                                <Separator />
+                                                <ui:MenuItem Header="削除">
+                                                    <ui:MenuItem.Icon>
+                                                        <ui:SymbolIcon Symbol="Delete16" />
+                                                    </ui:MenuItem.Icon>
+                                                </ui:MenuItem>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!--  説明列  -->
+                        <DataGridTextColumn Width="200" Binding="{Binding Description}" Header="説明" IsReadOnly="True" />
+
+                        <!--  開始日列  -->
+                        <DataGridTemplateColumn Width="100" Header="開始日">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2">
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding StartDate, StringFormat=yyyy/MM/dd}" />
                                     </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
-                        <Setter Property="BorderThickness" Value="0,0,1,1" />
-                        <Setter Property="Padding" Value="8,4" />
-                        <Setter Property="FontWeight" Value="SemiBold" />
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="DataGridColumnHeader">
-                                    <Border
-                                        Margin="0,0,0,0"
-                                        Padding="{TemplateBinding Padding}"
-                                        Background="{TemplateBinding Background}"
-                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                        ClipToBounds="False">
-                                        <ContentPresenter />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <DatePicker
+                                        DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" GotFocus="DatePicker_GotFocus" IsTodayHighlighted="True"
+                                        SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" Tag="StartDate" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!--  終了日列  -->
+                        <DataGridTemplateColumn Width="100" Header="終了日">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2">
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding EndDate, StringFormat=yyyy/MM/dd}" />
                                     </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                    <Style TargetType="DataGridRow">
-                        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
-                        <Setter Property="BorderThickness" Value="0,0,0,1" />
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBrush}" />
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                    <Style TargetType="ScrollBar">
-                        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
-                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </Style>
-                    <Style TargetType="Thumb">
-                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                    <Style TargetType="RepeatButton">
-                        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
-                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <DatePicker
+                                        DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" GotFocus="DatePicker_GotFocus" IsTodayHighlighted="True"
+                                        SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" Tag="EndDate" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
 
-                    <!--  日付ヘッダー用のスタイル  -->
-                    <Style x:Key="DateHeaderStyle" TargetType="DataGridColumnHeader">
-                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
-                        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
-                        <Setter Property="BorderThickness" Value="0,0,1,1" />
-                        <Setter Property="Padding" Value="2,2" />
-                        <Setter Property="FontWeight" Value="SemiBold" />
-                        <Setter Property="FontSize" Value="8" />
-                        <Setter Property="HorizontalContentAlignment" Value="Center" />
-                        <Setter Property="VerticalContentAlignment" Value="Center" />
-                        <Setter Property="Height" Value="40" />
-                    </Style>
-                </DataGrid.Resources>
+                        <!--  進捗列  -->
+                        <DataGridTemplateColumn Width="150" Header="進捗" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                <DataGrid.Columns>
-                    <!--  ID列  -->
-                    <DataGridTextColumn Width="80" Binding="{Binding Id}" Header="ID" IsReadOnly="True" />
+                                        <!--  プログレスバー  -->
+                                        <Border
+                                            Grid.Column="0" Height="16" Margin="0,0,8,0"
+                                            Background="{DynamicResource SubtleFillColorTertiaryBrush}"
+                                            BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                            BorderThickness="1" CornerRadius="2">
+                                            <Border Width="{Binding TotalProgress, Converter={x:Static helpers:ProgressToWidthConverter.Instance}}" HorizontalAlignment="Left" Background="{Binding TotalProgress, Converter={x:Static helpers:ProgressToColorConverter.Instance}}" CornerRadius="1" />
+                                        </Border>
 
-                    <!--  タスク名列  -->
-                    <DataGridTemplateColumn Width="300" Header="タスク名">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!--  展開/折りたたみテキストとサブタスク数表示（軽量化版）  -->
-                                    <StackPanel Grid.Column="0" Margin="0,0,8,0" Orientation="Horizontal" Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
-                                        <TextBlock
-                                            Margin="0,0,4,0" VerticalAlignment="Center" Cursor="Hand" FontSize="12" FontWeight="Bold"
+                                        <!--  進捗テキスト  -->
+                                        <ui:TextBlock
+                                            Grid.Column="1" MinWidth="40" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold"
                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                            MouseLeftButtonDown="ExpansionText_MouseLeftButtonDown"
-                                            Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}" />
-                                        <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
-                                    </StackPanel>
+                                            Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                                    <!--  階層レベル表示  -->
-                                    <Border
-                                        Grid.Column="1" Padding="4,2"
-                                        Background="{Binding IsSelected, Converter={x:Static helpers:SelectionHighlightConverter.Instance}}"
-                                        BorderBrush="{Binding IsSelected, Converter={x:Static helpers:SelectionBorderConverter.Instance}}"
-                                        BorderThickness="1" CornerRadius="3" Cursor="Hand"
-                                        AllowDrop="True" Drop="TaskBorder_Drop" DragEnter="TaskBorder_DragEnter" DragLeave="TaskBorder_DragLeave"
-                                        MouseLeftButtonDown="TaskBorder_MouseLeftButtonDown" MouseMove="TaskBorder_MouseMove" MouseLeftButtonUp="TaskBorder_MouseLeftButtonUp">
-                                        <Border.InputBindings>
-                                            <MouseBinding Command="{Binding DataContext.ViewModel.SelectItemCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" MouseAction="LeftClick" />
-                                        </Border.InputBindings>
-                                        <StackPanel Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}" Orientation="Horizontal">
-                                            <!--  階層インデント表示  -->
-                                            <ui:TextBlock VerticalAlignment="Center" FontFamily="Consolas, Courier New, monospace" FontSize="11" Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
-                                            <!--  タスクタイトル  -->
-                                            <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" Text="{Binding Title}" />
+                        <!--  ステータス列  -->
+                        <DataGridTemplateColumn Width="80" Header="ステータス" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Padding="4,2" Background="{Binding Status, Converter={x:Static helpers:StatusToBrushConverter.Instance}}" CornerRadius="2">
+                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Status}" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!--  優先度列  -->
+                        <DataGridTemplateColumn Width="80" Header="優先度" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Padding="4,2" Background="{Binding Priority, Converter={x:Static helpers:PriorityToBrushConverter.Instance}}" CornerRadius="2">
+                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Priority}" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!--  担当者列  -->
+                        <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
+
+                        <!--  先行・後続列  -->
+                        <DataGridTemplateColumn Width="120" Header="先行・後続&#x0d;&#x0a;D&amp;D" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!--  先行タスクID表示（後続タスクの行に表示）  -->
+                                        <StackPanel Grid.Column="0" Margin="2,0" Orientation="Horizontal" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                            <ui:TextBlock Foreground="Orange" Text="先行: " />
+                                            <ui:TextBlock Foreground="Orange" Text="{Binding Predecessors, Converter={x:Static helpers:PredecessorsToIdStringConverter.Instance}}" />
                                         </StackPanel>
-                                    </Border>
 
-                                    <!--  コンテキストメニュー  -->
-                                    <Grid.ContextMenu>
-                                        <ContextMenu Opened="ContextMenu_Opened">
-                                            <ui:MenuItem Header="サブタスク追加">
-                                                <ui:MenuItem.Icon>
-                                                    <ui:SymbolIcon Symbol="Add16" />
-                                                </ui:MenuItem.Icon>
-                                            </ui:MenuItem>
-                                            <ui:MenuItem Header="編集">
-                                                <ui:MenuItem.Icon>
-                                                    <ui:SymbolIcon Symbol="Edit16" />
-                                                </ui:MenuItem.Icon>
-                                            </ui:MenuItem>
-                                            <Separator />
-                                            <ui:MenuItem Header="依存関係管理">
-                                                <ui:MenuItem.Icon>
-                                                    <ui:SymbolIcon Symbol="Link16" />
-                                                </ui:MenuItem.Icon>
-                                                                                            <ui:MenuItem Header="先行タスクを削除" Command="{Binding ViewModel.RemovePredecessorCommand}" CommandParameter="{Binding}" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                <ui:MenuItem.Icon>
-                                                    <ui:SymbolIcon Symbol="ArrowUp16" />
-                                                </ui:MenuItem.Icon>
-                                            </ui:MenuItem>
-                                            <ui:MenuItem Header="後続タスクを削除" Command="{Binding ViewModel.RemoveSuccessorCommand}" CommandParameter="{Binding}" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                <ui:MenuItem.Icon>
-                                                    <ui:SymbolIcon Symbol="ArrowDown16" />
-                                                </ui:MenuItem.Icon>
-                                            </ui:MenuItem>
-                                            </ui:MenuItem>
-                                            <Separator />
-                                            <ui:MenuItem Header="削除">
-                                                <ui:MenuItem.Icon>
-                                                    <ui:SymbolIcon Symbol="Delete16" />
-                                                </ui:MenuItem.Icon>
-                                            </ui:MenuItem>
-                                        </ContextMenu>
-                                    </Grid.ContextMenu>
-                                </Grid>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                                        <!--  ドロップターゲット（先行・後続設定用）- 先行タスクがない場合のみ表示  -->
+                                        <Border
+                                            Grid.Column="0" Padding="4,2" AllowDrop="True" Background="Transparent" BorderBrush="Transparent"
+                                            BorderThickness="1" CornerRadius="2" DragEnter="DependencyDrop_DragEnter" DragLeave="DependencyDrop_DragLeave" Drop="DependencyDrop_Drop"
+                                            Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanInverseConverter.Instance}}" />
 
-                    <!--  説明列  -->
-                    <DataGridTextColumn Width="200" Binding="{Binding Description}" Header="説明" IsReadOnly="True" />
+                                        <!--  ツールチップ（詳細情報表示）  -->
+                                        <Grid.ToolTip>
+                                            <StackPanel MinWidth="250" MaxWidth="400">
+                                                <ui:TextBlock Margin="0,0,0,12" FontSize="14" FontWeight="Bold" Text="先行・後続の関係性" />
 
-                    <!--  開始日列  -->
-                    <DataGridTemplateColumn Width="100" Header="開始日">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2">
-                                    <ui:TextBlock Text="{Binding StartDate, StringFormat=yyyy/MM/dd}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate>
-                            <DataTemplate>
-                                <DatePicker SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                           FirstDayOfWeek="Monday"
-                                           IsTodayHighlighted="True"
-                                           DisplayDateStart="1900-01-01"
-                                           DisplayDateEnd="2100-12-31"
-                                           SelectedDateFormat="Short"
-                                           SelectedDateChanged="DatePicker_SelectedDateChanged"
-                                           GotFocus="DatePicker_GotFocus"
-                                           Tag="StartDate" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellEditingTemplate>
-                    </DataGridTemplateColumn>
+                                                <!--  先行タスク  -->
+                                                <StackPanel Margin="0,0,0,12" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                    <ui:SymbolIcon Width="12" Height="12" Margin="0,0,4,0" Foreground="Orange" Symbol="ArrowUp16" />
+                                                    <ui:TextBlock FontSize="11" FontWeight="SemiBold" Text="{Binding Title}" />
+                                                    <ui:TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text=" (ID: " />
+                                                    <ui:TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Id}" />
+                                                    <ui:TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text=")" />
+                                                </StackPanel>
 
-                    <!--  終了日列  -->
-                    <DataGridTemplateColumn Width="100" Header="終了日">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2">
-                                    <ui:TextBlock Text="{Binding EndDate, StringFormat=yyyy/MM/dd}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate>
-                            <DataTemplate>
-                                <DatePicker SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                           FirstDayOfWeek="Monday"
-                                           IsTodayHighlighted="True"
-                                           DisplayDateStart="1900-01-01"
-                                           DisplayDateEnd="2100-12-31"
-                                           SelectedDateFormat="Short"
-                                           SelectedDateChanged="DatePicker_SelectedDateChanged"
-                                           GotFocus="DatePicker_GotFocus"
-                                           Tag="EndDate" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellEditingTemplate>
-                    </DataGridTemplateColumn>
+                                                <!--  後続タスク  -->
+                                                <StackPanel Margin="0,0,0,12" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
+                                                    <ui:TextBlock Margin="0,0,0,4" FontSize="12" FontWeight="SemiBold" Foreground="Blue" Text="後続タスク:" />
+                                                    <Border Padding="8,6" Background="#E3F2FD" BorderBrush="Blue" BorderThickness="1" CornerRadius="4">
+                                                        <ItemsControl ItemsSource="{Binding Successors}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <StackPanel Margin="0,2" Orientation="Horizontal">
+                                                                        <ui:SymbolIcon Width="12" Height="12" Margin="0,0,4,0" Foreground="Blue" Symbol="ArrowDown16" />
+                                                                        <ui:TextBlock FontSize="11" FontWeight="SemiBold" Text="{Binding Title}" />
+                                                                        <ui:TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text=" (ID: " />
+                                                                        <ui:TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Id}" />
+                                                                        <ui:TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text=")" />
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Border>
+                                                </StackPanel>
 
-                    <!--  進捗列  -->
-                    <DataGridTemplateColumn Width="150" Header="進捗" IsReadOnly="True">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!--  プログレスバー  -->
-                                    <Border
-                                        Grid.Column="0" Height="16" Margin="0,0,8,0"
-                                        Background="{DynamicResource SubtleFillColorTertiaryBrush}"
-                                        BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                                        BorderThickness="1" CornerRadius="2">
-                                        <Border Width="{Binding TotalProgress, Converter={x:Static helpers:ProgressToWidthConverter.Instance}}" HorizontalAlignment="Left" Background="{Binding TotalProgress, Converter={x:Static helpers:ProgressToColorConverter.Instance}}" CornerRadius="1" />
-                                    </Border>
-
-                                    <!--  進捗テキスト  -->
-                                    <ui:TextBlock
-                                        Grid.Column="1" MinWidth="40" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold"
-                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                        Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
-                                </Grid>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-
-                    <!--  ステータス列  -->
-                    <DataGridTemplateColumn Width="80" Header="ステータス" IsReadOnly="True">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border Padding="4,2" Background="{Binding Status, Converter={x:Static helpers:StatusToBrushConverter.Instance}}" CornerRadius="2">
-                                    <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Status}" />
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-
-                    <!--  優先度列  -->
-                    <DataGridTemplateColumn Width="80" Header="優先度" IsReadOnly="True">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border Padding="4,2" Background="{Binding Priority, Converter={x:Static helpers:PriorityToBrushConverter.Instance}}" CornerRadius="2">
-                                    <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Priority}" />
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-
-                    <!--  先行・後続列  -->
-                    <DataGridTemplateColumn Width="120" Header="先行・後続" IsReadOnly="True">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!--  先行タスク数  -->
-                                    <StackPanel Grid.Column="0" Margin="2,0" Orientation="Horizontal" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                        <ui:SymbolIcon Symbol="ArrowUp16" Width="12" Height="12" Margin="0,0,2,0" Foreground="Orange" />
-                                        <ui:TextBlock FontSize="9" Foreground="Orange" Text="{Binding PredecessorCount}" FontWeight="SemiBold" />
-                                    </StackPanel>
-
-                                    <!--  後続タスク数  -->
-                                    <StackPanel Grid.Column="1" Margin="2,0" Orientation="Horizontal" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                        <ui:SymbolIcon Symbol="ArrowDown16" Width="12" Height="12" Margin="0,0,2,0" Foreground="Blue" />
-                                        <ui:TextBlock FontSize="9" Foreground="Blue" Text="{Binding SuccessorCount}" FontWeight="SemiBold" />
-                                    </StackPanel>
-
-                                    <!--  先行タスクがない場合の表示  -->
-                                    <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Margin="2,0" Orientation="Horizontal" 
-                                               Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanInverseConverter.Instance}}">
-                                        <ui:TextBlock FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="先行なし" />
-                                    </StackPanel>
-
-                                    <!--  ドロップターゲット（先行・後続設定用）  -->
-                                    <Border
-                                        Grid.ColumnSpan="2" Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2"
-                                        AllowDrop="True" Drop="DependencyDrop_Drop" DragEnter="DependencyDrop_DragEnter" DragLeave="DependencyDrop_DragLeave">
-                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="8" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="D&amp;D" />
-                                    </Border>
-
-                                    <!--  ツールチップ（詳細情報表示）  -->
-                                    <Grid.ToolTip>
-                                        <StackPanel MinWidth="250" MaxWidth="400">
-                                            <ui:TextBlock FontWeight="Bold" Text="先行・後続の関係性" Margin="0,0,0,12" FontSize="14" />
-                                            
-                                            <!--  先行タスク  -->
-                                            <StackPanel Margin="0,0,0,12" Visibility="{Binding HasPredecessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                <ui:TextBlock FontWeight="SemiBold" Text="先行タスク:" Foreground="Orange" FontSize="12" Margin="0,0,0,4" />
-                                                <Border Background="#FFF8E1" BorderBrush="Orange" BorderThickness="1" CornerRadius="4" Padding="8,6">
-                                                    <ItemsControl ItemsSource="{Binding Predecessors}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <StackPanel Orientation="Horizontal" Margin="0,2">
-                                                                    <ui:SymbolIcon Symbol="ArrowUp16" Width="12" Height="12" Foreground="Orange" Margin="0,0,4,0" />
-                                                                    <ui:TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" />
-                                                                    <ui:TextBlock Text=" (ID: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
-                                                                    <ui:TextBlock Text="{Binding Id}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
-                                                                    <ui:TextBlock Text=")" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
-                                                                </StackPanel>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                <!--  使用方法  -->
+                                                <Border Padding="8,6" Background="#F5F5F5" BorderBrush="{DynamicResource TextFillColorSecondaryBrush}" BorderThickness="1" CornerRadius="4">
+                                                    <ui:TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="使用方法: タスク名をドラッグしてこの列にドロップすると先行関係を設定できます" TextWrapping="Wrap" />
                                                 </Border>
                                             </StackPanel>
-                                            
-                                            <!--  後続タスク  -->
-                                            <StackPanel Margin="0,0,0,12" Visibility="{Binding HasSuccessors, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}">
-                                                <ui:TextBlock FontWeight="SemiBold" Text="後続タスク:" Foreground="Blue" FontSize="12" Margin="0,0,0,4" />
-                                                <Border Background="#E3F2FD" BorderBrush="Blue" BorderThickness="1" CornerRadius="4" Padding="8,6">
-                                                    <ItemsControl ItemsSource="{Binding Successors}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <StackPanel Orientation="Horizontal" Margin="0,2">
-                                                                    <ui:SymbolIcon Symbol="ArrowDown16" Width="12" Height="12" Foreground="Blue" Margin="0,0,4,0" />
-                                                                    <ui:TextBlock Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" />
-                                                                    <ui:TextBlock Text=" (ID: " Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
-                                                                    <ui:TextBlock Text="{Binding Id}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
-                                                                    <ui:TextBlock Text=")" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" />
-                                                                </StackPanel>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </Border>
-                                            </StackPanel>
-                                            
-                                            <!--  使用方法  -->
-                                            <Border Background="#F5F5F5" BorderBrush="{DynamicResource TextFillColorSecondaryBrush}" BorderThickness="1" CornerRadius="4" Padding="8,6">
-                                                <ui:TextBlock Text="使用方法: タスク名をドラッグしてこの列にドロップすると先行関係を設定できます" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                            </Border>
-                                        </StackPanel>
-                                    </Grid.ToolTip>
-                                </Grid>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+                                        </Grid.ToolTip>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                    <!--  担当者列  -->
-                    <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
+                        <!--  日付列はコードビハインドで動的に生成  -->
+                    </DataGrid.Columns>
 
-                    <!--  日付列はコードビハインドで動的に生成  -->
-                </DataGrid.Columns>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Padding" Value="4,2" />
+                            <Setter Property="Margin" Value="0,1" />
+                            <Setter Property="AllowDrop" Value="True" />
+                            <EventSetter Event="Drop" Handler="DataGridRow_Drop" />
+                            <EventSetter Event="DragEnter" Handler="DataGridRow_DragEnter" />
+                            <EventSetter Event="DragLeave" Handler="DataGridRow_DragLeave" />
+                            <Style.Triggers>
+                                <!--  先行タスクがある場合の強調表示  -->
+                                <DataTrigger Binding="{Binding HasPredecessors}" Value="True">
+                                    <Setter Property="Background" Value="#FFF8E1" />
+                                </DataTrigger>
 
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Setter Property="Padding" Value="4,2" />
-                        <Setter Property="Margin" Value="0,1" />
-                        <Setter Property="AllowDrop" Value="True" />
-                        <EventSetter Event="Drop" Handler="DataGridRow_Drop" />
-                        <EventSetter Event="DragEnter" Handler="DataGridRow_DragEnter" />
-                        <EventSetter Event="DragLeave" Handler="DataGridRow_DragLeave" />
-                        <Style.Triggers>
-                            <!-- 先行タスクがある場合の強調表示 -->
-                            <DataTrigger Binding="{Binding HasPredecessors}" Value="True">
-                                <Setter Property="Background" Value="#FFF8E1" />
-                                <Setter Property="BorderBrush" Value="Orange" />
-                                <Setter Property="BorderThickness" Value="1" />
-                            </DataTrigger>
-                            
-                            <!-- 選択状態の優先度を上げる -->
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E5F3FF" />
-                                <Setter Property="BorderBrush" Value="Blue" />
-                                <Setter Property="BorderThickness" Value="2" />
-                            </Trigger>
-                            
-                            <!-- マウスオーバー状態 -->
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#F0F0F0" />
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.RowStyle>
+                                <!--  選択状態の優先度を上げる  -->
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#E5F3FF" />
+                                    <Setter Property="BorderBrush" Value="Blue" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                </Trigger>
 
-                <DataGrid.InputBindings>
-                    <KeyBinding Key="Up" Command="{Binding ViewModel.MoveUpCommand}" />
-                    <KeyBinding Key="Down" Command="{Binding ViewModel.MoveDownCommand}" />
-                    <KeyBinding Key="Left" Command="{Binding ViewModel.MoveLeftCommand}" />
-                    <KeyBinding Key="Right" Command="{Binding ViewModel.MoveRightCommand}" />
-                </DataGrid.InputBindings>
-            </DataGrid>
+                                <!--  マウスオーバー状態  -->
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#F0F0F0" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
 
-            
+                    <DataGrid.InputBindings>
+                        <KeyBinding Key="Up" Command="{Binding ViewModel.MoveUpCommand}" />
+                        <KeyBinding Key="Down" Command="{Binding ViewModel.MoveDownCommand}" />
+                        <KeyBinding Key="Left" Command="{Binding ViewModel.MoveLeftCommand}" />
+                        <KeyBinding Key="Right" Command="{Binding ViewModel.MoveRightCommand}" />
+                    </DataGrid.InputBindings>
+                </DataGrid>
+
+                <!--  依存関係の矢印を表示するレイヤー（最前面、スクロールバーの操作を妨げない）  -->
+                <Canvas x:Name="DependencyArrowCanvas" Grid.Row="0" Panel.ZIndex="1000" Background="Transparent" IsHitTestVisible="False" />
+            </Grid>
 
             <!--  右側：タスク詳細（エクスパンダー）  -->
             <ui:Card
@@ -669,23 +644,17 @@
                                 <StackPanel>
                                     <!--  開始日  -->
                                     <ui:TextBlock Margin="0,8,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="開始日" />
-                                    <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                               FirstDayOfWeek="Monday"
-                                               IsTodayHighlighted="True"
-                                               DisplayDateStart="1900-01-01"
-                                               DisplayDateEnd="2100-12-31"
-                                               SelectedDateFormat="Short"
-                                               SelectedDateChanged="DatePicker_SelectedDateChanged" />
+                                    <DatePicker
+                                        DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" IsTodayHighlighted="True"
+                                        SelectedDate="{Binding ViewModel.SelectedItem.StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" />
 
                                     <!--  終了日  -->
                                     <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
-                                    <DatePicker SelectedDate="{Binding ViewModel.SelectedItem.EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                FirstDayOfWeek="Monday"
-                                                IsTodayHighlighted="True"
-                                                DisplayDateStart="1900-01-01"
-                                                DisplayDateEnd="2100-12-31"
-                                                SelectedDateFormat="Short"
-                                                SelectedDateChanged="DatePicker_SelectedDateChanged" />
+                                    <DatePicker
+                                        DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" IsTodayHighlighted="True"
+                                        SelectedDate="{Binding ViewModel.SelectedItem.EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" />
                                 </StackPanel>
                             </Expander>
 
