@@ -244,7 +244,7 @@ namespace RedmineClient.Views.Pages
                 InitializeDependencyArrows();
 
                 // DataGridの初期化処理を統合実行
-                InitializeDataGridAsync();
+                _ = InitializeDataGridAsync();
 
                 // 祝日データを初期化（非同期で実行、エラーが発生しても続行）
                 _ = Task.Run(async () =>
@@ -272,7 +272,7 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// DataGridの初期化処理を統合実行する
         /// </summary>
-        private async void InitializeDataGridAsync()
+        private async Task InitializeDataGridAsync()
         {
             try
             {
@@ -331,7 +331,7 @@ namespace RedmineClient.Views.Pages
                 _ = Task.Run(() => RefreshHolidayDataAsync());
 
                 // 日付列を再生成
-                GenerateDateColumns();
+                _ = GenerateDateColumns();
             }
         }
 
@@ -615,9 +615,9 @@ namespace RedmineClient.Views.Pages
         /// 日付列を生成する
         /// </summary>
         private bool _isGeneratingColumns = false;
-        private CancellationTokenSource _generateColumnsCancellation;
+        private CancellationTokenSource? _generateColumnsCancellation;
 
-        private async void GenerateDateColumns()
+        private async Task GenerateDateColumns()
         {
             // 無限ループを防ぐためのフラグ
             if (_isGeneratingColumns)
@@ -632,13 +632,25 @@ namespace RedmineClient.Views.Pages
 
                 try
                 {
-                    // プログレスバーを表示
-                    ViewModel.IsWbsLoading = true;
+                    // 他の処理が完了するまで少し待機
+                    if (_generateColumnsCancellation != null)
+                    {
+                        await Task.Delay(200, _generateColumnsCancellation.Token);
+                    }
+                    
+                    // プログレスバーを表示（既に表示されている場合は上書きしない）
+                    if (!ViewModel.IsWbsLoading)
+                    {
+                        ViewModel.IsWbsLoading = true;
+                    }
                     ViewModel.WbsProgressMessage = "日付列を生成中...";
                     ViewModel.WbsProgress = 0;
                     
                     // UIの更新を確実にするために少し待機
-                    await Task.Delay(100, _generateColumnsCancellation.Token);
+                    if (_generateColumnsCancellation != null)
+                    {
+                        await Task.Delay(100, _generateColumnsCancellation.Token);
+                    }
 
                     // ItemsSourceを一時的にクリアして列の操作を可能にする
                     var currentItemsSource = WbsDataGrid.ItemsSource;
@@ -688,7 +700,10 @@ namespace RedmineClient.Views.Pages
                         for (int columnCount = 0; columnCount < totalColumns; columnCount++)
                         {
                             // キャンセレーションをチェック
-                            _generateColumnsCancellation.Token.ThrowIfCancellationRequested();
+                            if (_generateColumnsCancellation?.Token.IsCancellationRequested == true)
+                            {
+                                throw new OperationCanceledException();
+                            }
 
                             // プログレスメッセージを更新（5列ごと、より細かく更新）
                             if (columnCount % 5 == 0)
@@ -701,7 +716,10 @@ namespace RedmineClient.Views.Pages
                                 ViewModel.WbsProgressMessage = $"日付列を生成中... ({progressPercent}%)";
 
                                 // UIの更新を確実にするために少し待機
-                                await Task.Delay(5, _generateColumnsCancellation.Token);
+                                if (_generateColumnsCancellation != null)
+                                {
+                                    await Task.Delay(5, _generateColumnsCancellation.Token);
+                                }
                             }
 
                             var loopDate = startDate.AddDays(columnCount);
@@ -878,7 +896,10 @@ namespace RedmineClient.Views.Pages
                             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
 
                             // 描画完了後にプログレス表示を非表示にする
-                            await Task.Delay(500, _generateColumnsCancellation.Token); // 完了メッセージを確認できるように少し待機
+                            if (_generateColumnsCancellation != null)
+                            {
+                                await Task.Delay(500, _generateColumnsCancellation.Token); // 完了メッセージを確認できるように少し待機
+                            }
                             ViewModel.IsWbsLoading = false;
                             ViewModel.WbsProgressMessage = "";
                         }, DispatcherPriority.Loaded);
@@ -991,7 +1012,7 @@ namespace RedmineClient.Views.Pages
                     {
                         if (e.PropertyName == nameof(ViewModel.ShowDependencyArrows))
                         {
-                            UpdateDependencyArrowsAsync();
+                            _ = UpdateDependencyArrowsAsync();
                         }
                     };
                 }
@@ -1019,7 +1040,7 @@ namespace RedmineClient.Views.Pages
                             {
                                 if (ViewModel?.ShowDependencyArrows == true)
                                 {
-                                    Dispatcher.BeginInvoke(() => UpdateDependencyArrowsAsync());
+                                    Dispatcher.BeginInvoke(() => _ = UpdateDependencyArrowsAsync());
                                 }
                             });
                         };
@@ -1048,9 +1069,9 @@ namespace RedmineClient.Views.Pages
         }
 
         private bool _isDrawingArrows = false;
-        private CancellationTokenSource _arrowDrawingCancellation;
+        private CancellationTokenSource? _arrowDrawingCancellation;
 
-        private async void UpdateDependencyArrowsAsync()
+        private async Task UpdateDependencyArrowsAsync()
         {
             if (_isDrawingArrows)
             {
@@ -1079,7 +1100,7 @@ namespace RedmineClient.Views.Pages
                 {
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        if (_arrowDrawingCancellation.Token.IsCancellationRequested) return;
+                        if (_arrowDrawingCancellation?.Token.IsCancellationRequested == true) return;
                         DrawDependencyArrowsLightweight();
                     }, DispatcherPriority.Background);
                 }, _arrowDrawingCancellation.Token);
@@ -1087,10 +1108,6 @@ namespace RedmineClient.Views.Pages
             catch (OperationCanceledException)
             {
                 // 描画がキャンセルされた場合は何もしない
-            }
-            catch (TaskCanceledException)
-            {
-                // タスクがキャンセルされた場合も何もしない
             }
             finally
             {
@@ -1387,287 +1404,11 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        /// <summary>
-        /// 日付テキストボックスのキーイベントハンドラー
-        /// </summary>
-        private void DateTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            try
-            {
-                // DatePickerを使用するため、このメソッドは不要
-                // 日付の調整はDatePickerのカレンダーで行う
-            }
-            catch
-            {
-                // 例外をキャッチ
-            }
-        }
 
-        /// <summary>
-        /// 次のフィールドまたは前のフィールドに移動する
-        /// </summary>
-        /// <param name="currentDateTextBox">現在の日付テキストボックス</param>
-        /// <param name="reverse">逆方向に移動するかどうか</param>
-        private void MoveToNextField(Wpf.Ui.Controls.TextBox currentDateTextBox, bool reverse)
-        {
-            try
-            {
-                if (reverse)
-                {
-                    // 逆方向に移動
-                    DescriptionTextBox?.Focus();
-                }
-                else
-                {
-                    // 順方向に移動
-                    ProgressSlider?.Focus();
-                }
-            }
-            catch
-            {
-                // フィールド移動中にエラー
-            }
-        }
 
-        /// <summary>
-        /// 矢印キーで日付を調整する
-        /// </summary>
-        /// <param name="dateTextBox">対象の日付テキストボックス</param>
-        /// <param name="key">押されたキー</param>
-        private void AdjustDate(Wpf.Ui.Controls.TextBox dateTextBox, System.Windows.Input.Key key)
-        {
-            try
-            {
-                // DatePickerを使用するため、このメソッドは不要
-                // 日付の調整はDatePickerのカレンダーで行う
-            }
-            catch
-            {
-                // 日付調整中にエラー
-            }
-        }
 
-        /// <summary>
-        /// 日付テキストボックスのKeyUpイベントハンドラー
-        /// </summary>
-        private void DateTextBox_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            try
-            {
-                // DatePickerを使用するため、このメソッドは不要
-                // 日付の調整はDatePickerのカレンダーで行う
-            }
-            catch
-            {
-                // DateTextBox KeyUp処理中にエラー
-            }
-        }
 
-        /// <summary>
-        /// タイトルフィールドのキーイベントハンドラー
-        /// </summary>
-        private void TitleTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            try
-            {
-                if (e.Key == System.Windows.Input.Key.Enter)
-                {
-                    // エンターキーで説明欄に移動
-                    e.Handled = true;
-                    DescriptionTextBox?.Focus();
-                }
-                else if (e.Key == System.Windows.Input.Key.Tab)
-                {
-                    // タブキーで説明欄に移動
-                    e.Handled = true;
-                    DescriptionTextBox?.Focus();
-                }
-            }
-            catch
-            {
-                // タイトルフィールド キーイベント処理中に例外
-            }
-        }
 
-        /// <summary>
-        /// タイトルフィールドにフォーカスを設定する
-        /// </summary>
-        private void SetTitleFocus()
-        {
-            // UIの更新が完了してからフォーカスを設定
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                try
-                {
-                    if (TitleTextBox != null)
-                    {
-                        TitleTextBox.Focus();
-                        TitleTextBox.SelectAll(); // テキストを全選択
-                    }
-                    else
-                    {
-                        // フォールバック：DataGridにフォーカス
-                        SetDataGridFocus();
-                    }
-                }
-                catch
-                {
-                    // エラーが発生した場合はDataGridにフォーカス
-                    SetDataGridFocus();
-                }
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-        }
-
-        /// <summary>
-        /// DataGridにフォーカスを設定する
-        /// </summary>
-        public void SetDataGridFocus()
-        {
-            // UIの更新が完了してからフォーカスを設定（複数段階で試行）
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                TrySetFocusWithRetry(0);
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-        }
-
-        /// <summary>
-        /// リトライ付きでフォーカスを設定する
-        /// </summary>
-        private void TrySetFocusWithRetry(int retryCount)
-        {
-            if (WbsDataGrid == null || ViewModel.SelectedItem == null)
-            {
-                WbsDataGrid?.Focus();
-                return;
-            }
-
-            try
-            {
-                // 選択されたアイテムの行を特定
-                var selectedIndex = -1;
-                for (int i = 0; i < WbsDataGrid.Items.Count; i++)
-                {
-                    if (WbsDataGrid.Items[i].Equals(ViewModel.SelectedItem))
-                    {
-                        selectedIndex = i;
-                        break;
-                    }
-                }
-
-                if (selectedIndex >= 0)
-                {
-                    // 選択された行を選択状態にする
-                    WbsDataGrid.SelectedIndex = selectedIndex;
-
-                    // 選択された行にスクロール
-                    WbsDataGrid.ScrollIntoView(WbsDataGrid.Items[selectedIndex]);
-
-                    // 少し待ってから行のコンテナを取得
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        TrySetFocusOnRow(selectedIndex, retryCount);
-                    }), System.Windows.Threading.DispatcherPriority.Background);
-                }
-                else
-                {
-                    // 選択されたアイテムが見つからない場合
-                    if (retryCount < 3)
-                    {
-                        // リトライ
-                        Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            TrySetFocusWithRetry(retryCount + 1);
-                        }), System.Windows.Threading.DispatcherPriority.Background);
-                    }
-                    else
-                    {
-                        WbsDataGrid.Focus();
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                WbsDataGrid.Focus();
-            }
-        }
-
-        /// <summary>
-        /// 特定の行にフォーカスを設定する
-        /// </summary>
-        private void TrySetFocusOnRow(int rowIndex, int retryCount)
-        {
-            try
-            {
-                // 行のコンテナを取得
-                var row = WbsDataGrid.ItemContainerGenerator.ContainerFromIndex(rowIndex) as DataGridRow;
-
-                if (row != null)
-                {
-                    // 行が見つかった場合、セルにフォーカスを設定
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        TrySetFocusOnCell(row, rowIndex, retryCount);
-                    }), System.Windows.Threading.DispatcherPriority.Background);
-                }
-                else
-                {
-                    // 行が見つからない場合
-                    if (retryCount < 3)
-                    {
-                        // リトライ
-                        Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            TrySetFocusWithRetry(retryCount + 1);
-                        }), System.Windows.Threading.DispatcherPriority.Background);
-                    }
-                    else
-                    {
-                        // リトライ上限に達した場合はDataGrid全体にフォーカス
-                        WbsDataGrid.Focus();
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                WbsDataGrid.Focus();
-            }
-        }
-
-        /// <summary>
-        /// 特定のセルにフォーカスを設定する
-        /// </summary>
-        private void TrySetFocusOnCell(DataGridRow row, int rowIndex, int retryCount)
-        {
-            try
-            {
-                // 最初のセル（Title列）にフォーカスを設定
-                if (WbsDataGrid.Columns.Count > 0)
-                {
-                    var cell = WbsDataGrid.Columns[0].GetCellContent(row) as FrameworkElement;
-                    if (cell != null)
-                    {
-                        cell.Focus();
-                        return;
-                    }
-                }
-
-                // セルが見つからない場合は行にフォーカス
-                row.Focus();
-            }
-            catch (Exception)
-            {
-                // エラーが発生した場合は行にフォーカス
-                try
-                {
-                    row.Focus();
-                }
-                catch
-                {
-                    // 最終手段としてDataGrid全体にフォーカス
-                    WbsDataGrid.Focus();
-                }
-            }
-        }
 
         /// <summary>
         /// ViewModelのプロパティ変更時のイベントハンドラー
@@ -1704,7 +1445,7 @@ namespace RedmineClient.Views.Pages
                     // 今日の日付ライン表示設定が変更された場合、スケジュール表を再生成
                     if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
                     {
-                        GenerateDateColumns();
+                        _ = GenerateDateColumns();
                     }
                 }
                 else if (e.PropertyName == nameof(ViewModel.FlattenedWbsItems))
@@ -1824,8 +1565,11 @@ namespace RedmineClient.Views.Pages
                 {
                     try
                     {
-                        // プログレスバーを表示
-                        ViewModel.IsWbsLoading = true;
+                        // プログレスバーを表示（既に表示されている場合は上書きしない）
+                        if (!ViewModel.IsWbsLoading)
+                        {
+                            ViewModel.IsWbsLoading = true;
+                        }
                         ViewModel.WbsProgressMessage = "Redmineデータを読み込み中...";
                         ViewModel.WbsProgress = 0;
                         
@@ -1845,7 +1589,7 @@ namespace RedmineClient.Views.Pages
                         
                         if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
                         {
-                            GenerateDateColumns();
+                            _ = GenerateDateColumns();
                         }
                     }
                     catch (Exception ex)
@@ -1855,7 +1599,7 @@ namespace RedmineClient.Views.Pages
                         // エラーが発生した場合でも、日付カラムは生成
                         if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
                         {
-                            GenerateDateColumns();
+                            _ = GenerateDateColumns();
                         }
                     }
                 }
@@ -1864,7 +1608,7 @@ namespace RedmineClient.Views.Pages
                     // プロジェクトが選択されていない場合でも、日付カラムは生成
                     if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
                     {
-                        GenerateDateColumns();
+                        _ = GenerateDateColumns();
                     }
                 }
                 
@@ -1888,6 +1632,8 @@ namespace RedmineClient.Views.Pages
 
                             // 描画完了後にプログレスバーとメッセージを非表示にする
                             // ただし、日付列生成中（_isGeneratingColumns = true）の場合は非表示にしない
+                            // また、他の処理がまだ実行中の可能性があるため、少し待機してから確認
+                            await Task.Delay(100);
                             if (ViewModel.IsWbsLoading && !_isGeneratingColumns)
                             {
                                 ViewModel.IsWbsLoading = false;
@@ -2144,16 +1890,10 @@ namespace RedmineClient.Views.Pages
                 if (Application.Current == null) return;
 
                 // 日付列生成処理をキャンセル
-                if (_generateColumnsCancellation != null && !_generateColumnsCancellation.IsCancellationRequested)
-                {
-                    _generateColumnsCancellation.Cancel();
-                }
+                _generateColumnsCancellation?.Cancel();
 
                 // 矢印描画処理をキャンセル
-                if (_arrowDrawingCancellation != null && !_arrowDrawingCancellation.IsCancellationRequested)
-                {
-                    _arrowDrawingCancellation.Cancel();
-                }
+                _arrowDrawingCancellation?.Cancel();
 
                 // 未保存の変更がある場合は保存処理を実行
                 if (ViewModel != null)

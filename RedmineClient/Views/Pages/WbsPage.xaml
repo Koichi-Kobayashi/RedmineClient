@@ -641,7 +641,7 @@
 
                                     <!--  タイトル  -->
                                     <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="タイトル" />
-                                    <ui:TextBox x:Name="TitleTextBox" KeyDown="TitleTextBox_KeyDown" PlaceholderText="タスクのタイトルを入力" Text="{Binding ViewModel.SelectedItem.Title, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ui:TextBox x:Name="TitleTextBox" PlaceholderText="タスクのタイトルを入力" Text="{Binding ViewModel.SelectedItem.Title, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <!--  説明  -->
                                     <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="説明" />

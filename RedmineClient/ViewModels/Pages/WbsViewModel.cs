@@ -509,7 +509,11 @@ namespace RedmineClient.ViewModels.Pages
             // 即座にプログレスバーを表示（初期化開始）
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                IsWbsLoading = true;
+                // 既に表示されている場合は上書きしない
+                if (!IsWbsLoading)
+                {
+                    IsWbsLoading = true;
+                }
                 WbsProgress = 0;
                 WbsProgressMessage = "WBSページを初期化中...";
             });
@@ -1290,7 +1294,11 @@ namespace RedmineClient.ViewModels.Pages
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsWbsLoading = true;
+                    // 既に表示されている場合は上書きしない
+                    if (!IsWbsLoading)
+                    {
+                        IsWbsLoading = true;
+                    }
                     WbsProgress = 0;
                     WbsProgressMessage = "WBSリストを更新中...";
                 });
@@ -2202,7 +2210,11 @@ namespace RedmineClient.ViewModels.Pages
                 // プログレスバーを開始
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    IsWbsLoading = true;
+                    // 既に表示されている場合は上書きしない
+                    if (!IsWbsLoading)
+                    {
+                        IsWbsLoading = true;
+                    }
                     WbsProgress = 0;
                     WbsProgressMessage = "Redmineからデータを取得中...";
                 });
