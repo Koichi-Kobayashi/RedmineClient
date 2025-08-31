@@ -715,13 +715,32 @@ namespace RedmineClient.Models
             if (newDependency == null) 
                 return new CircularDependencyInfo { HasCycle = false, CyclePath = new List<WbsItem>() };
 
-            // 新しく追加しようとしている依存関係が循環参照を作成するかをチェック
-            // 既存の依存関係は無視し、新しい依存関係のみでチェック
+            // 新しく追加される依存関係が現在のアイテム自身の場合は循環参照
+            if (newDependency == this)
+            {
+                return new CircularDependencyInfo 
+                { 
+                    HasCycle = true, 
+                    CyclePath = new List<WbsItem> { this, newDependency } 
+                };
+            }
+
+            // 新しく追加される依存関係が既に先行タスクまたは後続タスクとして存在する場合は循環参照
+            if (Predecessors.Contains(newDependency) || Successors.Contains(newDependency))
+            {
+                return new CircularDependencyInfo 
+                { 
+                    HasCycle = true, 
+                    CyclePath = new List<WbsItem> { this, newDependency, this } 
+                };
+            }
+
+            // 新しく追加される依存関係から開始して循環参照をチェック
             var visited = new HashSet<WbsItem>();
             var recursionStack = new HashSet<WbsItem>();
             var cyclePath = new List<WbsItem>();
             
-            // 新しく追加される依存関係から開始して循環参照をチェック
+            // 現在のアイテムから開始して循環参照をチェック
             var hasCycle = FindCyclePathFromNewDependency(newDependency, visited, recursionStack, cyclePath);
             
             return new CircularDependencyInfo 
@@ -795,6 +814,13 @@ namespace RedmineClient.Models
         /// <returns>循環参照が存在する場合はtrue</returns>
         private bool FindCyclePathFromNewDependency(WbsItem newDependency, HashSet<WbsItem> visited, HashSet<WbsItem> recursionStack, List<WbsItem> cyclePath)
         {
+            // 新しく追加される依存関係が現在のアイテム自身の場合は循環参照
+            if (newDependency == this)
+            {
+                cyclePath.Add(this);
+                return true;
+            }
+
             if (recursionStack.Contains(newDependency))
             {
                 // 循環参照のパスを構築
@@ -828,13 +854,6 @@ namespace RedmineClient.Models
                 {
                     if (FindCyclePathFromNewDependency(predecessor, visited, recursionStack, cyclePath))
                         return true;
-                }
-
-                // 新しく追加される依存関係が現在のアイテムに戻ってくるかをチェック
-                if (newDependency == this)
-                {
-                    cyclePath.Add(this);
-                    return true;
                 }
 
                 cyclePath.RemoveAt(cyclePath.Count - 1);
