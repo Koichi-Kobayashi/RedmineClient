@@ -531,7 +531,7 @@ namespace RedmineClient.Models
                 return false;
             }
 
-            // 循環参照をチェック
+            // 循環参照をチェック（Predecessorsに追加する前に行う）
             System.Diagnostics.Debug.WriteLine($"AddPredecessor: Checking circular dependency for {Title} -> {predecessor.Title}");
             var cycleInfo = GetCircularDependencyInfo(predecessor);
             if (cycleInfo.HasCycle)
@@ -546,7 +546,8 @@ namespace RedmineClient.Models
             // 相互呼び出しをスキップしない場合のみ、後続タスクとして追加
             if (!skipReciprocalCall)
             {
-                predecessor.AddSuccessor(this, true);
+                // 循環参照チェックをスキップして後続タスクとして追加（既にチェック済み）
+                predecessor.AddSuccessorInternal(this);
             }
             
             OnPropertyChanged(nameof(HasPredecessors));
@@ -578,6 +579,26 @@ namespace RedmineClient.Models
         }
 
         /// <summary>
+        /// 先行タスクを内部追加（循環参照チェックなし）
+        /// </summary>
+        /// <param name="predecessor">先行タスク</param>
+        private void AddPredecessorInternal(WbsItem predecessor)
+        {
+            if (predecessor == null || predecessor == this) return;
+
+            // 既存の先行タスクの場合は何もしない
+            if (Predecessors.Contains(predecessor)) return;
+
+            // 循環参照チェックなしで追加
+            Predecessors.Add(predecessor);
+            
+            OnPropertyChanged(nameof(HasPredecessors));
+            OnPropertyChanged(nameof(PredecessorCount));
+            OnPropertyChanged(nameof(PredecessorDetails));
+            OnPropertyChanged(nameof(PredecessorDisplayText));
+        }
+
+        /// <summary>
         /// 後続タスクを追加
         /// </summary>
         /// <param name="successor">後続タスク</param>
@@ -598,7 +619,7 @@ namespace RedmineClient.Models
                 return false;
             }
 
-            // 循環参照をチェック
+            // 循環参照をチェック（Successorsに追加する前に行う）
             System.Diagnostics.Debug.WriteLine($"AddSuccessor: Checking circular dependency for {Title} -> {successor.Title}");
             var cycleInfo = GetCircularDependencyInfo(successor);
             if (cycleInfo.HasCycle)
@@ -613,7 +634,8 @@ namespace RedmineClient.Models
             // 相互呼び出しをスキップしない場合のみ、先行タスクとして追加
             if (!skipReciprocalCall)
             {
-                successor.AddPredecessor(this, true);
+                // 循環参照チェックをスキップして先行タスクとして追加（既にチェック済み）
+                successor.AddPredecessorInternal(this);
             }
             
             OnPropertyChanged(nameof(HasSuccessors));
@@ -642,6 +664,26 @@ namespace RedmineClient.Models
                 OnPropertyChanged(nameof(SuccessorDetails));
                 OnPropertyChanged(nameof(SuccessorDisplayText));
             }
+        }
+
+        /// <summary>
+        /// 後続タスクを内部追加（循環参照チェックなし）
+        /// </summary>
+        /// <param name="successor">後続タスク</param>
+        private void AddSuccessorInternal(WbsItem successor)
+        {
+            if (successor == null || successor == this) return;
+
+            // 既存の後続タスクの場合は何もしない
+            if (Successors.Contains(successor)) return;
+
+            // 循環参照チェックなしで追加
+            Successors.Add(successor);
+            
+            OnPropertyChanged(nameof(HasSuccessors));
+            OnPropertyChanged(nameof(SuccessorCount));
+            OnPropertyChanged(nameof(SuccessorDetails));
+            OnPropertyChanged(nameof(SuccessorDisplayText));
         }
 
         /// <summary>
