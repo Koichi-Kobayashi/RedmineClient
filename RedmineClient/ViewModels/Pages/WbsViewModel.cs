@@ -556,10 +556,8 @@ namespace RedmineClient.ViewModels.Pages
                         WbsItems.Clear();
                         FlattenedWbsItems.Clear();
                         
-                        // 空の状態でもFlattenedWbsItemsを初期化完了とみなすために、ダミーアイテムを追加してから削除
-                        var dummyItem = new WbsItem { Title = "初期化中..." };
-                        FlattenedWbsItems.Add(dummyItem);
-                        FlattenedWbsItems.Remove(dummyItem);
+                        // FlattenedWbsItemsを初期化
+                        FlattenedWbsItems.Clear();
                     });
                 }
                 else
@@ -599,10 +597,8 @@ namespace RedmineClient.ViewModels.Pages
                                 }
                                 FlattenedWbsItems.Clear();
                                 
-                                // 空の状態でもFlattenedWbsItemsを初期化完了とみなすために、ダミーアイテムを追加してから削除
-                                var dummyItem = new WbsItem { Title = "プロジェクト一覧取得完了" };
-                                FlattenedWbsItems.Add(dummyItem);
-                                FlattenedWbsItems.Remove(dummyItem);
+                                // FlattenedWbsItemsを初期化完了
+                                System.Diagnostics.Debug.WriteLine("プロジェクト一覧取得後: FlattenedWbsItemsを初期化しました");
                                 
                                 System.Diagnostics.Debug.WriteLine("プロジェクト一覧取得後: FlattenedWbsItemsを初期化しました");
                             });
@@ -1296,12 +1292,10 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     FlattenedWbsItems.Clear();
 
-                    // WbsItemsが空の場合はダミーアイテムを追加して初期化完了とみなす
+                    // WbsItemsが空の場合は何も表示しない
                     if (WbsItems.Count == 0)
                     {
-                        var dummyItem = new WbsItem { Title = "データなし" };
-                        FlattenedWbsItems.Add(dummyItem);
-                        System.Diagnostics.Debug.WriteLine("WbsItemsが空のため、ダミーアイテムを追加しました");
+                        System.Diagnostics.Debug.WriteLine("WbsItemsが空のため、何も表示しません");
                         return;
                     }
 
@@ -2534,12 +2528,10 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     FlattenedWbsItems.Clear();
 
-                    // WbsItemsが空の場合はダミーアイテムを追加して初期化完了とみなす
+                    // WbsItemsが空の場合は何も表示しない
                     if (WbsItems.Count == 0)
                     {
-                        var dummyItem = new WbsItem { Title = "データなし" };
-                        FlattenedWbsItems.Add(dummyItem);
-                        System.Diagnostics.Debug.WriteLine("WbsItemsが空のため、ダミーアイテムを追加しました");
+                        System.Diagnostics.Debug.WriteLine("WbsItemsが空のため、何も表示しません");
                         return;
                     }
 
