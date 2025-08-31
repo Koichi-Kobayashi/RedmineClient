@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -19,8 +20,7 @@ namespace RedmineClient.Views.Pages
 
         static WbsPage()
         {
-            // 静的コンストラクタでDatePickerのプリロードを実行
-            Task.Run(StaticPreloadDatePickersAsync);
+            // 静的コンストラクタでの非同期処理は問題を引き起こす可能性があるため削除
         }
 
         public WbsPage(WbsViewModel viewModel)
@@ -81,7 +81,7 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// 祝日データを初期化する
         /// </summary>
-        private async Task InitializeHolidayDataAsync()
+        private Task InitializeHolidayDataAsync()
         {
             try
             {
@@ -104,6 +104,8 @@ namespace RedmineClient.Views.Pages
                 // 祝日データの初期化に失敗しても処理を続行
                 System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー: {ex.Message}");
             }
+            
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -304,7 +306,7 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// 祝日データを再初期化する
         /// </summary>
-        private async Task RefreshHolidayDataAsync()
+        private Task RefreshHolidayDataAsync()
         {
             try
             {
@@ -327,6 +329,8 @@ namespace RedmineClient.Views.Pages
                 // 祝日データの再初期化に失敗しても処理を続行
                 System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
             }
+            
+            return Task.CompletedTask;
         }
 
         public Task OnNavigatedToAsync()
