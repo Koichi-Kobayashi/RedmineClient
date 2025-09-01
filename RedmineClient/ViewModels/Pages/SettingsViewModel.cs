@@ -41,6 +41,12 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     _selectedTracker = value;
                     OnPropertyChanged(nameof(SelectedTracker));
+                    
+                    // 値が変更された時にコマンドを実行
+                    if (value != null)
+                    {
+                        OnTrackerSelected(value);
+                    }
                 }
             }
         }
@@ -60,6 +66,12 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     _selectedStatus = value;
                     OnPropertyChanged(nameof(SelectedStatus));
+                    
+                    // 値が変更された時にコマンドを実行
+                    if (value != null)
+                    {
+                        OnStatusSelected(value);
+                    }
                 }
             }
         }

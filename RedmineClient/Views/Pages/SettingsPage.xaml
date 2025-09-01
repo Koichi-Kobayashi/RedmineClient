@@ -43,15 +43,13 @@
         <ComboBox Margin="0,8,0,0" 
                   DisplayMemberPath="Name" 
                   ItemsSource="{Binding ViewModel.AvailableTrackers}" 
-                  SelectedItem="{Binding ViewModel.SelectedTracker, Mode=TwoWay}"
-                  SelectionChanged="ComboBox_SelectionChanged" />
+                  SelectedItem="{Binding ViewModel.SelectedTracker, Mode=TwoWay}" />
 
         <ui:TextBlock Margin="0,24,0,0" FontSize="16" FontWeight="Medium" Text="利用可能なステータス" />
         <ComboBox Margin="0,8,0,0" 
                   DisplayMemberPath="Name" 
                   ItemsSource="{Binding ViewModel.AvailableStatuses}" 
-                  SelectedItem="{Binding ViewModel.SelectedStatus, Mode=TwoWay}"
-                  SelectionChanged="StatusComboBox_SelectionChanged" />
+                  SelectedItem="{Binding ViewModel.SelectedStatus, Mode=TwoWay}" />
         <ui:TextBlock Margin="0,24,0,0" FontSize="20" FontTypography="Title" FontWeight="Medium" Text="テーマ設定" />
         <ui:TextBlock Margin="0,12,0,0" Text="テーマ" />
         <RadioButton
