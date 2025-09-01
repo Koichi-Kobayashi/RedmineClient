@@ -482,6 +482,12 @@ namespace RedmineClient.ViewModels.Pages
 
         #endregion DraggableTaskBorderのマウスイベント
 
+        #region キーボードショートカット
+        public ICommand DeleteKeyCommand { get; }
+        public ICommand F5KeyCommand { get; }
+        public ICommand EnterKeyCommand { get; }
+        #endregion キーボードショートカット
+
         #region DraggableTaskBorderのマウスイベント実装
 
         /// <summary>
@@ -601,6 +607,10 @@ namespace RedmineClient.ViewModels.Pages
             DraggableTaskBorderMouseLeftButtonUpCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseLeftButtonUp());
             DraggableTaskBorderMouseEnterCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseEnter());
             DraggableTaskBorderMouseLeaveCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseLeave());
+
+            DeleteKeyCommand = new RelayCommand(() => DeleteSelectedItem());
+            F5KeyCommand = new RelayCommand(() => Refresh());
+            EnterKeyCommand = new RelayCommand(() => EditItem(SelectedItem));
         }
 
         public virtual async Task OnNavigatedToAsync()

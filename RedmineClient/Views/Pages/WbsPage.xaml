@@ -601,6 +601,8 @@
                         <KeyBinding Key="Down" Command="{Binding ViewModel.MoveDownCommand}" />
                         <KeyBinding Key="Left" Command="{Binding ViewModel.MoveLeftCommand}" />
                         <KeyBinding Key="Right" Command="{Binding ViewModel.MoveRightCommand}" />
+                        <KeyBinding Key="Delete" Command="{Binding ViewModel.DeleteKeyCommand}" />
+                        <KeyBinding Key="Enter" Command="{Binding ViewModel.EnterKeyCommand}" />
                     </DataGrid.InputBindings>
                 </DataGrid>
 

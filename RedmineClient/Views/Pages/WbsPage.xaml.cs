@@ -37,7 +37,7 @@ namespace RedmineClient.Views.Pages
 
             // 基本的なイベントハンドラーのみ登録
             this.Loaded += WbsPage_InitialLoaded;
-            this.KeyDown += WbsPage_KeyDown;
+            this.KeyDown += WbsPage_KeyDown_Command;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             // 日付変更の監視を有効化
@@ -141,54 +141,56 @@ namespace RedmineClient.Views.Pages
             return Task.CompletedTask;
         }
 
+        #region キーボードショートカット
         /// <summary>
-        /// キーボードショートカットを処理する
+        /// キーボードショートカットを処理する（コマンドパターン版）
         /// </summary>
-        private void WbsPage_KeyDown(object sender, KeyEventArgs e)
+        private void WbsPage_KeyDown_Command(object sender, KeyEventArgs e)
         {
             switch (e.Key)
             {
                 case Key.Delete:
                     // Deleteキーで選択されたアイテムを削除
-                    if (ViewModel.SelectedItem != null)
+                    if (ViewModel.SelectedItem != null && ViewModel.DeleteKeyCommand.CanExecute(null))
                     {
-                        ViewModel.DeleteSelectedItemCommand.Execute(null);
+                        ViewModel.DeleteKeyCommand.Execute(null);
                         e.Handled = true;
                     }
                     break;
 
                 case Key.F5:
                     // F5キーでデータを更新
-                    if (ViewModel.RefreshRedmineDataCommand.CanExecute(null))
+                    if (ViewModel.F5KeyCommand.CanExecute(null))
                     {
-                        ViewModel.RefreshRedmineDataCommand.Execute(null);
+                        ViewModel.F5KeyCommand.Execute(null);
                         e.Handled = true;
                     }
                     break;
             }
         }
+        #endregion キーボードショートカット
 
         /// <summary>
-        /// DataGridのキーボードショートカットを処理する
+        /// DataGridのキーボードショートカットを処理する（コマンドパターン版）
         /// </summary>
-        private void WbsDataGrid_KeyDown(object sender, KeyEventArgs e)
+        private void WbsDataGrid_KeyDown_Command(object sender, KeyEventArgs e)
         {
             switch (e.Key)
             {
                 case Key.Delete:
                     // Deleteキーで選択されたアイテムを削除
-                    if (ViewModel.SelectedItem != null)
+                    if (ViewModel.SelectedItem != null && ViewModel.DeleteKeyCommand.CanExecute(null))
                     {
-                        ViewModel.DeleteSelectedItemCommand.Execute(null);
+                        ViewModel.DeleteKeyCommand.Execute(null);
                         e.Handled = true;
                     }
                     break;
 
                 case Key.Enter:
                     // Enterキーで選択されたアイテムを編集
-                    if (ViewModel.SelectedItem != null)
+                    if (ViewModel.SelectedItem != null && ViewModel.EnterKeyCommand.CanExecute(null))
                     {
-                        ViewModel.EditItemCommand.Execute(ViewModel.SelectedItem);
+                        ViewModel.EnterKeyCommand.Execute(null);
                         e.Handled = true;
                     }
                     break;
@@ -208,17 +210,17 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
-        /// DataGridのPreviewKeyDownイベントを処理する（より確実にキーイベントをキャッチ）
+        /// DataGridのPreviewKeyDownイベントを処理する（より確実にキーイベントをキャッチ）（コマンドパターン版）
         /// </summary>
-        private void WbsDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void WbsDataGrid_PreviewKeyDown_Command(object sender, KeyEventArgs e)
         {
             switch (e.Key)
             {
                 case Key.Delete:
                     // Deleteキーで選択されたアイテムを削除
-                    if (ViewModel.SelectedItem != null)
+                    if (ViewModel.SelectedItem != null && ViewModel.DeleteKeyCommand.CanExecute(null))
                     {
-                        ViewModel.DeleteSelectedItemCommand.Execute(null);
+                        ViewModel.DeleteKeyCommand.Execute(null);
                         e.Handled = true;
                     }
                     break;
@@ -280,8 +282,8 @@ namespace RedmineClient.Views.Pages
                 // DataGridのイベントハンドラーを設定
                 if (WbsDataGrid != null)
                 {
-                    WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
-                    WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
+                    WbsDataGrid.KeyDown += WbsDataGrid_KeyDown_Command;
+                    WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown_Command;
                     WbsDataGrid.SizeChanged += WbsDataGrid_SizeChanged;
                     WbsDataGrid.Loaded += WbsDataGrid_Loaded;
                     WbsDataGrid.IsVisibleChanged += WbsDataGrid_IsVisibleChanged;
