@@ -92,7 +92,7 @@
             <!--  スケジュール設定  -->
             <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
                 <ui:TextBlock Margin="0,0,5,0" VerticalAlignment="Center" Text="スケジュール開始年月:" />
-                <ComboBox x:Name="ScheduleStartYearMonthComboBox" Width="100" VerticalAlignment="Center" SelectedItem="{Binding ViewModel.ScheduleStartYearMonth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ScheduleStartYearMonthComboBox_SelectionChanged" />
+                <ComboBox x:Name="ScheduleStartYearMonthComboBox" Width="100" VerticalAlignment="Center" SelectedItem="{Binding ViewModel.ScheduleStartYearMonth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <ui:ToggleSwitch Margin="16,0,0,0" Content="今日の日付ライン" IsChecked="{Binding ViewModel.ShowTodayLine, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 

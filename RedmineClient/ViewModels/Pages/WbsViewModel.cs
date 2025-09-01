@@ -288,11 +288,28 @@ namespace RedmineClient.ViewModels.Pages
             get => _scheduleStartYearMonth;
             set
             {
-                if (SetProperty(ref _scheduleStartYearMonth, value))
+                System.Diagnostics.Debug.WriteLine($"ScheduleStartYearMonth setter 呼び出し: 現在値 = {_scheduleStartYearMonth}, 新しい値 = {value}");
+                
+                bool changed = SetProperty(ref _scheduleStartYearMonth, value);
+                if (changed)
                 {
+                    System.Diagnostics.Debug.WriteLine("ScheduleStartYearMonth プロパティが変更されました");
+                    
                     // 設定を保存
                     AppConfig.ScheduleStartYearMonth = value;
                     AppConfig.Save();
+                    
+                    // 値が変更された時にコマンドを実行
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        ScheduleStartYearMonthChanged(value);
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("ScheduleStartYearMonth プロパティは変更されませんでしたが、強制的に通知します");
+                    // ComboBox の選択が変更された場合は、同じ値でも日付列を再生成する必要がある
+                    OnPropertyChanged(nameof(ScheduleStartYearMonth));
                 }
             }
         }
@@ -404,6 +421,11 @@ namespace RedmineClient.ViewModels.Pages
         private readonly object _dataLoadingLock = new object();
 
         /// <summary>
+        /// 祝日データの再初期化中かどうか
+        /// </summary>
+        private bool _isHolidayDataRefreshing = false;
+
+        /// <summary>
         /// 登録ボタンのコマンド
         /// </summary>
         public ICommand RegisterItemsCommand { get; }
@@ -444,6 +466,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand RemoveSuccessorCommand { get; }
         public ICommand OpenRedmineIssueCommand { get; }
         public ICommand UpdateTaskDateCommand { get; }
+        public ICommand ScheduleStartYearMonthChangedCommand { get; }
 
         public WbsViewModel()
         {
@@ -507,6 +530,7 @@ namespace RedmineClient.ViewModels.Pages
             RemoveSuccessorCommand = new RelayCommand<WbsItem?>(RemoveSuccessor);
             OpenRedmineIssueCommand = new RelayCommand<string>(OpenRedmineIssue);
             UpdateTaskDateCommand = new AsyncRelayCommand<object>(UpdateTaskDateAsync);
+            ScheduleStartYearMonthChangedCommand = new RelayCommand<string>(ScheduleStartYearMonthChanged);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -3432,6 +3456,73 @@ namespace RedmineClient.ViewModels.Pages
                     System.Windows.MessageBoxButton.OK,
                     System.Windows.MessageBoxImage.Warning);
             }
+        }
+
+        /// <summary>
+        /// スケジュール開始年月が変更された時の処理
+        /// </summary>
+        /// <param name="selectedYearMonth">選択された年月</param>
+        private void ScheduleStartYearMonthChanged(string? selectedYearMonth)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"ScheduleStartYearMonthChanged 呼び出し: selectedYearMonth = {selectedYearMonth}");
+                
+                if (!string.IsNullOrEmpty(selectedYearMonth))
+                {
+                    // 設定が変更されたらスケジュール表を再生成
+                    // 祝日データを再初期化（色設定のため）
+                    _ = Task.Run(() => RefreshHolidayDataAsync());
+
+                    // 日付列を再生成するためのイベントを発火
+                    System.Diagnostics.Debug.WriteLine("OnPropertyChanged(nameof(ScheduleStartYearMonth)) を呼び出し");
+                    OnPropertyChanged(nameof(ScheduleStartYearMonth));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"スケジュール開始年月変更処理でエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 祝日データを再初期化する
+        /// </summary>
+        private Task RefreshHolidayDataAsync()
+        {
+            // 重複実行を防ぐ
+            if (_isHolidayDataRefreshing) return Task.CompletedTask;
+            
+            try
+            {
+                _isHolidayDataRefreshing = true;
+                
+                // 祝日データの再初期化は非同期で実行し、エラーが発生しても処理を続行
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await RedmineClient.Services.HolidayService.ForceUpdateAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        // 祝日データの再初期化に失敗しても処理を続行（ログ出力のみ）
+                        System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
+                    }
+                    finally
+                    {
+                        _isHolidayDataRefreshing = false;
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // 祝日データの再初期化に失敗しても処理を続行
+                System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
+                _isHolidayDataRefreshing = false;
+            }
+            
+            return Task.CompletedTask;
         }
     }
 }

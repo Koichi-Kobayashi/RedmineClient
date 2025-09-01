@@ -21,7 +21,7 @@ namespace RedmineClient.Views.Pages
 
         // 祝日データ初期化の重複実行を防ぐフラグ
         private bool _isHolidayDataInitializing = false;
-        private bool _isHolidayDataRefreshing = false;
+
 
         static WbsPage()
         {
@@ -317,64 +317,9 @@ namespace RedmineClient.Views.Pages
 
 
 
-        private void ScheduleStartYearMonthComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            // 設定が変更されたらスケジュール表を再生成
-            if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
-            {
-                // 選択された年月をViewModelに設定
-                if (ScheduleStartYearMonthComboBox.SelectedItem is string selectedYearMonth)
-                {
-                    ViewModel.ScheduleStartYearMonth = selectedYearMonth;
-                }
 
-                // 祝日データを再初期化（色設定のため）
-                _ = Task.Run(() => RefreshHolidayDataAsync());
 
-                // 日付列を再生成
-                _ = GenerateDateColumns();
-            }
-        }
 
-        /// <summary>
-        /// 祝日データを再初期化する
-        /// </summary>
-        private Task RefreshHolidayDataAsync()
-        {
-            // 重複実行を防ぐ
-            if (_isHolidayDataRefreshing) return Task.CompletedTask;
-            
-            try
-            {
-                _isHolidayDataRefreshing = true;
-                
-                // 祝日データの再初期化は非同期で実行し、エラーが発生しても処理を続行
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await RedmineClient.Services.HolidayService.ForceUpdateAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        // 祝日データの再初期化に失敗しても処理を続行（ログ出力のみ）
-                        System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
-                    }
-                    finally
-                    {
-                        _isHolidayDataRefreshing = false;
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                // 祝日データの再初期化に失敗しても処理を続行
-                System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
-                _isHolidayDataRefreshing = false;
-            }
-            
-            return Task.CompletedTask;
-        }
 
         public Task OnNavigatedToAsync()
         {
@@ -620,9 +565,12 @@ namespace RedmineClient.Views.Pages
 
         private async Task GenerateDateColumns()
         {
+            System.Diagnostics.Debug.WriteLine("GenerateDateColumns() 開始");
+            
             // 無限ループを防ぐためのフラグ
             if (_isGeneratingColumns)
             {
+                System.Diagnostics.Debug.WriteLine("GenerateDateColumns() 早期リターン: _isGeneratingColumns = true");
                 return;
             }
 
@@ -1391,7 +1339,7 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// ViewModelのプロパティ変更時のイベントハンドラー
         /// </summary>
-        private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             try
             {
@@ -1423,7 +1371,21 @@ namespace RedmineClient.Views.Pages
                     // 今日の日付ライン表示設定が変更された場合、スケジュール表を再生成
                     if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
                     {
-                        _ = GenerateDateColumns();
+                        await GenerateDateColumns();
+                    }
+                }
+                else if (e.PropertyName == nameof(ViewModel.ScheduleStartYearMonth))
+                {
+                    System.Diagnostics.Debug.WriteLine($"ScheduleStartYearMonth 変更検出: {ViewModel.ScheduleStartYearMonth}");
+                    // スケジュール開始年月が変更された場合、スケジュール表を再生成
+                    if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                    {
+                        System.Diagnostics.Debug.WriteLine("GenerateDateColumns() を呼び出し");
+                        await GenerateDateColumns();
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("WbsDataGrid が null または Loaded でないため GenerateDateColumns() をスキップ");
                     }
                 }
                 else if (e.PropertyName == nameof(ViewModel.FlattenedWbsItems))
@@ -1542,14 +1504,19 @@ namespace RedmineClient.Views.Pages
                             System.Diagnostics.Debug.WriteLine($"Redmineデータ読み込み後、ItemsSource再設定: {ViewModel.FlattenedWbsItems.Count}件");
                         }
                         
-                        // 日付カラムを生成
-                        ViewModel.WbsProgressMessage = "日付カラムを生成中...";
-                        ViewModel.WbsProgress = 50;
-                        
-                        if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
-                        {
-                            _ = GenerateDateColumns();
-                        }
+                                        // 日付カラムを生成
+                ViewModel.WbsProgressMessage = "日付カラムを生成中...";
+                ViewModel.WbsProgress = 50;
+
+                if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
+                {
+                    System.Diagnostics.Debug.WriteLine("WbsDataGrid_Loaded: GenerateDateColumns() を呼び出し");
+                    _ = GenerateDateColumns();
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"WbsDataGrid_Loaded: GenerateDateColumns() をスキップ - WbsDataGrid null: {WbsDataGrid == null}, IsLoaded: {WbsDataGrid?.IsLoaded}");
+                }
                     }
                     catch (Exception ex)
                     {
