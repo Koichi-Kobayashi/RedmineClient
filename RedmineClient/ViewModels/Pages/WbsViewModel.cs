@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using System.Diagnostics;
 using Redmine.Net.Api.Types;
 using RedmineClient.Services;
 using RedmineClient.ViewModels;
@@ -441,6 +442,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand RemoveDependencyCommand { get; }
         public ICommand RemovePredecessorCommand { get; }
         public ICommand RemoveSuccessorCommand { get; }
+        public ICommand OpenRedmineIssueCommand { get; }
 
         public WbsViewModel()
         {
@@ -502,6 +504,7 @@ namespace RedmineClient.ViewModels.Pages
             RemoveDependencyCommand = new RelayCommand<WbsItem?>(RemoveDependency);
             RemovePredecessorCommand = new RelayCommand<WbsItem?>(RemovePredecessor);
             RemoveSuccessorCommand = new RelayCommand<WbsItem?>(RemoveSuccessor);
+            OpenRedmineIssueCommand = new RelayCommand<string>(OpenRedmineIssue);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -3270,6 +3273,100 @@ namespace RedmineClient.ViewModels.Pages
             catch
             {
                 // 依存関係の設定でエラーが発生した場合は無視して続行
+            }
+        }
+
+        /// <summary>
+        /// Redmineのチケットをブラウザで開く
+        /// </summary>
+        /// <param name="issueId">チケットID</param>
+        public void OpenRedmineIssue(string? issueId)
+        {
+            try
+            {
+                // IDが有効な場合のみ処理
+                if (!string.IsNullOrEmpty(issueId) && issueId != "0" && issueId != "-1")
+                {
+                    // RedmineのURLを構築
+                    var redmineUrl = BuildRedmineUrl(issueId);
+                    
+                    // ブラウザでURLを開く
+                    OpenUrlInBrowser(redmineUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Redmineチケットを開くエラー: {ex.Message}");
+            }
+        }
+
+                /// <summary>
+        /// RedmineのURLを構築する
+        /// </summary>
+        /// <param name="issueId">チケットID</param>
+        /// <returns>RedmineのURL</returns>
+        private string BuildRedmineUrl(string? issueId)
+        {
+            try
+            {
+                // issueIdのnullチェック
+                if (string.IsNullOrEmpty(issueId))
+                {
+                    throw new ArgumentException("issueIdがnullまたは空です。", nameof(issueId));
+                }
+
+                // 設定からRedmineHostを取得
+                var redmineHost = AppConfig.RedmineHost;
+                
+                if (string.IsNullOrEmpty(redmineHost))
+                {
+                    throw new InvalidOperationException("RedmineHostが設定されていません。設定ページでRedmineHostを設定してください。");
+            }
+        
+                // URLの形式を正規化
+                var normalizedHost = redmineHost.TrimEnd('/');
+                if (!normalizedHost.StartsWith("http://") && !normalizedHost.StartsWith("https://"))
+                {
+                    normalizedHost = "https://" + normalizedHost;
+                }
+        
+                // チケットURLを構築
+                return $"{normalizedHost}/issues/{issueId}";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Redmine URL構築エラー: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// ブラウザでURLを開く
+        /// </summary>
+        /// <param name="url">開くURL</param>
+        private void OpenUrlInBrowser(string url)
+        {
+            try
+            {
+                // Process.Startを使用してブラウザでURLを開く
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+
+                Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ブラウザでURLを開くエラー: {ex.Message}");
+                
+                // エラーメッセージをユーザーに表示
+                System.Windows.MessageBox.Show(
+                    $"ブラウザでURLを開けませんでした: {ex.Message}",
+                    "エラー",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
             }
         }
     }

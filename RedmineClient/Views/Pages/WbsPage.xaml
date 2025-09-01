@@ -307,8 +307,13 @@
                         <DataGridTemplateColumn Width="80" Header="ID" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                                                         <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2" Cursor="Hand" MouseLeftButtonDown="IdColumn_MouseLeftButtonDown">
-                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Id}" Foreground="Blue" TextDecorations="Underline" />
+                                    <Border
+                                        Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2"
+                                        Cursor="Hand">
+                                        <Border.InputBindings>
+                                            <MouseBinding Command="{Binding DataContext.ViewModel.OpenRedmineIssueCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Id}" MouseAction="LeftDoubleClick" />
+                                        </Border.InputBindings>
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Blue" Text="{Binding Id}" TextDecorations="Underline" />
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -602,14 +607,12 @@
                     IsHitTestVisible="False" />
 
                 <!--  WBSデータ読み込み中のプログレスバーオーバーレイ  -->
-                <Border Grid.Row="0" Grid.Column="0" Background="#80000066" Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}" Panel.ZIndex="1001">
+                <Border Grid.Row="0" Grid.Column="0" Panel.ZIndex="1001" Background="#80000066" Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}">
                     <Grid>
                         <StackPanel Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock Margin="0,0,0,8" HorizontalAlignment="Center" FontSize="14" Foreground="White" Text="{Binding ViewModel.WbsProgressMessage}" />
                             <ProgressBar
-                                Width="240" Height="8" HorizontalAlignment="Center"
-                                IsIndeterminate="False"
-                                Maximum="100"
+                                Width="240" Height="8" HorizontalAlignment="Center" IsIndeterminate="False" Maximum="100"
                                 Value="{Binding ViewModel.WbsProgress}" />
                         </StackPanel>
                     </Grid>
