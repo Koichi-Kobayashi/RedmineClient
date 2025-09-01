@@ -101,13 +101,7 @@ namespace RedmineClient.ViewModels.Pages
         /// false: タスク詳細を非表示
         /// </summary>
 
-        /// <summary>
-        /// 依存関係矢印の表示/非表示
-        /// true: 依存関係矢印を表示
-        /// false: 依存関係矢印を非表示
-        /// </summary>
-        [ObservableProperty]
-        private bool _showDependencyArrows = true;
+
 
         [ObservableProperty]
         private bool _isTaskDetailVisible = false;

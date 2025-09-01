@@ -639,10 +639,7 @@
                     </DataGrid.InputBindings>
                 </DataGrid>
 
-                <!--  依存関係の矢印を表示するレイヤー（最前面、スクロールバーの操作を妨げない）  -->
-                <Canvas
-                    x:Name="DependencyArrowCanvas" Grid.Row="0" Grid.Column="0" Panel.ZIndex="1000" Background="Transparent"
-                    IsHitTestVisible="False" />
+
 
                 <!--  WBSデータ読み込み中のプログレスバーオーバーレイ  -->
                 <Border Grid.Row="0" Grid.Column="0" Background="#80000066" Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}" Panel.ZIndex="1001">

@@ -198,14 +198,7 @@ namespace RedmineClient.Views.Pages
         /// <summary>
         /// DataGridのサイズ変更時に矢印を再描画する
         /// </summary>
-        private void WbsDataGrid_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            // サイズ変更後に矢印を再描画
-            WbsDataGrid?.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
-            {
-                DrawDependencyArrowsLightweight();
-            }));
-        }
+
 
         /// <summary>
         /// DataGridのPreviewKeyDownイベントを処理する（より確実にキーイベントをキャッチ）
@@ -241,8 +234,7 @@ namespace RedmineClient.Views.Pages
                 // スケジュール開始年月の初期化
                 InitializeScheduleStartYearMonth();
 
-                // 依存関係矢印の初期化
-                InitializeDependencyArrows();
+
 
                 // DataGridの初期化処理を統合実行
                 _ = InitializeDataGridAsync();
@@ -263,10 +255,9 @@ namespace RedmineClient.Views.Pages
                 // このイベントは一度だけ実行
                 this.Loaded -= WbsPage_InitialLoaded;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // エラーが発生した場合はログ出力して処理を続行
-                System.Diagnostics.Debug.WriteLine($"WbsPage_InitialLoaded error: {ex.Message}");
+                // エラー処理は必要に応じて実装
             }
         }
 
@@ -282,9 +273,9 @@ namespace RedmineClient.Views.Pages
                 {
                     WbsDataGrid.KeyDown += WbsDataGrid_KeyDown;
                     WbsDataGrid.PreviewKeyDown += WbsDataGrid_PreviewKeyDown;
-                    WbsDataGrid.SizeChanged += WbsDataGrid_SizeChanged;
+
                     WbsDataGrid.Loaded += WbsDataGrid_Loaded;
-                    WbsDataGrid.IsVisibleChanged += WbsDataGrid_IsVisibleChanged;
+
                 }
 
                 // ViewModelの初期化が完了するまで待機（タイムアウト付き）
@@ -293,12 +284,9 @@ namespace RedmineClient.Views.Pages
                 {
                     await Task.Delay(100);
                     waitCount++;
-                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了を待機中... ({waitCount}回目)");
-                    
                     // 無限ループを防ぐ（最大100回まで待機）
                     if (waitCount >= 100)
                     {
-                        System.Diagnostics.Debug.WriteLine("ViewModel初期化完了の待機がタイムアウトしました");
                         
 
                         break;
@@ -923,13 +911,11 @@ namespace RedmineClient.Views.Pages
                 // スケジュール開始年月の初期化
                 InitializeScheduleStartYearMonth();
 
-                // 依存関係矢印の初期化（重複初期化を防ぐ）
-                InitializeDependencyArrows();
+
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // エラーが発生した場合はログ出力して処理を続行
-                System.Diagnostics.Debug.WriteLine($"WbsPage_Loaded error: {ex.Message}");
+                // エラー処理は必要に応じて実装
             }
         }
 
@@ -974,365 +960,7 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        private bool _isDependencyArrowsInitialized = false;
-        private void InitializeDependencyArrows()
-        {
-            // 重複初期化を防ぐ
-            if (_isDependencyArrowsInitialized) return;
-            _isDependencyArrowsInitialized = true;
 
-            try
-            {
-                // 依存関係矢印の表示/非表示を制御
-                if (ViewModel != null)
-                {
-                    ViewModel.PropertyChanged += (s, e) =>
-                    {
-                        if (e.PropertyName == nameof(ViewModel.ShowDependencyArrows))
-                        {
-                            _ = UpdateDependencyArrowsAsync();
-                        }
-                    };
-                }
-
-                // DataGridの表示状態変更を監視（重複登録を防ぐため、既存のイベントを削除）
-                if (WbsDataGrid != null)
-                {
-                    // 既存のイベントハンドラーを削除（重複登録を防ぐ）
-                    WbsDataGrid.IsVisibleChanged -= WbsDataGrid_IsVisibleChanged;
-                    
-                    // スクロール中の描画処理を最適化
-                    var scrollViewer = GetScrollViewer(WbsDataGrid);
-                    if (scrollViewer != null)
-                    {
-                        scrollViewer.ScrollChanged += (s, e) =>
-                        {
-                            // スクロール中は矢印描画を一時停止
-                            if (_isDrawingArrows)
-                            {
-                                _arrowDrawingCancellation?.Cancel();
-                            }
-
-                            // スクロール停止後、少し遅延して矢印を再描画
-                            Task.Delay(300).ContinueWith(_ =>
-                            {
-                                if (ViewModel?.ShowDependencyArrows == true)
-                                {
-                                    Dispatcher.BeginInvoke(() => _ = UpdateDependencyArrowsAsync());
-                                }
-                            });
-                        };
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // エラーが発生した場合はログ出力して処理を続行
-                System.Diagnostics.Debug.WriteLine($"InitializeDependencyArrows error: {ex.Message}");
-            }
-        }
-
-        private ScrollViewer GetScrollViewer(DependencyObject depObj)
-        {
-            if (depObj is ScrollViewer scrollViewer)
-                return scrollViewer;
-
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
-            {
-                var child = VisualTreeHelper.GetChild(depObj, i);
-                var result = GetScrollViewer(child);
-                if (result != null) return result;
-            }
-            return null;
-        }
-
-        private bool _isDrawingArrows = false;
-        private CancellationTokenSource? _arrowDrawingCancellation;
-
-        private async Task UpdateDependencyArrowsAsync()
-        {
-            if (_isDrawingArrows)
-            {
-                _arrowDrawingCancellation?.Cancel();
-            }
-
-            if (!ViewModel?.ShowDependencyArrows == true || DependencyArrowCanvas == null)
-            {
-                ClearDependencyArrows();
-                return;
-            }
-
-            // DependencyArrowCanvasが非表示の場合は矢印を描画しない
-            if (DependencyArrowCanvas.Visibility != Visibility.Visible)
-            {
-                ClearDependencyArrows();
-                return;
-            }
-
-            _isDrawingArrows = true;
-            _arrowDrawingCancellation = new CancellationTokenSource();
-
-            try
-            {
-                await Task.Run(async () =>
-                {
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        if (_arrowDrawingCancellation?.Token.IsCancellationRequested == true) return;
-                        DrawDependencyArrowsLightweight();
-                    }, DispatcherPriority.Background);
-                }, _arrowDrawingCancellation.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                // 描画がキャンセルされた場合は何もしない
-            }
-            finally
-            {
-                _isDrawingArrows = false;
-                _arrowDrawingCancellation?.Dispose();
-                _arrowDrawingCancellation = null;
-            }
-        }
-
-        private void DrawDependencyArrowsLightweight()
-        {
-            if (DependencyArrowCanvas == null || ViewModel?.FlattenedWbsItems == null) return;
-
-            // DependencyArrowCanvasが非表示の場合は矢印を描画しない
-            if (DependencyArrowCanvas.Visibility != Visibility.Visible) return;
-
-            // 既存の矢印をクリア
-            DependencyArrowCanvas.Children.Clear();
-
-            // DataGridのレイアウトが完了するまで待機
-            WbsDataGrid?.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
-            {
-                try
-                {
-                    // 表示されている範囲のみを描画（パフォーマンス向上）
-                    var visibleItems = ViewModel.FlattenedWbsItems.Take(50).ToList(); // 最初の50件のみ描画
-
-                    foreach (var item in visibleItems)
-                    {
-                        if (item.Predecessors?.Any() == true)
-                        {
-                            foreach (var predecessor in item.Predecessors)
-                            {
-                                DrawSimpleArrow(predecessor, item);
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // 矢印描画エラーは無視
-                }
-            }));
-        }
-
-        private void DrawSimpleArrow(WbsItem from, WbsItem to)
-        {
-            if (DependencyArrowCanvas == null || WbsDataGrid == null) return;
-
-            try
-            {
-                // DataGridの行の位置を取得
-                var fromRow = GetRowIndex(from);
-                var toRow = GetRowIndex(to);
-
-                if (fromRow == -1 || toRow == -1)
-                {
-                    return;
-                }
-
-                // DataGridの実際の位置とサイズを取得
-                var dataGridBounds = WbsDataGrid.TransformToVisual(DependencyArrowCanvas).TransformBounds(
-                    new Rect(0, 0, WbsDataGrid.ActualWidth, WbsDataGrid.ActualHeight));
-
-                // 行の高さを取得（DataGridの実際の行高さを使用）
-                var rowHeight = WbsDataGrid.RowHeight > 0 ? WbsDataGrid.RowHeight : 30.0;
-
-                // 行の位置を計算（DataGridの実際の位置を考慮）
-                var fromY = dataGridBounds.Top + fromRow * rowHeight + rowHeight / 2;
-                var toY = dataGridBounds.Top + toRow * rowHeight + rowHeight / 2;
-
-                // スケジュール表の開始位置を計算（固定列の後ろから）
-                var scheduleStartX = CalculateScheduleStartX();
-
-                // 先行タスクの終了日位置を計算
-                var fromEndDateX = CalculateDateColumnX(from.EndDate, scheduleStartX);
-
-                // 後続タスクの開始日位置を計算
-                var toStartDateX = CalculateDateColumnX(to.StartDate, scheduleStartX);
-
-                // L字型の矢印を描画
-                // 1. 先行タスクの終了日から水平に右へ
-                var horizontalStartX = fromEndDateX;
-                var horizontalEndX = toStartDateX;
-
-                // 2. 垂直線のX座標（先行タスクと後続タスクの中間）
-                var verticalX = (horizontalStartX + horizontalEndX) / 2;
-
-                // 水平線1（先行タスクの終了日から垂直線まで）
-                var horizontalLine1 = new Line
-                {
-                    Stroke = Brushes.DarkBlue,
-                    StrokeThickness = 2.0,
-                    X1 = horizontalStartX,
-                    Y1 = fromY,
-                    X2 = verticalX,
-                    Y2 = fromY
-                };
-
-                // 垂直線
-                var verticalLine = new Line
-                {
-                    Stroke = Brushes.DarkBlue,
-                    StrokeThickness = 2.0,
-                    X1 = verticalX,
-                    Y1 = fromY,
-                    X2 = verticalX,
-                    Y2 = toY
-                };
-
-                // 水平線2（垂直線から後続タスクの開始日まで）
-                var horizontalLine2 = new Line
-                {
-                    Stroke = Brushes.DarkBlue,
-                    StrokeThickness = 2.0,
-                    X1 = verticalX,
-                    Y1 = toY,
-                    X2 = horizontalEndX,
-                    Y2 = toY
-                };
-
-                // 矢印ヘッド
-                var arrowHead = new Polygon
-                {
-                    Fill = Brushes.DarkBlue,
-                    Points = new PointCollection
-                    {
-                        new Point(horizontalEndX - 6, toY - 6),
-                        new Point(horizontalEndX + 6, toY),
-                        new Point(horizontalEndX - 6, toY + 6)
-                    }
-                };
-
-                // Canvasに追加
-                DependencyArrowCanvas.Children.Add(horizontalLine1);
-                DependencyArrowCanvas.Children.Add(verticalLine);
-                DependencyArrowCanvas.Children.Add(horizontalLine2);
-                DependencyArrowCanvas.Children.Add(arrowHead);
-            }
-            catch
-            {
-                // 描画エラーは無視
-            }
-        }
-
-        /// <summary>
-        /// スケジュール表の開始X座標を計算する
-        /// </summary>
-        private double CalculateScheduleStartX()
-        {
-            if (WbsDataGrid == null) return 0.0;
-
-            try
-            {
-                // 固定列の幅を累積して計算
-                double x = 0;
-                for (int i = 0; i < WbsDataGrid.Columns.Count; i++)
-                {
-                    var column = WbsDataGrid.Columns[i];
-                    // 日付列（StackPanelヘッダーを持つ列）の前まで
-                    // 固定列: ID, タスク名, 説明, 開始日, 終了日, 進捗, ステータス, 優先度, 担当者, 先行・後続
-                    if (i >= 10) // 固定列は10個
-                    {
-                        break;
-                    }
-                    x += column.Width.Value;
-                }
-                return x;
-            }
-            catch
-            {
-                return 0.0;
-            }
-        }
-
-        /// <summary>
-        /// 指定された日付の列のX座標を計算する
-        /// </summary>
-        private double CalculateDateColumnX(DateTime date, double scheduleStartX)
-        {
-            if (WbsDataGrid == null || ViewModel?.ScheduleStartYearMonth == null) return scheduleStartX;
-
-            try
-            {
-                // 設定された年月の1日から開始
-                DateTime startDate;
-                if (DateTime.TryParseExact(ViewModel.ScheduleStartYearMonth, "yyyy/MM", null, System.Globalization.DateTimeStyles.None, out startDate))
-                {
-                    startDate = startDate.AddDays(-startDate.Day + 1); // 月の1日に設定
-                }
-                else
-                {
-                    startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                }
-
-                // タスクの開始日が設定された開始日より前の場合は、タスクの開始日から表示
-                if (ViewModel.WbsItems != null && ViewModel.WbsItems.Count > 0)
-                {
-                    var earliestStartDate = ViewModel.WbsItems.Min(item => item.StartDate);
-                    if (earliestStartDate < startDate)
-                    {
-                        startDate = earliestStartDate.AddDays(-7); // タスク開始日の1週間前から表示
-                    }
-                }
-
-                // 日付列の幅（40px）
-                var dateColumnWidth = 40.0;
-
-                // 指定された日付までの日数を計算
-                var daysDiff = (int)((date - startDate).TotalDays);
-
-                // 日付列の位置を計算
-                var dateColumnIndex = Math.Max(0, daysDiff);
-
-                return scheduleStartX + (dateColumnIndex * dateColumnWidth) + (dateColumnWidth / 2);
-            }
-            catch
-            {
-                return scheduleStartX;
-            }
-        }
-
-        /// <summary>
-        /// WbsItemの行インデックスを取得する
-        /// </summary>
-        private int GetRowIndex(WbsItem item)
-        {
-            if (ViewModel?.FlattenedWbsItems == null) return -1;
-
-            var flattenedItems = ViewModel.FlattenedWbsItems;
-            for (int i = 0; i < flattenedItems.Count; i++)
-            {
-                if (flattenedItems[i] == item)
-                {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        private void ClearDependencyArrows()
-        {
-            if (DependencyArrowCanvas != null)
-            {
-                DependencyArrowCanvas.Children.Clear();
-            }
-        }
 
         private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -1407,9 +1035,9 @@ namespace RedmineClient.Views.Pages
                             {
                                 await ViewModel.LoadRedmineDataAsync();
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
-                                System.Diagnostics.Debug.WriteLine($"プロジェクト選択時のデータ読み込みエラー: {ex.Message}");
+                                // エラー処理は必要に応じて実装
                             }
                         });
                     }
@@ -1448,18 +1076,11 @@ namespace RedmineClient.Views.Pages
                     System.Diagnostics.Debug.WriteLine($"WbsItems changed: Count = {ViewModel.WbsItems?.Count ?? 0}");
                 }
 
-                // DependencyArrowCanvasの表示状態をDataGridと同期（必要な場合のみ）
-                // 表示状態に関連するプロパティが変更された場合のみ同期
-                if (e.PropertyName == nameof(ViewModel.ShowDependencyArrows) || 
-                    e.PropertyName == nameof(ViewModel.FlattenedWbsItems))
-                {
-                    SynchronizeDependencyArrowCanvasVisibility();
-                }
+
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // エラーが発生した場合はログ出力して処理を続行
-                System.Diagnostics.Debug.WriteLine($"ViewModel_PropertyChanged error: {ex.Message}");
+                // エラー処理は必要に応じて実装
             }
         }
 
@@ -1493,13 +1114,9 @@ namespace RedmineClient.Views.Pages
                 // このイベントは一度だけ実行
                 dataGrid.Loaded -= WbsDataGrid_Loaded;
                 
-                // デバッグ出力：DataGridの状態を確認
-                System.Diagnostics.Debug.WriteLine($"DataGrid Loaded: ItemsSource = {dataGrid.ItemsSource}, Items.Count = {dataGrid.Items.Count}");
-                System.Diagnostics.Debug.WriteLine($"ViewModel.FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
-                System.Diagnostics.Debug.WriteLine($"ViewModel.WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+
                 
-                // DependencyArrowCanvasの表示状態をDataGridと同期
-                SynchronizeDependencyArrowCanvasVisibility();
+
                 
                 // ViewModelの初期化が完了するまで待機（タイムアウト付き）
                 var waitCount = 0;
@@ -1507,13 +1124,9 @@ namespace RedmineClient.Views.Pages
                 {
                     await Task.Delay(100);
                     waitCount++;
-                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了を待機中... ({waitCount}回目)");
-                    
                     // 無限ループを防ぐ（最大100回まで待機）
                     if (waitCount >= 100)
                     {
-                        System.Diagnostics.Debug.WriteLine("ViewModel初期化完了の待機がタイムアウトしました");
-                        
                         // タイムアウト後の処理：空のリストでもItemsSourceを設定
                         if (ViewModel.FlattenedWbsItems == null)
                         {
@@ -1522,7 +1135,6 @@ namespace RedmineClient.Views.Pages
                         
                         // 空のリストでもItemsSourceを設定してDataGridを初期化
                         dataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
-                        System.Diagnostics.Debug.WriteLine("タイムアウト後、空のリストでItemsSourceを設定しました");
                         break;
                     }
                 }
@@ -1531,11 +1143,6 @@ namespace RedmineClient.Views.Pages
                 if (ViewModel.FlattenedWbsItems != null && ViewModel.FlattenedWbsItems.Count > 0)
                 {
                     dataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
-                    System.Diagnostics.Debug.WriteLine($"DataGrid ItemsSource設定完了: {ViewModel.FlattenedWbsItems.Count}件");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("ViewModel.FlattenedWbsItemsが空またはnullのため、ItemsSourceを設定できません");
                 }
                 
                 // Redmineデータの読み込みと日付カラム生成を実行
@@ -1555,7 +1162,6 @@ namespace RedmineClient.Views.Pages
                         if (ViewModel.FlattenedWbsItems != null && ViewModel.FlattenedWbsItems.Count > 0)
                         {
                             dataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
-                            System.Diagnostics.Debug.WriteLine($"Redmineデータ読み込み後、ItemsSource再設定: {ViewModel.FlattenedWbsItems.Count}件");
                         }
                         
                         // 日付カラムを生成
@@ -1567,10 +1173,8 @@ namespace RedmineClient.Views.Pages
                             _ = GenerateDateColumns();
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Redmineデータ読み込みエラー: {ex.Message}");
-                        
                         // エラーが発生した場合でも、日付カラムは生成
                         if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
                         {
@@ -1597,87 +1201,14 @@ namespace RedmineClient.Views.Pages
                     // DataGridのレンダリングが完了するまで少し待機
                     await Task.Delay(50);
                     renderWaitCount++;
-                    
-                    // レンダリングの進行状況を確認
-                    if (dataGrid.Items.Count > 0)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"DataGridレンダリング待機中... ({renderWaitCount}回目)");
-                    }
                 }
-                
-                // DataGridの完全な読み込みが完了したことを確認
-                System.Diagnostics.Debug.WriteLine($"DataGrid完全読み込み完了: Items.Count = {dataGrid.Items.Count}");
                 
                 // プログレスバーの非表示はGenerateDateColumns()内で行われるため、
                 // ここでは何もしない
             }
         }
 
-        /// <summary>
-        /// DependencyArrowCanvasの表示状態をDataGridと同期する
-        /// </summary>
-        private bool _isSynchronizingVisibility = false;
-        private void SynchronizeDependencyArrowCanvasVisibility()
-        {
-            // 重複実行を防ぐ
-            if (_isSynchronizingVisibility) return;
-            
-            try
-            {
-                _isSynchronizingVisibility = true;
-                
-                if (DependencyArrowCanvas != null && WbsDataGrid != null)
-                {
-                    // DataGridの表示状態を取得
-                    var dataGridVisibility = WbsDataGrid.Visibility;
-                    
-                    // 現在のCanvasの表示状態と比較して、変更がある場合のみ更新
-                    if (DependencyArrowCanvas.Visibility != dataGridVisibility)
-                    {
-                        // UIスレッドで実行されていることを確認
-                        if (Dispatcher.CheckAccess())
-                        {
-                            DependencyArrowCanvas.Visibility = dataGridVisibility;
-                        }
-                        else
-                        {
-                            Dispatcher.BeginInvoke(() => DependencyArrowCanvas.Visibility = dataGridVisibility);
-                        }
-                        
-                        // デバッグ用：表示状態をログ出力
-                        System.Diagnostics.Debug.WriteLine($"SynchronizeDependencyArrowCanvasVisibility: DataGrid={dataGridVisibility}, Canvas={DependencyArrowCanvas.Visibility}");
-                    }
-                }
-            }
-            finally
-            {
-                _isSynchronizingVisibility = false;
-            }
-        }
 
-        /// <summary>
-        /// DataGridの表示状態変更イベントハンドラー
-        /// </summary>
-        private void WbsDataGrid_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-        {
-            try
-            {
-                // 表示状態が実際に変更された場合のみ同期
-                if (e.NewValue is Visibility newVisibility && e.OldValue is Visibility oldVisibility)
-                {
-                    if (newVisibility != oldVisibility)
-                    {
-                        // DependencyArrowCanvasの表示状態をDataGridと同期
-                        SynchronizeDependencyArrowCanvasVisibility();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // エラーが発生した場合はログ出力して処理を続行
-                System.Diagnostics.Debug.WriteLine($"WbsDataGrid_IsVisibleChanged error: {ex.Message}");
-            }
-        }
 
         /// <summary>
         /// 静的DatePickerのプリロードを実行する
@@ -1829,8 +1360,7 @@ namespace RedmineClient.Views.Pages
                 // 日付列生成処理をキャンセル
                 _generateColumnsCancellation?.Cancel();
 
-                // 矢印描画処理をキャンセル
-                _arrowDrawingCancellation?.Cancel();
+
 
                 // 未保存の変更がある場合は保存処理を実行
                 if (ViewModel != null)
@@ -1839,10 +1369,9 @@ namespace RedmineClient.Views.Pages
                     await ViewModel.SavePendingChangesAsync();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // アプリケーション終了時の保存処理でエラーが発生した場合はログ出力のみ
-                System.Diagnostics.Debug.WriteLine($"MainWindow_Closing error: {ex.Message}");
+                // エラー処理は必要に応じて実装
             }
         }
 

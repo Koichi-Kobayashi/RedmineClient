@@ -99,14 +99,14 @@ namespace RedmineClient.Services
                 if (offset.HasValue)
                     options.QueryString.Add("offset", offset.Value.ToString());
 
-                var pagedIssues = await Task.Run(() => _redmineManager.GetPaginatedObjects<Issue>(options.QueryString), cts.Token);
+                var issues = await Task.Run(() => _redmineManager.Get<Issue>(options), cts.Token);
                 
-                if (pagedIssues == null)
+                if (issues == null)
                 {
                     return new List<Issue>();
                 }
                 
-                return pagedIssues.Items.ToList();
+                return issues;
             }
             catch (OperationCanceledException)
             {
@@ -656,18 +656,13 @@ namespace RedmineClient.Services
                     using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
 
-                    // デバッグ情報を出力
-                    System.Diagnostics.Debug.WriteLine($"チケット更新試行 {attempt}/{maxRetries}: ID={issue.Id}, 開始日={issue.StartDate:yyyy/MM/dd}, 終了日={issue.DueDate:yyyy/MM/dd}");
-
                     // 修正: RedmineManager.Update<T> を使用
                     await Task.Run(() => _redmineManager.Update<Issue>(issue.Id.ToString(), issue), cts.Token);
                     
-                    System.Diagnostics.Debug.WriteLine($"チケット更新成功: ID={issue.Id}");
                     return; // 成功したらループを抜ける
                 }
                 catch (OperationCanceledException)
                 {
-                    System.Diagnostics.Debug.WriteLine($"チケット更新タイムアウト (試行 {attempt}/{maxRetries}): ID={issue.Id}");
                     if (attempt == maxRetries)
                     {
                         throw new RedmineApiException($"チケットの更新がタイムアウトしました（{_timeoutSeconds}秒、{maxRetries}回試行）");
@@ -675,7 +670,6 @@ namespace RedmineClient.Services
                 }
                 catch (Redmine.Net.Api.Exceptions.RedmineException redmineEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Redmine API エラー (試行 {attempt}/{maxRetries}): ID={issue.Id}, エラー: {redmineEx.Message}");
                     if (attempt == maxRetries)
                     {
                         throw new RedmineApiException($"Redmine API エラー: {redmineEx.Message}", redmineEx);
@@ -683,7 +677,6 @@ namespace RedmineClient.Services
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"チケット更新で予期しないエラー (試行 {attempt}/{maxRetries}): ID={issue.Id}, エラー: {ex.Message}");
                     if (attempt == maxRetries)
                     {
                         throw new RedmineApiException($"チケットの更新に失敗しました: {ex.Message}", ex);
@@ -737,40 +730,30 @@ namespace RedmineClient.Services
         /// <param name="cancellationToken">キャンセレーショントークン</param>
         public async Task CreateIssueRelationAsync(int issueId, int relatedIssueId, IssueRelationType relationType, CancellationToken cancellationToken = default)
         {
-            System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: Starting - IssueId: {issueId}, RelatedIssueId: {relatedIssueId}, RelationType: {relationType}");
-            
             try
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
 
-                System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: Creating IssueRelation object");
                 // Redmine.Net.Apiライブラリの仕様に従ってIssueRelationを作成
                 var issueRelation = new IssueRelation();
                 issueRelation.Type = relationType; // 先行タスクなど
                 issueRelation.IssueToId = relatedIssueId; // 関連タスクのID
 
-                System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: Calling RedmineManager.Create with IssueId: {issueId}");
                 // RedmineManagerのCreateメソッドを使用して依存関係を作成
                 var createdRelation = await Task.Run(() => _redmineManager.Create<IssueRelation>(issueRelation, issueId.ToString()), cts.Token);
 
                 if (createdRelation == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: Create returned null, throwing exception");
                     throw new RedmineApiException("依存関係の作成に失敗しました");
                 }
-
-                System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: Successfully created relation with ID: {createdRelation.Id}");
             }
             catch (OperationCanceledException)
             {
-                System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: OperationCanceledException caught - timeout after {_timeoutSeconds} seconds");
                 throw new RedmineApiException($"依存関係の設定がタイムアウトしました（{_timeoutSeconds}秒）");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: Exception caught - Type: {ex.GetType().Name}, Message: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"CreateIssueRelationAsync: Exception stack trace: {ex.StackTrace}");
                 throw new RedmineApiException($"依存関係の設定に失敗しました: {ex.Message}", ex);
             }
         }
