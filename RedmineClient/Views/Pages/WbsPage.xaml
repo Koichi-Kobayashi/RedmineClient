@@ -304,7 +304,15 @@
 
                     <DataGrid.Columns>
                         <!--  ID列  -->
-                        <DataGridTextColumn Width="80" Binding="{Binding Id}" Header="ID" IsReadOnly="True" />
+                        <DataGridTemplateColumn Width="80" Header="ID" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                                                         <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2" Cursor="Hand" MouseLeftButtonDown="IdColumn_MouseLeftButtonDown">
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Id}" Foreground="Blue" TextDecorations="Underline" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <!--  タスク名列  -->
                         <DataGridTemplateColumn Width="300" Header="タスク名">

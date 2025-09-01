@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using System.Diagnostics;
 using RedmineClient.Helpers;
 using RedmineClient.ViewModels.Pages;
 using RedmineClient.Views.Controls;
@@ -2267,5 +2268,156 @@ namespace RedmineClient.Views.Pages
         }
 
         #endregion 先行・後続の依存関係設定（ドラッグ&ドロップ）
+
+        #region ID列ダブルクリック機能
+
+        /// <summary>
+        /// ID列のマウス左ボタンダウンイベントハンドラー（ダブルクリック判定用）
+        /// </summary>
+        private void IdColumn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                if (sender is Border border && border.DataContext is WbsItem wbsItem)
+                {
+                    // ダブルクリックの判定
+                    var currentTime = DateTime.Now;
+                    var lastClickTime = GetLastClickTime(border);
+                    
+                    if (lastClickTime.HasValue && (currentTime - lastClickTime.Value).TotalMilliseconds < 500)
+                    {
+                        // ダブルクリックと判定
+                        HandleIdColumnDoubleClick(wbsItem);
+                        
+                        // クリック時間をリセット
+                        SetLastClickTime(border, null);
+                    }
+                    else
+                    {
+                        // シングルクリックの場合は時間を記録
+                        SetLastClickTime(border, currentTime);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ID列マウスクリックエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// ID列のダブルクリック処理
+        /// </summary>
+        private void HandleIdColumnDoubleClick(WbsItem wbsItem)
+        {
+            try
+            {
+                // IDが有効な場合のみ処理
+                if (!string.IsNullOrEmpty(wbsItem.Id) && wbsItem.Id != "0" && wbsItem.Id != "-1")
+                {
+                    // RedmineのURLを構築
+                    var redmineUrl = BuildRedmineUrl(wbsItem.Id);
+                    
+                    // ブラウザでURLを開く
+                    OpenUrlInBrowser(redmineUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ID列ダブルクリック処理エラー: {ex.Message}");
+            }
+        }
+
+        // ダブルクリック判定用の辞書
+        private readonly Dictionary<Border, DateTime> _lastClickTimes = new();
+
+        /// <summary>
+        /// 最後のクリック時間を取得
+        /// </summary>
+        private DateTime? GetLastClickTime(Border border)
+        {
+            return _lastClickTimes.TryGetValue(border, out var time) ? time : null;
+        }
+
+        /// <summary>
+        /// 最後のクリック時間を設定
+        /// </summary>
+        private void SetLastClickTime(Border border, DateTime? time)
+        {
+            if (time.HasValue)
+            {
+                _lastClickTimes[border] = time.Value;
+            }
+            else
+            {
+                _lastClickTimes.Remove(border);
+            }
+        }
+
+        /// <summary>
+        /// RedmineのURLを構築する
+        /// </summary>
+        /// <param name="issueId">チケットID</param>
+        /// <returns>RedmineのURL</returns>
+        private string BuildRedmineUrl(string issueId)
+        {
+            try
+            {
+                // 設定からRedmineHostを取得
+                var redmineHost = AppConfig.RedmineHost;
+                
+                if (string.IsNullOrEmpty(redmineHost))
+                {
+                    throw new InvalidOperationException("RedmineHostが設定されていません。設定ページでRedmineHostを設定してください。");
+                }
+
+                // URLの形式を正規化
+                var normalizedHost = redmineHost.TrimEnd('/');
+                if (!normalizedHost.StartsWith("http://") && !normalizedHost.StartsWith("https://"))
+                {
+                    normalizedHost = "https://" + normalizedHost;
+                }
+
+                // チケットURLを構築
+                return $"{normalizedHost}/issues/{issueId}";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Redmine URL構築エラー: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// ブラウザでURLを開く
+        /// </summary>
+        /// <param name="url">開くURL</param>
+        private void OpenUrlInBrowser(string url)
+        {
+            try
+            {
+                // Process.Startを使用してブラウザでURLを開く
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+
+                Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ブラウザでURLを開くエラー: {ex.Message}");
+                
+                // エラーメッセージをユーザーに表示
+                System.Windows.MessageBox.Show(
+                    $"ブラウザでURLを開けませんでした: {ex.Message}",
+                    "エラー",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+            }
+        }
+
+        #endregion ID列ダブルクリック機能
     }
 }
