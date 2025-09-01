@@ -1463,23 +1463,7 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        /// <summary>
-        /// 展開/折りたたみテキストのマウスクリックイベントハンドラー（軽量化版）
-        /// </summary>
-        private void ExpansionText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (sender is System.Windows.Controls.TextBlock textBlock && textBlock.DataContext is WbsItem item)
-            {
-                // 展開状態を切り替え
-                item.IsExpanded = !item.IsExpanded;
 
-                // ViewModelの更新処理を実行
-                ViewModel.ToggleExpansion(item);
-
-                // UIを即座に更新
-                WbsDataGrid.Items.Refresh();
-            }
-        }
 
 
 
@@ -1862,11 +1846,11 @@ namespace RedmineClient.Views.Pages
         }
 
         /// <summary>
-        /// DatePickerの日付変更イベントを処理する
+        /// DatePickerの日付変更イベントを処理する（コマンド版）
         /// </summary>
         /// <param name="sender">イベントの送信元</param>
         /// <param name="e">イベント引数</param>
-        private async void DatePicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        private void DatePicker_SelectedDateChanged_Command(object sender, SelectionChangedEventArgs e)
         {
             try
             {
@@ -1915,11 +1899,24 @@ namespace RedmineClient.Views.Pages
                             }
                         }
 
-                        // 日付が変更された場合のみ更新処理を実行
+                        // 日付が変更された場合のみコマンドを実行
                         if (dateChanged)
                         {
-                            // ViewModelの更新処理を実行
-                            await ViewModel.UpdateTaskScheduleAsync(task, originalStartDate, originalEndDate);
+                            // コマンドパラメータを作成
+                            var dateChangeInfo = new Dictionary<string, object>
+                            {
+                                ["task"] = task,
+                                ["newDate"] = newDate,
+                                ["columnType"] = columnType ?? "",
+                                ["oldStartDate"] = originalStartDate,
+                                ["oldEndDate"] = originalEndDate
+                            };
+
+                            // ViewModelのコマンドを実行
+                            if (ViewModel.UpdateTaskDateCommand.CanExecute(dateChangeInfo))
+                            {
+                                ViewModel.UpdateTaskDateCommand.Execute(dateChangeInfo);
+                            }
                         }
                     }
                 }

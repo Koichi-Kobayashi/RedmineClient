@@ -334,8 +334,11 @@
                                             <TextBlock
                                                 Margin="0,0,4,0" VerticalAlignment="Center" Cursor="Hand" FontSize="12" FontWeight="Bold"
                                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                MouseLeftButtonDown="ExpansionText_MouseLeftButtonDown"
-                                                Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}" />
+                                                Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}">
+                                                <TextBlock.InputBindings>
+                                                    <MouseBinding Command="{Binding DataContext.ViewModel.ToggleExpansionCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" MouseAction="LeftClick" />
+                                                </TextBlock.InputBindings>
+                                            </TextBlock>
                                             <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat='({0})'}" />
                                         </StackPanel>
 
@@ -413,10 +416,10 @@
                             </DataGridTemplateColumn.CellTemplate>
                             <DataGridTemplateColumn.CellEditingTemplate>
                                 <DataTemplate>
-                                    <DatePicker
-                                        DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" GotFocus="DatePicker_GotFocus" IsTodayHighlighted="True"
-                                        SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" Tag="StartDate" />
+                                                                    <DatePicker
+                                    DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" GotFocus="DatePicker_GotFocus" IsTodayHighlighted="True"
+                                    SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                    SelectedDateChanged="DatePicker_SelectedDateChanged_Command" SelectedDateFormat="Short" Tag="StartDate" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
@@ -432,10 +435,10 @@
                             </DataGridTemplateColumn.CellTemplate>
                             <DataGridTemplateColumn.CellEditingTemplate>
                                 <DataTemplate>
-                                    <DatePicker
-                                        DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" GotFocus="DatePicker_GotFocus" IsTodayHighlighted="True"
-                                        SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" Tag="EndDate" />
+                                                                    <DatePicker
+                                    DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" GotFocus="DatePicker_GotFocus" IsTodayHighlighted="True"
+                                    SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                    SelectedDateChanged="DatePicker_SelectedDateChanged_Command" SelectedDateFormat="Short" Tag="EndDate" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
@@ -671,14 +674,14 @@
                                     <DatePicker
                                         DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" IsTodayHighlighted="True"
                                         SelectedDate="{Binding ViewModel.SelectedItem.StartDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" />
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged_Command" SelectedDateFormat="Short" />
 
                                     <!--  終了日  -->
                                     <ui:TextBlock Margin="0,16,0,4" FontTypography="Caption" FontWeight="SemiBold" Text="終了日" />
                                     <DatePicker
                                         DisplayDateEnd="2100-12-31" DisplayDateStart="1900-01-01" FirstDayOfWeek="Monday" IsTodayHighlighted="True"
                                         SelectedDate="{Binding ViewModel.SelectedItem.EndDate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                        SelectedDateChanged="DatePicker_SelectedDateChanged" SelectedDateFormat="Short" />
+                                        SelectedDateChanged="DatePicker_SelectedDateChanged_Command" SelectedDateFormat="Short" />
                                 </StackPanel>
                             </Expander>
 

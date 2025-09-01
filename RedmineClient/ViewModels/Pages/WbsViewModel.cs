@@ -443,6 +443,7 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand RemovePredecessorCommand { get; }
         public ICommand RemoveSuccessorCommand { get; }
         public ICommand OpenRedmineIssueCommand { get; }
+        public ICommand UpdateTaskDateCommand { get; }
 
         public WbsViewModel()
         {
@@ -505,6 +506,7 @@ namespace RedmineClient.ViewModels.Pages
             RemovePredecessorCommand = new RelayCommand<WbsItem?>(RemovePredecessor);
             RemoveSuccessorCommand = new RelayCommand<WbsItem?>(RemoveSuccessor);
             OpenRedmineIssueCommand = new RelayCommand<string>(OpenRedmineIssue);
+            UpdateTaskDateCommand = new AsyncRelayCommand<object>(UpdateTaskDateAsync);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -3088,6 +3090,68 @@ namespace RedmineClient.ViewModels.Pages
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"スケジュール表再生成エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// タスクの日付変更を処理する（コマンド用）
+        /// </summary>
+        /// <param name="parameter">日付変更パラメータ（Dictionary形式）</param>
+        private async Task UpdateTaskDateAsync(object? parameter)
+        {
+            try
+            {
+                if (parameter is Dictionary<string, object> dateChangeInfo)
+                {
+                    var task = dateChangeInfo["task"] as WbsItem;
+                    var newDate = (DateTime)dateChangeInfo["newDate"];
+                    var columnType = dateChangeInfo["columnType"] as string;
+                    var oldStartDate = (DateTime)dateChangeInfo["oldStartDate"];
+                    var oldEndDate = (DateTime)dateChangeInfo["oldEndDate"];
+
+                    if (task != null && !string.IsNullOrEmpty(columnType))
+                    {
+                        // 新規登録時は更新処理を実行しない
+                        if (int.TryParse(task.Id, out int idValue) && idValue <= 0)
+                        {
+                            return;
+                        }
+
+                        // 日付変更の検出と処理
+                        bool dateChanged = false;
+                        DateTime originalStartDate = oldStartDate;
+                        DateTime originalEndDate = oldEndDate;
+
+                        if (columnType == "StartDate")
+                        {
+                            if (newDate != oldStartDate)
+                            {
+                                originalStartDate = oldStartDate;
+                                task.StartDate = newDate;
+                                dateChanged = true;
+                            }
+                        }
+                        else if (columnType == "EndDate")
+                        {
+                            if (newDate != oldEndDate)
+                            {
+                                originalEndDate = oldEndDate;
+                                task.EndDate = newDate;
+                                dateChanged = true;
+                            }
+                        }
+
+                        // 日付が変更された場合のみ更新処理を実行
+                        if (dateChanged)
+                        {
+                            await UpdateTaskScheduleAsync(task, originalStartDate, originalEndDate);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateTaskDateAsyncでエラーが発生しました: {ex.Message}");
             }
         }
 
