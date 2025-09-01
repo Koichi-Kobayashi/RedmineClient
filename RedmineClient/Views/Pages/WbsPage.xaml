@@ -189,25 +189,23 @@
             </Grid.ColumnDefinitions>
 
             <ui:TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="ページサイズ:" />
-            
-            <ComboBox Grid.Column="1" Width="80" Margin="0,0,16,0" VerticalAlignment="Center" 
-                      ItemsSource="{Binding ViewModel.PageSizeOptions}" 
-                      SelectedItem="{Binding ViewModel.SelectedPageSize, Mode=TwoWay}" />
+
+            <ComboBox
+                Grid.Column="1" Width="80" Margin="0,0,16,0" VerticalAlignment="Center"
+                ItemsSource="{Binding ViewModel.PageSizeOptions}"
+                SelectedItem="{Binding ViewModel.SelectedPageSize, Mode=TwoWay}" />
 
             <ui:Button Grid.Column="2" Margin="0,0,8,0" Command="{Binding ViewModel.FirstPageCommand}" Content="&lt;&lt;" ToolTip="最初のページ" />
             <ui:Button Grid.Column="3" Margin="0,0,8,0" Command="{Binding ViewModel.PreviousPageCommand}" Content="&lt;" ToolTip="前のページ" />
-            
-            <ui:TextBlock Grid.Column="4" Margin="8,0,8,0" VerticalAlignment="Center" 
-                         Text="{Binding ViewModel.CurrentPage, StringFormat='ページ {0}'}" />
-            
-            <ui:TextBlock Grid.Column="5" Margin="0,0,8,0" VerticalAlignment="Center" 
-                         Text="{Binding ViewModel.TotalPages, StringFormat='/ {0}'}" />
-            
+
+            <ui:TextBlock Grid.Column="4" Margin="8,0,8,0" VerticalAlignment="Center" Text="{Binding ViewModel.CurrentPage, StringFormat='ページ {0}'}" />
+
+            <ui:TextBlock Grid.Column="5" Margin="0,0,8,0" VerticalAlignment="Center" Text="{Binding ViewModel.TotalPages, StringFormat='/ {0}'}" />
+
             <ui:Button Grid.Column="6" Margin="8,0,8,0" Command="{Binding ViewModel.NextPageCommand}" Content="&gt;" ToolTip="次のページ" />
             <ui:Button Grid.Column="7" Margin="0,0,16,0" Command="{Binding ViewModel.LastPageCommand}" Content="&gt;&gt;" ToolTip="最後のページ" />
 
-            <ui:TextBlock Grid.Column="8" Margin="0,0,0,0" VerticalAlignment="Center" 
-                         Text="{Binding ViewModel.FilteredItems, StringFormat='表示中: {0} 件'}" />
+            <ui:TextBlock Grid.Column="8" Margin="0,0,0,0" VerticalAlignment="Center" Text="{Binding ViewModel.FilteredItems, StringFormat='表示中: {0} 件'}" />
         </Grid>
 
         <!--  WBSツリービュー  -->
@@ -350,8 +348,10 @@
                         <DataGridTemplateColumn Width="80" Header="ID" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                                                         <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2" Cursor="Hand" MouseLeftButtonDown="IdColumn_MouseLeftButtonDown">
-                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Id}" Foreground="Blue" TextDecorations="Underline" />
+                                    <Border
+                                        Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2"
+                                        Cursor="Hand" MouseLeftButtonDown="IdColumn_MouseLeftButtonDown">
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Blue" Text="{Binding Id}" TextDecorations="Underline" />
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -499,7 +499,7 @@
 
                                         <!--  進捗テキスト  -->
                                         <ui:TextBlock
-                                            Grid.Column="1" MinWidth="40" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold"
+                                            Grid.Column="1" MinWidth="40" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"
                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                             Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
                                     </Grid>
@@ -512,7 +512,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="{Binding Status, Converter={x:Static helpers:StatusToBrushConverter.Instance}}" CornerRadius="2">
-                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Status}" />
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" Foreground="White" Text="{Binding Status}" />
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -523,14 +523,22 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="{Binding Priority, Converter={x:Static helpers:PriorityToBrushConverter.Instance}}" CornerRadius="2">
-                                        <ui:TextBlock HorizontalAlignment="Center" FontSize="10" Foreground="White" Text="{Binding Priority}" />
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" Foreground="White" Text="{Binding Priority}" />
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
                         <!--  担当者列  -->
-                        <DataGridTextColumn Width="100" Binding="{Binding Assignee}" Header="担当者" IsReadOnly="True" />
+                        <DataGridTemplateColumn Width="100" Header="担当者" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Padding="4,2">
+                                        <ui:TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" Text="{Binding Assignee}" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <!--  先行・後続列  -->
                         <DataGridTemplateColumn Width="120" Header="先行タスク&#x0d;&#x0a;D&amp;D" IsReadOnly="True">
@@ -639,17 +647,13 @@
                     </DataGrid.InputBindings>
                 </DataGrid>
 
-
-
                 <!--  WBSデータ読み込み中のプログレスバーオーバーレイ  -->
-                <Border Grid.Row="0" Grid.Column="0" Background="#80000066" Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}" Panel.ZIndex="1001">
+                <Border Grid.Row="0" Grid.Column="0" Panel.ZIndex="1001" Background="#80000066" Visibility="{Binding ViewModel.IsWbsLoading, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}">
                     <Grid>
                         <StackPanel Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock Margin="0,0,0,8" HorizontalAlignment="Center" FontSize="14" Foreground="White" Text="{Binding ViewModel.WbsProgressMessage}" />
                             <ProgressBar
-                                Width="240" Height="8" HorizontalAlignment="Center"
-                                IsIndeterminate="False"
-                                Maximum="100"
+                                Width="240" Height="8" HorizontalAlignment="Center" IsIndeterminate="False" Maximum="100"
                                 Value="{Binding ViewModel.WbsProgress}" />
                         </StackPanel>
                     </Grid>
