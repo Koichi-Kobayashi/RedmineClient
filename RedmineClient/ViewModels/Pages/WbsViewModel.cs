@@ -300,6 +300,30 @@ namespace RedmineClient.ViewModels.Pages
         private bool _showNotStarted = true;
 
         /// <summary>
+        /// 利用可能な担当者のリスト
+        /// </summary>
+        [ObservableProperty]
+        private List<string> _availableAssignees = new();
+
+        /// <summary>
+        /// 選択された担当者（フィルター用）
+        /// </summary>
+        private string? _selectedAssignee;
+
+        public string? SelectedAssignee
+        {
+            get => _selectedAssignee;
+            set
+            {
+                if (SetProperty(ref _selectedAssignee, value))
+                {
+                    // 担当者が変更された場合、フィルターを適用
+                    _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
+                }
+            }
+        }
+
+        /// <summary>
         /// 追加後編集モードかどうか
         /// true: 追加後編集、false: 連続追加
         /// </summary>
@@ -364,7 +388,9 @@ namespace RedmineClient.ViewModels.Pages
                     AppConfig.SelectedProjectId = null;
                     AppConfig.Save();
                     WbsItems.Clear();
-                    _ = Task.Run(async () => await UpdateFlattenedList());
+                    AvailableAssignees.Clear();
+                    SelectedAssignee = null;
+                    _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
                     IsRedmineDataLoaded = false;
                     ErrorMessage = string.Empty;
                 }
@@ -1116,6 +1142,11 @@ namespace RedmineClient.ViewModels.Pages
                     WbsProgress = 20;
                     WbsProgressMessage = "Redmineからデータを取得中...";
 
+                    // 担当者リストを取得
+                    var assignees = await redmineService.GetProjectUsersAsync(project.Id).ConfigureAwait(false);
+                    AvailableAssignees = assignees;
+                    SelectedAssignee = "全担当者"; // デフォルトは全担当者
+
                     var issues = await redmineService.GetIssuesWithHierarchyAsync(project.Id).ConfigureAwait(false);
 
                     // チケットが0個の場合でも適切に処理
@@ -1126,6 +1157,8 @@ namespace RedmineClient.ViewModels.Pages
                         {
                             WbsItems.Clear();
                             FlattenedWbsItems.Clear();
+                            AvailableAssignees.Clear();
+                            SelectedAssignee = null;
                             IsRedmineDataLoaded = true;
                             ErrorMessage = string.Empty;
                         }
@@ -1345,15 +1378,20 @@ namespace RedmineClient.ViewModels.Pages
 
                 // 完了メッセージを少し表示
                 await Task.Delay(500);
-                // プログレスバーの非表示はDataGridの完全な読み込み完了後に行うため、
-                // ここでは何もしない（WbsDataGrid_Loadedで制御される）
+                
+                // プログレスバーを非表示にする
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    SetWbsLoading(false);
+                });
             }
             catch (Exception ex)
             {
-                // エラーが発生した場合でも、プログレスバーの非表示はDataGridの完全な読み込み完了後に行う
+                // エラーが発生した場合でも、プログレスバーを非表示にする
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     WbsProgressMessage = $"エラーが発生しました: {ex.Message}";
+                    SetWbsLoading(false);
                 });
             }
         }
@@ -1367,6 +1405,16 @@ namespace RedmineClient.ViewModels.Pages
             if (addedItems.Contains(item))
             {
                 return;
+            }
+
+            // 担当者フィルターを適用
+            if (!string.IsNullOrEmpty(SelectedAssignee) && SelectedAssignee != "全担当者")
+            {
+                if (string.IsNullOrEmpty(item.Assignee) || item.Assignee != SelectedAssignee)
+                {
+                    // 担当者が一致しない場合、子アイテムも含めてスキップ
+                    return;
+                }
             }
 
             // UIスレッドで実行されていることを確認
@@ -1531,7 +1579,7 @@ namespace RedmineClient.ViewModels.Pages
                         }
 
                         // 平坦化リストを更新
-                        _ = Task.Run(async () => await UpdateFlattenedList());
+                        _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
 
                         // 成功メッセージをデバッグ出力
                     }
@@ -2131,7 +2179,7 @@ namespace RedmineClient.ViewModels.Pages
                     }
 
                     // 平坦化リストを更新
-                    _ = Task.Run(async () => await UpdateFlattenedList());
+                    _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
 
                     // Redmineデータ読み込み後、選択状態を復元
                     if (SelectedItem != null)
@@ -2253,7 +2301,7 @@ namespace RedmineClient.ViewModels.Pages
                             WbsProgressMessage = "平坦化リストを更新中...";
 
                             // 平坦化リストを更新
-                            _ = Task.Run(async () => await UpdateFlattenedList());
+                            _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
 
                             // Redmineデータ読み込み後、選択状態を復元
                             if (SelectedItem != null)
@@ -2925,7 +2973,7 @@ namespace RedmineClient.ViewModels.Pages
 
                         CanRegisterItems = NewWbsItems.Count > 0;
                         OnPropertyChanged(nameof(NewItemsCount));
-                        _ = Task.Run(async () => await UpdateFlattenedList());
+                        _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
 
                         ErrorMessage = $"{successCount} 件のチケットを登録しました。";
                     }
@@ -2980,7 +3028,7 @@ namespace RedmineClient.ViewModels.Pages
                 }
 
                 // 平坦化リストを更新
-                _ = Task.Run(async () => await UpdateFlattenedList());
+                _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
             }
             catch (Exception ex)
             {

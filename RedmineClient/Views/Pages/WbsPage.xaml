@@ -153,6 +153,7 @@
         <Grid Grid.Row="3" Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="200" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -160,11 +161,16 @@
 
             <ui:TextBox Grid.Column="0" Margin="0,8,0,0" Icon="Search" PlaceholderText="タスクを検索..." Text="{Binding ViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-            <ui:ToggleSwitch Grid.Column="1" Margin="16,8,0,0" Content="完了" IsChecked="{Binding ViewModel.ShowCompleted}" />
+            <StackPanel Grid.Column="1" Margin="16,8,0,0" Orientation="Horizontal">
+                <ui:TextBlock Margin="0,0,8,0" VerticalAlignment="Center" Text="担当者:" />
+                <ComboBox Width="120" ItemsSource="{Binding ViewModel.AvailableAssignees}" SelectedItem="{Binding ViewModel.SelectedAssignee, Mode=TwoWay}" />
+            </StackPanel>
 
-            <ui:ToggleSwitch Grid.Column="2" Margin="16,8,0,0" Content="進行中" IsChecked="{Binding ViewModel.ShowInProgress}" />
+            <ui:ToggleSwitch Grid.Column="2" Margin="16,8,0,0" Content="完了" IsChecked="{Binding ViewModel.ShowCompleted}" />
 
-            <ui:ToggleSwitch Grid.Column="3" Margin="16,8,0,0" Content="未着手" IsChecked="{Binding ViewModel.ShowNotStarted}" />
+            <ui:ToggleSwitch Grid.Column="3" Margin="16,8,0,0" Content="進行中" IsChecked="{Binding ViewModel.ShowInProgress}" />
+
+            <ui:ToggleSwitch Grid.Column="4" Margin="16,8,0,0" Content="未着手" IsChecked="{Binding ViewModel.ShowNotStarted}" />
         </Grid>
 
         <!--  WBSツリービュー  -->

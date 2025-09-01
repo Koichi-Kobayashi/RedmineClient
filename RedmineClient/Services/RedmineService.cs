@@ -413,6 +413,45 @@ namespace RedmineClient.Services
         }
 
         /// <summary>
+        /// プロジェクトのユーザー一覧を取得（非同期版）
+        /// </summary>
+        public async Task<List<string>> GetProjectUsersAsync(int projectId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                // プロジェクトのチケットを取得して、担当者を抽出
+                var issues = await GetIssuesAsync(projectId, 1000, 0, cts.Token);
+                
+                var assignees = new HashSet<string>();
+                
+                foreach (var issue in issues)
+                {
+                    if (!string.IsNullOrEmpty(issue.AssignedTo?.Name))
+                    {
+                        assignees.Add(issue.AssignedTo.Name);
+                    }
+                }
+
+                // "全担当者"オプションを最初に追加
+                var result = new List<string> { "全担当者" };
+                result.AddRange(assignees.OrderBy(x => x));
+                
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"プロジェクトID {projectId} のユーザー一覧の取得がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"プロジェクトID {projectId} のユーザー一覧の取得に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// 接続テストを実行（非同期版）
         /// </summary>
         public async Task<bool> TestConnectionAsync(CancellationToken cancellationToken = default)
