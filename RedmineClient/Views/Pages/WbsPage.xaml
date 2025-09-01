@@ -345,7 +345,7 @@
 
                     <DataGrid.Columns>
                         <!--  ID列  -->
-                        <DataGridTemplateColumn Width="80" Header="ID" IsReadOnly="True">
+                        <DataGridTemplateColumn MinWidth="80" Header="ID" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border
@@ -358,7 +358,7 @@
                         </DataGridTemplateColumn>
 
                         <!--  タスク名列  -->
-                        <DataGridTemplateColumn Width="300" Header="タスク名">
+                        <DataGridTemplateColumn Width="Auto" MinWidth="300" Header="タスク名">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -437,10 +437,8 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-
-
                         <!--  開始日列  -->
-                        <DataGridTemplateColumn Width="100" Header="開始日">
+                        <DataGridTemplateColumn MinWidth="100" Header="開始日">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2">
@@ -459,7 +457,7 @@
                         </DataGridTemplateColumn>
 
                         <!--  終了日列  -->
-                        <DataGridTemplateColumn Width="100" Header="終了日">
+                        <DataGridTemplateColumn MinWidth="100" Header="終了日">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="2">
@@ -478,7 +476,7 @@
                         </DataGridTemplateColumn>
 
                         <!--  進捗列  -->
-                        <DataGridTemplateColumn Width="150" Header="進捗" IsReadOnly="True">
+                        <DataGridTemplateColumn MinWidth="150" Header="進捗" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -507,7 +505,7 @@
                         </DataGridTemplateColumn>
 
                         <!--  ステータス列  -->
-                        <DataGridTemplateColumn Width="80" Header="ステータス" IsReadOnly="True">
+                        <DataGridTemplateColumn MinWidth="80" Header="ステータス" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="{Binding Status, Converter={x:Static helpers:StatusToBrushConverter.Instance}}" CornerRadius="2">
@@ -518,7 +516,7 @@
                         </DataGridTemplateColumn>
 
                         <!--  優先度列  -->
-                        <DataGridTemplateColumn Width="80" Header="優先度" IsReadOnly="True">
+                        <DataGridTemplateColumn MinWidth="80" Header="優先度" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2" Background="{Binding Priority, Converter={x:Static helpers:PriorityToBrushConverter.Instance}}" CornerRadius="2">
@@ -529,7 +527,7 @@
                         </DataGridTemplateColumn>
 
                         <!--  担当者列  -->
-                        <DataGridTemplateColumn Width="100" Header="担当者" IsReadOnly="True">
+                        <DataGridTemplateColumn Width="Auto" MinWidth="100" Header="担当者" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Padding="4,2">
@@ -540,7 +538,7 @@
                         </DataGridTemplateColumn>
 
                         <!--  先行・後続列  -->
-                        <DataGridTemplateColumn Width="120" Header="先行タスク&#x0d;&#x0a;D&amp;D" IsReadOnly="True">
+                        <DataGridTemplateColumn Width="Auto" MinWidth="120" Header="先行タスク&#x0d;&#x0a;D&amp;D" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>
