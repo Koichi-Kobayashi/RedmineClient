@@ -437,8 +437,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <!--  説明列  -->
-                        <DataGridTextColumn Width="200" Binding="{Binding Description}" Header="説明" IsReadOnly="True" />
+
 
                         <!--  開始日列  -->
                         <DataGridTemplateColumn Width="100" Header="開始日">

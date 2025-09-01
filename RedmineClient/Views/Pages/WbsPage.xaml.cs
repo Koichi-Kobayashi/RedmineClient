@@ -677,8 +677,8 @@ namespace RedmineClient.Views.Pages
                         var currentDate = startDate;
                         var lastMonth = -1;
 
-                        // 固定列の数を取得（ID、タスク名、説明、開始日、終了日、進捗、ステータス、優先度、担当者、先行・後続）
-                        var fixedColumnCount = 10;
+                        // 固定列の数を取得（ID、タスク名、開始日、終了日、進捗、ステータス、優先度、担当者、先行・後続）
+                        var fixedColumnCount = RedmineClient.Views.Controls.DraggableTaskBorder.TASK_INFO_COLUMN_COUNT;
 
                         // 日付列の総数を計算
                         var totalColumns = (int)((endDate - startDate).TotalDays) + 1;
@@ -1114,7 +1114,7 @@ namespace RedmineClient.Views.Pages
                 // このイベントは一度だけ実行
                 dataGrid.Loaded -= WbsDataGrid_Loaded;
                 
-
+                
                 
 
                 

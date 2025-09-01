@@ -2,7 +2,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using System.Windows;
 using System.Windows.Threading;
 using RedmineClient.ViewModels.Pages;
 
@@ -30,8 +29,8 @@ namespace RedmineClient.Views.Controls
         // ドラッグハンドルの幅
         private const double DRAG_HANDLE_WIDTH = 10.0;
 
-        // タスク情報列数（ID, タスク名, 説明, 開始日, 終了日, 進捗, ステータス, 優先度, 先行・後続, 担当者の9列）
-        private const int TASK_INFO_COLUMN_COUNT = 10;
+        // タスク情報列数（ID, タスク名, 開始日, 終了日, 進捗, ステータス, 優先度, 担当者, 先行・後続の9列）
+        public const int TASK_INFO_COLUMN_COUNT = 9;
 
         public DraggableTaskBorder()
         {
