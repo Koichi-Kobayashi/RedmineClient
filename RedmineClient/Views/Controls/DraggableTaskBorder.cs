@@ -60,12 +60,12 @@ namespace RedmineClient.Views.Controls
 
             Child = grid;
 
-            // マウスイベントを設定
-            MouseLeftButtonDown += OnMouseLeftButtonDown;
-            MouseMove += OnMouseMove;
-            MouseLeftButtonUp += OnMouseLeftButtonUp;
-            MouseEnter += OnMouseEnter;
-            MouseLeave += OnMouseLeave;
+            // マウスイベントを設定（コマンドパターン用）
+            MouseLeftButtonDown += OnMouseLeftButtonDown_Command;
+            MouseMove += OnMouseMove_Command;
+            MouseLeftButtonUp += OnMouseLeftButtonUp_Command;
+            MouseEnter += OnMouseEnter_Command;
+            MouseLeave += OnMouseLeave_Command;
 
             // ツールチップは動的に設定するため、初期値は空
             ToolTip = "";
@@ -100,6 +100,92 @@ namespace RedmineClient.Views.Controls
                 grid.Children.Clear();
             }
         }
+
+        #region コマンドパターン用イベントハンドラー
+
+        /// <summary>
+        /// マウス左ボタンダウンイベント（コマンドパターン用）
+        /// </summary>
+        private void OnMouseLeftButtonDown_Command(object sender, MouseButtonEventArgs e)
+        {
+            // ViewModelのコマンドを実行
+            var viewModel = GetWbsViewModel();
+            if (viewModel?.DraggableTaskBorderMouseLeftButtonDownCommand.CanExecute(null) == true)
+            {
+                viewModel.DraggableTaskBorderMouseLeftButtonDownCommand.Execute(null);
+            }
+            
+            // 元の処理も実行
+            OnMouseLeftButtonDown(sender, e);
+        }
+
+        /// <summary>
+        /// マウス移動イベント（コマンドパターン用）
+        /// </summary>
+        private void OnMouseMove_Command(object sender, MouseEventArgs e)
+        {
+            // ViewModelのコマンドを実行
+            var viewModel = GetWbsViewModel();
+            if (viewModel?.DraggableTaskBorderMouseMoveCommand.CanExecute(null) == true)
+            {
+                viewModel.DraggableTaskBorderMouseMoveCommand.Execute(null);
+            }
+            
+            // 元の処理も実行
+            OnMouseMove(sender, e);
+        }
+
+        /// <summary>
+        /// マウス左ボタンアップイベント（コマンドパターン用）
+        /// </summary>
+        private void OnMouseLeftButtonUp_Command(object sender, MouseButtonEventArgs e)
+        {
+            // ViewModelのコマンドを実行
+            var viewModel = GetWbsViewModel();
+            if (viewModel?.DraggableTaskBorderMouseLeftButtonUpCommand.CanExecute(null) == true)
+            {
+                viewModel.DraggableTaskBorderMouseLeftButtonUpCommand.Execute(null);
+            }
+            
+            // 元の処理も実行
+            OnMouseLeftButtonUp(sender, e);
+        }
+
+        /// <summary>
+        /// マウスエンターイベント（コマンドパターン用）
+        /// </summary>
+        private void OnMouseEnter_Command(object sender, MouseEventArgs e)
+        {
+            // ViewModelのコマンドを実行
+            var viewModel = GetWbsViewModel();
+            if (viewModel?.DraggableTaskBorderMouseEnterCommand.CanExecute(null) == true)
+            {
+                viewModel.DraggableTaskBorderMouseEnterCommand.Execute(null);
+            }
+            
+            // 元の処理も実行
+            OnMouseEnter(sender, e);
+        }
+
+        /// <summary>
+        /// マウスリーブイベント（コマンドパターン用）
+        /// </summary>
+        private void OnMouseLeave_Command(object sender, MouseEventArgs e)
+        {
+            // ViewModelのコマンドを実行
+            var viewModel = GetWbsViewModel();
+            if (viewModel?.DraggableTaskBorderMouseLeaveCommand.CanExecute(null) == true)
+            {
+                viewModel.DraggableTaskBorderMouseLeaveCommand.Execute(null);
+            }
+            
+            // 元の処理も実行
+            OnMouseLeave(sender, e);
+        }
+
+        #endregion コマンドパターン用イベントハンドラー
+
+        #region 元のマウスイベントハンドラー
 
         /// <summary>
         /// マウス左ボタンダウンイベント
@@ -572,6 +658,8 @@ namespace RedmineClient.Views.Controls
                 HideDragHandles();
             }
         }
+
+        #endregion 元のマウスイベントハンドラー
 
         /// <summary>
         /// ドラッグハンドルを表示

@@ -472,6 +472,62 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand TaskReorderCommand { get; }
         public ICommand SetDependencyCommand { get; }
 
+        #region DraggableTaskBorderのマウスイベント
+
+        public ICommand DraggableTaskBorderMouseLeftButtonDownCommand { get; }
+        public ICommand DraggableTaskBorderMouseMoveCommand { get; }
+        public ICommand DraggableTaskBorderMouseLeftButtonUpCommand { get; }
+        public ICommand DraggableTaskBorderMouseEnterCommand { get; }
+        public ICommand DraggableTaskBorderMouseLeaveCommand { get; }
+
+        #endregion DraggableTaskBorderのマウスイベント
+
+        #region DraggableTaskBorderのマウスイベント実装
+
+        /// <summary>
+        /// DraggableTaskBorderのマウス左ボタンダウンイベント（コマンド用）
+        /// </summary>
+        public void DraggableTaskBorderMouseLeftButtonDown()
+        {
+            // DraggableTaskBorderのOnMouseLeftButtonDown処理をここに移動
+            // 現在はDraggableTaskBorder内で直接処理されているため、
+            // 必要に応じてパラメータを受け取るように修正
+        }
+
+        /// <summary>
+        /// DraggableTaskBorderのマウス移動イベント（コマンド用）
+        /// </summary>
+        public void DraggableTaskBorderMouseMove()
+        {
+            // DraggableTaskBorderのOnMouseMove処理をここに移動
+        }
+
+        /// <summary>
+        /// DraggableTaskBorderのマウス左ボタンアップイベント（コマンド用）
+        /// </summary>
+        public void DraggableTaskBorderMouseLeftButtonUp()
+        {
+            // DraggableTaskBorderのOnMouseLeftButtonUp処理をここに移動
+        }
+
+        /// <summary>
+        /// DraggableTaskBorderのマウスエンターイベント（コマンド用）
+        /// </summary>
+        public void DraggableTaskBorderMouseEnter()
+        {
+            // DraggableTaskBorderのOnMouseEnter処理をここに移動
+        }
+
+        /// <summary>
+        /// DraggableTaskBorderのマウスリーブイベント（コマンド用）
+        /// </summary>
+        public void DraggableTaskBorderMouseLeave()
+        {
+            // DraggableTaskBorderのOnMouseLeave処理をここに移動
+        }
+
+        #endregion DraggableTaskBorderのマウスイベント実装
+
         public WbsViewModel()
         {
             // 初期状態ではプログレスバーを非表示
@@ -539,6 +595,12 @@ namespace RedmineClient.ViewModels.Pages
             // ドラッグ&ドロップ用コマンド
             TaskReorderCommand = new RelayCommand<Tuple<WbsItem, WbsItem>>(TaskReorderCommandMethod);
             SetDependencyCommand = new RelayCommand<Tuple<WbsItem, WbsItem, bool>>(SetDependencyCommandMethod);
+
+            DraggableTaskBorderMouseLeftButtonDownCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseLeftButtonDown());
+            DraggableTaskBorderMouseMoveCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseMove());
+            DraggableTaskBorderMouseLeftButtonUpCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseLeftButtonUp());
+            DraggableTaskBorderMouseEnterCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseEnter());
+            DraggableTaskBorderMouseLeaveCommand = new RelayCommand<object>(_ => DraggableTaskBorderMouseLeave());
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -1580,7 +1642,6 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        #region タスク境界のドラッグ&ドロップ
         /// <summary>
         /// 先行・後続の関係性を設定する（ドラッグ&ドロップ用）
         /// </summary>
@@ -3489,7 +3550,6 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        #region スケジュール開始年月ComboBox
         /// <summary>
         /// スケジュール開始年月が変更された時の処理
         /// </summary>
@@ -3556,7 +3616,6 @@ namespace RedmineClient.ViewModels.Pages
             
             return Task.CompletedTask;
         }
-        #endregion スケジュール開始年月ComboBox
 
         /// <summary>
         /// タスクの順番を変更する（コマンド用）
@@ -3579,6 +3638,5 @@ namespace RedmineClient.ViewModels.Pages
             var (sourceItem, targetItem, isPredecessor) = parameters;
             SetDependency(sourceItem, targetItem, isPredecessor);
         }
-        #endregion タスク境界のドラッグ&ドロップ
     }
 }
