@@ -229,7 +229,7 @@
                     AutoGenerateColumns="False"
                     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
-                    BorderThickness="1" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
+                    BorderThickness="1" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserResizeColumns="True"
                     CanUserSortColumns="True" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave" Drop="WbsDataGrid_Drop" EnableColumnVirtualization="True"
                     EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All" HeadersVisibility="Column"
                     ItemsSource="{Binding ViewModel.FlattenedWbsItems}"

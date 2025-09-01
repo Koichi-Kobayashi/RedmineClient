@@ -1,10 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Threading;
-using System.Diagnostics;
 using RedmineClient.Helpers;
 using RedmineClient.ViewModels.Pages;
 using RedmineClient.Views.Controls;
@@ -678,7 +677,7 @@ namespace RedmineClient.Views.Pages
                         var lastMonth = -1;
 
                         // 固定列の数を取得（ID、タスク名、開始日、終了日、進捗、ステータス、優先度、担当者、先行・後続）
-                        var fixedColumnCount = RedmineClient.Views.Controls.DraggableTaskBorder.TASK_INFO_COLUMN_COUNT;
+                        var fixedColumnCount = DraggableTaskBorder.TASK_INFO_COLUMN_COUNT;
 
                         // 日付列の総数を計算
                         var totalColumns = (int)((endDate - startDate).TotalDays) + 1;
@@ -719,6 +718,8 @@ namespace RedmineClient.Views.Pages
                             var dateColumn = new DataGridTemplateColumn
                             {
                                 Width = 40, // 幅を少し広げて3行表示に対応
+                                MinWidth = 40,
+                                MaxWidth = 40,
                                 Header = CreateThreeRowHeader(loopDate, isMonthStart),
                                 IsReadOnly = true,
                                 HeaderStyle = CreateDateHeaderStyle()
@@ -816,12 +817,12 @@ namespace RedmineClient.Views.Pages
                                         // 現在の列の実際のインデックスを計算
                                         // columnCountは日付列のインデックス（0から始まる）
                                         // 固定列9個 + 日付列の位置（columnCount）
-                                        var actualColumnIndex = 9 + columnCount;
+                                        var actualColumnIndex = fixedColumnCount + columnCount;
 
                                         // 列0の日付（表示開始日）を基準として渡す
                                         // これにより、各列での日付計算が正しく行われる
                                         // totalColumnsには固定列9個 + 日付列の総数を渡す必要がある
-                                        var actualTotalColumns = 9 + totalColumns;
+                                        var actualTotalColumns = fixedColumnCount + totalColumns;
 
                                         // 境界条件の確認：actualColumnIndexがactualTotalColumnsの範囲内にあることを確認
                                         if (actualColumnIndex >= actualTotalColumns)
