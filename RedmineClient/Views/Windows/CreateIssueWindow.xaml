@@ -125,6 +125,17 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- ウォッチャー登録オプション -->
+                <StackPanel Margin="0,0,0,20">
+                    <CheckBox Content="作成者をウォッチャーとして登録する" 
+                              IsChecked="{Binding AddAsWatcher}" 
+                              Margin="0,0,0,5" />
+                    <ui:TextBlock Text="チェックすると、作成したチケットのウォッチャーとして自動で登録されます。" 
+                                 FontSize="12" 
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                 TextWrapping="Wrap" />
+                </StackPanel>
+
                 <!-- エラーメッセージ -->
                 <ui:Card Padding="12" 
                          BorderThickness="1" 

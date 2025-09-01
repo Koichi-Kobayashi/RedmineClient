@@ -758,6 +758,42 @@ namespace RedmineClient.Services
             }
         }
 
+        /// <summary>
+        /// チケットにウォッチャーを追加（非同期版）
+        /// </summary>
+        /// <param name="issueId">チケットID</param>
+        /// <param name="userId">ユーザーID</param>
+        /// <param name="cancellationToken">キャンセレーショントークン</param>
+        public async Task AddWatcherAsync(int issueId, int userId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                // Redmine.Net.Apiライブラリの仕様に従ってWatcherを作成
+                var watcher = new Watcher();
+                
+                // Idプロパティをリフレクションで設定
+                var idProperty = typeof(Watcher).GetProperty("Id");
+                if (idProperty?.CanWrite == true)
+                {
+                    idProperty.SetValue(watcher, userId);
+                }
+
+                // RedmineManagerのCreateメソッドを使用してウォッチャーを追加
+                await Task.Run(() => _redmineManager.Create<Watcher>(watcher, issueId.ToString()), cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"ウォッチャーの追加がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"ウォッチャーの追加に失敗しました: {ex.Message}", ex);
+            }
+        }
+
         public void Dispose()
         {
             // RedmineManagerはIDisposableではないため、何もしない

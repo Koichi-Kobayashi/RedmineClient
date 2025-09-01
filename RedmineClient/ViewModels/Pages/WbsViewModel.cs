@@ -632,6 +632,33 @@ namespace RedmineClient.ViewModels.Pages
                     }
                 });
 
+                // 現在のユーザーIDを取得（Redmine接続済みの場合のみ）
+                if (IsRedmineConnected && AppConfig.CurrentUserId == 0)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 15;
+                        WbsProgressMessage = "現在のユーザー情報を取得中...";
+                    });
+
+                    try
+                    {
+                        using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                        {
+                            var currentUser = await redmineService.GetCurrentUserAsync();
+                            if (currentUser != null)
+                            {
+                                AppConfig.CurrentUserId = currentUser.Id;
+                                System.Diagnostics.Debug.WriteLine($"現在のユーザーIDを取得: {currentUser.Id}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"現在のユーザー情報取得に失敗: {ex.Message}");
+                    }
+                }
+
                 // プロジェクト選択の初期化
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -2641,7 +2668,7 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// 新しいチケットを作成
         /// </summary>
-        private void CreateNewIssue()
+        private async void CreateNewIssue()
         {
             if (SelectedProject == null)
             {
@@ -2668,7 +2695,8 @@ namespace RedmineClient.ViewModels.Pages
                     // チケットが作成された場合は、プロジェクトのデータを再読み込み
                     if (result == true)
                     {
-                        LoadRedmineData();
+                        // 非同期でデータを再読み込み（UIをブロックしない）
+                        await Task.Run(async () => await LoadRedmineDataAsync());
                     }
                 }
             }

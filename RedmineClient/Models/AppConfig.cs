@@ -23,6 +23,7 @@ namespace RedmineClient.Models
         private static int _defaultTrackerId = 1;
         private static int _defaultStatusId = 1;
         private static bool _showTodayLine = true;
+        private static int _currentUserId = 0;
         private static List<TrackerItem> _availableTrackers = new();
         private static List<StatusItem> _availableStatuses = new();
 
@@ -110,6 +111,23 @@ namespace RedmineClient.Models
                 if (_isInitialized)
                 {
                     SetSetting("ShowTodayLine", value.ToString());
+                }
+            }
+        }
+
+        /// <summary>
+        /// 現在のユーザーID
+        /// </summary>
+        public static int CurrentUserId
+        {
+            get => _currentUserId;
+            set
+            {
+                _currentUserId = value;
+                // 初期化完了後にのみ保存を実行
+                if (_isInitialized)
+                {
+                    SetSetting("CurrentUserId", value.ToString());
                 }
             }
         }
@@ -226,6 +244,7 @@ namespace RedmineClient.Models
                 SetSettingsItem(config, "DefaultTrackerId", DefaultTrackerId.ToString());
                 SetSettingsItem(config, "DefaultStatusId", DefaultStatusId.ToString());
                 SetSettingsItem(config, "ShowTodayLine", ShowTodayLine.ToString());
+                SetSettingsItem(config, "CurrentUserId", CurrentUserId.ToString());
                 
                 config.Save();
             }
@@ -394,6 +413,16 @@ namespace RedmineClient.Models
                     {
                         _showTodayLine = true; // デフォルト値
                     }
+
+                    var currentUserId = ConfigurationManager.AppSettings["CurrentUserId"];
+                    if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out int userId))
+                    {
+                        _currentUserId = userId;
+                    }
+                    else
+                    {
+                        _currentUserId = 0; // デフォルト値
+                    }
                 }
                 catch
                 {
@@ -422,6 +451,7 @@ namespace RedmineClient.Models
             ApplicationTheme = ApplicationTheme.Light;
             _defaultTrackerId = 1;
             _defaultStatusId = 1;
+            _currentUserId = 0;
             _scheduleStartYearMonth = DateTime.Now.ToString("yyyy/MM");
             _selectedProjectId = null; // デフォルト値
         }
