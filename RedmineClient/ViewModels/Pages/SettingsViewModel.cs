@@ -473,6 +473,7 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        #region ComboBox選択変更
         private void OnTrackerSelected(TrackerItem? selectedTracker)
         {
             // 無限ループを防ぐ
@@ -591,5 +592,6 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         public ICommand OnStatusSelectedCommand => new RelayCommand<StatusItem?>(OnStatusSelected);
+        #endregion ComboBox選択変更
     }
 }

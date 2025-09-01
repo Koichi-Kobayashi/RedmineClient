@@ -1580,6 +1580,7 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        #region タスク境界のドラッグ&ドロップ
         /// <summary>
         /// 先行・後続の関係性を設定する（ドラッグ&ドロップ用）
         /// </summary>
@@ -3488,6 +3489,7 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        #region スケジュール開始年月ComboBox
         /// <summary>
         /// スケジュール開始年月が変更された時の処理
         /// </summary>
@@ -3554,6 +3556,7 @@ namespace RedmineClient.ViewModels.Pages
             
             return Task.CompletedTask;
         }
+        #endregion スケジュール開始年月ComboBox
 
         /// <summary>
         /// タスクの順番を変更する（コマンド用）
@@ -3576,5 +3579,6 @@ namespace RedmineClient.ViewModels.Pages
             var (sourceItem, targetItem, isPredecessor) = parameters;
             SetDependency(sourceItem, targetItem, isPredecessor);
         }
+        #endregion タスク境界のドラッグ&ドロップ
     }
 }

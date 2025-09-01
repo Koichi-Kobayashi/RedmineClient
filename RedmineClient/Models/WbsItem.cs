@@ -702,6 +702,7 @@ namespace RedmineClient.Models
             OnPropertyChanged(nameof(SuccessorDisplayText));
         }
 
+        #region 循環参照検出
         /// <summary>
         /// 循環参照が発生するかチェック
         /// </summary>
@@ -1175,6 +1176,8 @@ namespace RedmineClient.Models
                 recursionStack.Remove(newDependency);
             }
         }
+
+        #endregion 循環参照検出
 
         /// <summary>
         /// 循環参照の詳細情報を表すクラス
