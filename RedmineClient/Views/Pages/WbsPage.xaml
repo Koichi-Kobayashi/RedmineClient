@@ -18,6 +18,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -171,6 +172,42 @@
             <ui:ToggleSwitch Grid.Column="3" Margin="16,8,0,0" Content="進行中" IsChecked="{Binding ViewModel.ShowInProgress}" />
 
             <ui:ToggleSwitch Grid.Column="4" Margin="16,8,0,0" Content="未着手" IsChecked="{Binding ViewModel.ShowNotStarted}" />
+        </Grid>
+
+        <!--  ページング制御  -->
+        <Grid Grid.Row="4" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ui:TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="ページサイズ:" />
+            
+            <ComboBox Grid.Column="1" Width="80" Margin="0,0,16,0" VerticalAlignment="Center" 
+                      ItemsSource="{Binding ViewModel.PageSizeOptions}" 
+                      SelectedItem="{Binding ViewModel.SelectedPageSize, Mode=TwoWay}" />
+
+            <ui:Button Grid.Column="2" Margin="0,0,8,0" Command="{Binding ViewModel.FirstPageCommand}" Content="&lt;&lt;" ToolTip="最初のページ" />
+            <ui:Button Grid.Column="3" Margin="0,0,8,0" Command="{Binding ViewModel.PreviousPageCommand}" Content="&lt;" ToolTip="前のページ" />
+            
+            <ui:TextBlock Grid.Column="4" Margin="8,0,8,0" VerticalAlignment="Center" 
+                         Text="{Binding ViewModel.CurrentPage, StringFormat='ページ {0}'}" />
+            
+            <ui:TextBlock Grid.Column="5" Margin="0,0,8,0" VerticalAlignment="Center" 
+                         Text="{Binding ViewModel.TotalPages, StringFormat='/ {0}'}" />
+            
+            <ui:Button Grid.Column="6" Margin="8,0,8,0" Command="{Binding ViewModel.NextPageCommand}" Content="&gt;" ToolTip="次のページ" />
+            <ui:Button Grid.Column="7" Margin="0,0,16,0" Command="{Binding ViewModel.LastPageCommand}" Content="&gt;&gt;" ToolTip="最後のページ" />
+
+            <ui:TextBlock Grid.Column="8" Margin="0,0,0,0" VerticalAlignment="Center" 
+                         Text="{Binding ViewModel.FilteredItems, StringFormat='表示中: {0} 件'}" />
         </Grid>
 
         <!--  WBSツリービュー  -->

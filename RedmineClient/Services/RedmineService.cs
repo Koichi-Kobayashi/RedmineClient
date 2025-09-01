@@ -99,14 +99,14 @@ namespace RedmineClient.Services
                 if (offset.HasValue)
                     options.QueryString.Add("offset", offset.Value.ToString());
 
-                var issues = await Task.Run(() => _redmineManager.Get<Issue>(options), cts.Token);
+                var pagedIssues = await Task.Run(() => _redmineManager.GetPaginatedObjects<Issue>(options.QueryString), cts.Token);
                 
-                if (issues == null)
+                if (pagedIssues == null)
                 {
                     return new List<Issue>();
                 }
                 
-                return issues;
+                return pagedIssues.Items.ToList();
             }
             catch (OperationCanceledException)
             {
@@ -203,20 +203,20 @@ namespace RedmineClient.Services
         /// <summary>
         /// チケットの階層構造を取得（非同期版）
         /// </summary>
-        public async Task<List<HierarchicalIssue>> GetIssuesWithHierarchyAsync(int projectId, CancellationToken cancellationToken = default)
+        public async Task<List<HierarchicalIssue>> GetIssuesWithHierarchyAsync(int projectId, int? limit = null, int? offset = null, CancellationToken cancellationToken = default)
         {
             try
             {
-                // 全チケットを取得
-                var allIssues = await GetIssuesAsync(projectId, 1000, 0, cancellationToken);
+                // 指定された範囲のチケットを取得
+                var issues = await GetIssuesAsync(projectId, limit, offset, cancellationToken);
 
-                if (allIssues == null || allIssues.Count == 0)
+                if (issues == null || issues.Count == 0)
                 {
                     return new List<HierarchicalIssue>();
                 }
 
                 // IssueをHierarchicalIssueに変換
-                var hierarchicalIssues = allIssues.Select(i => new HierarchicalIssue(i)).ToList();
+                var hierarchicalIssues = issues.Select(i => new HierarchicalIssue(i)).ToList();
 
                 // 親子関係を構築
                 BuildHierarchy(hierarchicalIssues);
@@ -448,6 +448,39 @@ namespace RedmineClient.Services
             catch (Exception ex)
             {
                 throw new RedmineApiException($"プロジェクトID {projectId} のユーザー一覧の取得に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// プロジェクトのチケット総数を取得（非同期版）
+        /// </summary>
+        public async Task<int> GetIssuesCountAsync(int projectId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                var options = new RequestOptions();
+                
+                // QueryStringプロパティを明示的に初期化
+                options.QueryString = new NameValueCollection();
+                
+                // プロジェクトIDをクエリパラメータに追加
+                options.QueryString.Add("project_id", projectId.ToString());
+
+                // CountAsyncメソッドを使用してトータル件数を取得
+                var totalCount = await Task.Run(() => _redmineManager.CountAsync<Issue>(options), cts.Token);
+                
+                return totalCount;
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"プロジェクトID {projectId} のチケット数の取得がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"プロジェクトID {projectId} のチケット数の取得に失敗しました: {ex.Message}", ex);
             }
         }
 

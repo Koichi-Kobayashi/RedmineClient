@@ -310,6 +310,55 @@ namespace RedmineClient.ViewModels.Pages
         /// </summary>
         private string? _selectedAssignee;
 
+        /// <summary>
+        /// ページング設定のオプション
+        /// </summary>
+        [ObservableProperty]
+        private List<int> _pageSizeOptions = new() { 50, 100 };
+
+        /// <summary>
+        /// 選択されたページサイズ
+        /// </summary>
+        private int _selectedPageSize = 50;
+
+        public int SelectedPageSize
+        {
+            get => _selectedPageSize;
+            set
+            {
+                if (SetProperty(ref _selectedPageSize, value))
+                {
+                    // ページサイズが変更された場合、現在のページを1にリセットしてデータを再読み込み
+                    CurrentPage = 1;
+                    _ = Application.Current.Dispatcher.InvokeAsync(async () => await LoadCurrentPageData());
+                }
+            }
+        }
+
+        /// <summary>
+        /// 現在のページ番号（1ベース）
+        /// </summary>
+        [ObservableProperty]
+        private int _currentPage = 1;
+
+        /// <summary>
+        /// 総ページ数
+        /// </summary>
+        [ObservableProperty]
+        private int _totalPages = 1;
+
+        /// <summary>
+        /// 総アイテム数
+        /// </summary>
+        [ObservableProperty]
+        private int _totalItems = 0;
+
+        /// <summary>
+        /// フィルター適用後のアイテム数
+        /// </summary>
+        [ObservableProperty]
+        private int _filteredItems = 0;
+
         public string? SelectedAssignee
         {
             get => _selectedAssignee;
@@ -317,8 +366,9 @@ namespace RedmineClient.ViewModels.Pages
             {
                 if (SetProperty(ref _selectedAssignee, value))
                 {
-                    // 担当者が変更された場合、フィルターを適用
-                    _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
+                    // 担当者が変更された場合、現在のページを1にリセットしてデータを再読み込み
+                    CurrentPage = 1;
+                    _ = Application.Current.Dispatcher.InvokeAsync(async () => await LoadCurrentPageData());
                 }
             }
         }
@@ -468,6 +518,12 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand RemovePredecessorCommand { get; }
         public ICommand RemoveSuccessorCommand { get; }
 
+        // ページングコマンド
+        public ICommand FirstPageCommand { get; }
+        public ICommand PreviousPageCommand { get; }
+        public ICommand NextPageCommand { get; }
+        public ICommand LastPageCommand { get; }
+
         public WbsViewModel()
         {
             // 初期状態ではプログレスバーを非表示
@@ -525,9 +581,15 @@ namespace RedmineClient.ViewModels.Pages
             SettingsCommand = new RelayCommand(OpenSettings);
             CreateNewIssueCommand = new RelayCommand(CreateNewIssue);
             RegisterItemsCommand = new RelayCommand(RegisterItems);
-            RemoveDependencyCommand = new RelayCommand<WbsItem?>(RemoveDependency);
-            RemovePredecessorCommand = new RelayCommand<WbsItem?>(RemovePredecessor);
-            RemoveSuccessorCommand = new RelayCommand<WbsItem?>(RemoveSuccessor);
+                    RemoveDependencyCommand = new RelayCommand<WbsItem?>(RemoveDependency);
+        RemovePredecessorCommand = new RelayCommand<WbsItem?>(RemovePredecessor);
+        RemoveSuccessorCommand = new RelayCommand<WbsItem?>(RemoveSuccessor);
+
+        // ページングコマンドの初期化
+        FirstPageCommand = new RelayCommand(FirstPage, () => CurrentPage > 1);
+        PreviousPageCommand = new RelayCommand(PreviousPage, () => CurrentPage > 1);
+        NextPageCommand = new RelayCommand(NextPage, () => CurrentPage < TotalPages);
+        LastPageCommand = new RelayCommand(LastPage, () => CurrentPage < TotalPages);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -1396,47 +1458,9 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        /// <summary>
-        /// アイテムと（展開されている場合）その子アイテムを平坦化リストに追加（重複チェック付き）
-        /// </summary>
-        private void AddItemToFlattened(WbsItem item, HashSet<WbsItem> addedItems)
-        {
-            // 重複チェック
-            if (addedItems.Contains(item))
-            {
-                return;
-            }
 
-            // 担当者フィルターを適用
-            if (!string.IsNullOrEmpty(SelectedAssignee) && SelectedAssignee != "全担当者")
-            {
-                if (string.IsNullOrEmpty(item.Assignee) || item.Assignee != SelectedAssignee)
-                {
-                    // 担当者が一致しない場合、子アイテムも含めてスキップ
-                    return;
-                }
-            }
 
-            // UIスレッドで実行されていることを確認
-            if (Application.Current.Dispatcher.CheckAccess())
-            {
-                FlattenedWbsItems.Add(item);
-                addedItems.Add(item);
 
-                if (item.IsExpanded && item.HasChildren)
-                {
-                    foreach (var child in item.Children)
-                    {
-                        AddItemToFlattened(child, addedItems);
-                    }
-                }
-            }
-            else
-            {
-                // UIスレッドでない場合は、UIスレッドで実行
-                Application.Current.Dispatcher.Invoke(() => AddItemToFlattened(item, addedItems));
-            }
-        }
 
         /// <summary>
         /// タスクを選択する
@@ -2263,19 +2287,32 @@ namespace RedmineClient.ViewModels.Pages
 
                 using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
                 {
-                    // データ取得（20%）
-                    var issues = await redmineService.GetIssuesWithHierarchyAsync(projectId).ConfigureAwait(false);
+                    // 総アイテム数を取得
+                    var totalCount = await redmineService.GetIssuesCountAsync(projectId).ConfigureAwait(false);
+                    
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        TotalItems = totalCount;
+                        TotalPages = Math.Max(1, (int)Math.Ceiling((double)TotalItems / SelectedPageSize));
+                        CurrentPage = 1; // 最初のページから開始
+                        
+                        WbsProgress = 20;
+                        WbsProgressMessage = "チケットデータを取得中...";
+                    });
+
+                    // 最初のページのデータを取得
+                    var offset = 0;
+                    var issues = await redmineService.GetIssuesWithHierarchyAsync(projectId, SelectedPageSize, offset).ConfigureAwait(false);
 
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        WbsProgress = 20;
+                        WbsProgress = 40;
                         WbsProgressMessage = "チケットデータを変換中...";
                     });
 
-                    // バックグラウンドスレッドでWBSアイテムの変換を実行（40%）
+                    // バックグラウンドスレッドでWBSアイテムの変換を実行
                     var wbsItems = await Task.Run(() =>
                     {
-                        // すべてのルートチケットを一度に処理して依存関係を正しく設定
                         return ConvertMultipleRedmineIssuesToWbsItems(issues);
                     }).ConfigureAwait(false);
 
@@ -2285,7 +2322,7 @@ namespace RedmineClient.ViewModels.Pages
                         WbsProgressMessage = "UIコレクションを更新中...";
                     });
 
-                    // UIスレッドでコレクションを更新（80%）
+                    // UIスレッドでコレクションを更新
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         try
@@ -2301,7 +2338,15 @@ namespace RedmineClient.ViewModels.Pages
                             WbsProgressMessage = "平坦化リストを更新中...";
 
                             // 平坦化リストを更新
-                            _ = Application.Current.Dispatcher.InvokeAsync(async () => await UpdateFlattenedList());
+                            UpdateFlattenedListForCurrentPage();
+
+                            // コマンドの有効/無効状態を更新
+                            ((RelayCommand)FirstPageCommand).NotifyCanExecuteChanged();
+                            ((RelayCommand)PreviousPageCommand).NotifyCanExecuteChanged();
+                            ((RelayCommand)NextPageCommand).NotifyCanExecuteChanged();
+                            ((RelayCommand)LastPageCommand).NotifyCanExecuteChanged();
+
+                            FilteredItems = FlattenedWbsItems.Count;
 
                             // Redmineデータ読み込み後、選択状態を復元
                             if (SelectedItem != null)
@@ -3318,6 +3363,232 @@ namespace RedmineClient.ViewModels.Pages
             catch
             {
                 // 依存関係の設定でエラーが発生した場合は無視して続行
+            }
+        }
+
+        /// <summary>
+        /// 現在のページのデータを読み込む
+        /// </summary>
+        private async Task LoadCurrentPageData()
+        {
+            if (SelectedProject == null || !IsRedmineConnected)
+            {
+                return;
+            }
+
+            try
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    SetWbsLoading(true);
+                    WbsProgress = 0;
+                    WbsProgressMessage = "データを読み込み中...";
+                });
+
+                using (var redmineService = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey))
+                {
+                    // 総アイテム数を取得
+                    var totalCount = await redmineService.GetIssuesCountAsync(SelectedProject.Id).ConfigureAwait(false);
+                    
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        TotalItems = totalCount;
+                        TotalPages = Math.Max(1, (int)Math.Ceiling((double)TotalItems / SelectedPageSize));
+                        
+                        // 現在のページが総ページ数を超えている場合は調整
+                        if (CurrentPage > TotalPages)
+                        {
+                            CurrentPage = TotalPages;
+                        }
+                        
+                        WbsProgress = 30;
+                        WbsProgressMessage = "チケットデータを取得中...";
+                    });
+
+                    // 現在のページのオフセットを計算
+                    var offset = (CurrentPage - 1) * SelectedPageSize;
+                    
+                    // 指定された範囲のチケットを取得
+                    var issues = await redmineService.GetIssuesWithHierarchyAsync(SelectedProject.Id, SelectedPageSize, offset).ConfigureAwait(false);
+
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 60;
+                        WbsProgressMessage = "チケットデータを変換中...";
+                    });
+
+                    // WBSアイテムに変換
+                    var wbsItems = await Task.Run(() =>
+                    {
+                        return ConvertMultipleRedmineIssuesToWbsItems(issues);
+                    }).ConfigureAwait(false);
+
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        WbsProgress = 80;
+                        WbsProgressMessage = "UIを更新中...";
+                    });
+
+                    // UIを更新
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        try
+                        {
+                            // WBSアイテムを完全にクリア
+                            WbsItems.Clear();
+                            foreach (var wbsItem in wbsItems)
+                            {
+                                WbsItems.Add(wbsItem);
+                            }
+
+                            // 平坦化リストを更新
+                            UpdateFlattenedListForCurrentPage();
+
+                            // コマンドの有効/無効状態を更新
+                            ((RelayCommand)FirstPageCommand).NotifyCanExecuteChanged();
+                            ((RelayCommand)PreviousPageCommand).NotifyCanExecuteChanged();
+                            ((RelayCommand)NextPageCommand).NotifyCanExecuteChanged();
+                            ((RelayCommand)LastPageCommand).NotifyCanExecuteChanged();
+
+                            FilteredItems = FlattenedWbsItems.Count;
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorMessage = $"UI更新中にエラーが発生しました: {ex.Message}";
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ErrorMessage = $"データの読み込みに失敗しました: {ex.Message}";
+                });
+            }
+            finally
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    SetWbsLoading(false);
+                });
+            }
+        }
+
+        /// <summary>
+        /// 現在のページの平坦化リストを更新
+        /// </summary>
+        private void UpdateFlattenedListForCurrentPage()
+        {
+            FlattenedWbsItems.Clear();
+            
+            foreach (var item in WbsItems)
+            {
+                AddItemToFlattenedForCurrentPage(item, new HashSet<WbsItem>());
+            }
+        }
+
+        /// <summary>
+        /// アイテムと（展開されている場合）その子アイテムを平坦化リストに追加（担当者フィルター適用）
+        /// </summary>
+        private void AddItemToFlattenedForCurrentPage(WbsItem item, HashSet<WbsItem> addedItems)
+        {
+            // 重複チェック
+            if (addedItems.Contains(item))
+            {
+                return;
+            }
+
+            // 担当者フィルターを適用
+            if (!string.IsNullOrEmpty(SelectedAssignee) && SelectedAssignee != "全担当者")
+            {
+                if (string.IsNullOrEmpty(item.Assignee) || item.Assignee != SelectedAssignee)
+                {
+                    // 担当者が一致しない場合、子アイテムも含めてスキップ
+                    return;
+                }
+            }
+
+            FlattenedWbsItems.Add(item);
+            addedItems.Add(item);
+
+            if (item.IsExpanded && item.HasChildren)
+            {
+                foreach (var child in item.Children)
+                {
+                    AddItemToFlattenedForCurrentPage(child, addedItems);
+                }
+            }
+        }
+
+        /// <summary>
+        /// アイテムと（展開されている場合）その子アイテムを平坦化リストに追加（通常版）
+        /// </summary>
+        private void AddItemToFlattened(WbsItem item, HashSet<WbsItem> addedItems)
+        {
+            // 重複チェック
+            if (addedItems.Contains(item))
+            {
+                return;
+            }
+
+            FlattenedWbsItems.Add(item);
+            addedItems.Add(item);
+
+            if (item.IsExpanded && item.HasChildren)
+            {
+                foreach (var child in item.Children)
+                {
+                    AddItemToFlattened(child, addedItems);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 最初のページに移動
+        /// </summary>
+        private void FirstPage()
+        {
+            if (CurrentPage > 1)
+            {
+                CurrentPage = 1;
+                _ = Application.Current.Dispatcher.InvokeAsync(async () => await LoadCurrentPageData());
+            }
+        }
+
+        /// <summary>
+        /// 前のページに移動
+        /// </summary>
+        private void PreviousPage()
+        {
+            if (CurrentPage > 1)
+            {
+                CurrentPage--;
+                _ = Application.Current.Dispatcher.InvokeAsync(async () => await LoadCurrentPageData());
+            }
+        }
+
+        /// <summary>
+        /// 次のページに移動
+        /// </summary>
+        private void NextPage()
+        {
+            if (CurrentPage < TotalPages)
+            {
+                CurrentPage++;
+                _ = Application.Current.Dispatcher.InvokeAsync(async () => await LoadCurrentPageData());
+            }
+        }
+
+        /// <summary>
+        /// 最後のページに移動
+        /// </summary>
+        private void LastPage()
+        {
+            if (CurrentPage < TotalPages)
+            {
+                CurrentPage = TotalPages;
+                _ = Application.Current.Dispatcher.InvokeAsync(async () => await LoadCurrentPageData());
             }
         }
     }
