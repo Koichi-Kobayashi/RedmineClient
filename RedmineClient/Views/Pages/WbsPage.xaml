@@ -189,7 +189,7 @@
                     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
                     BorderThickness="1" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="True" CanUserResizeColumns="True"
-                    CanUserSortColumns="True" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave" Drop="WbsDataGrid_Drop" EnableColumnVirtualization="True"
+                    CanUserSortColumns="True" DragEnter="WbsDataGrid_DragEnter" DragLeave="WbsDataGrid_DragLeave" Drop="WbsDataGrid_Drop_Command" EnableColumnVirtualization="True"
                     EnableRowVirtualization="True" FrozenColumnCount="2" GridLinesVisibility="All" HeadersVisibility="Column"
                     ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
                     RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
@@ -515,7 +515,7 @@
                                         <!--  ドロップターゲット（先行・後続設定用）- 常に表示  -->
                                         <Border
                                             Grid.Column="0" Padding="4,2" AllowDrop="True" Background="Transparent" BorderBrush="Transparent"
-                                            BorderThickness="1" CornerRadius="2" DragEnter="DependencyDrop_DragEnter" DragLeave="DependencyDrop_DragLeave" Drop="DependencyDrop_Drop" />
+                                            BorderThickness="1" CornerRadius="2" DragEnter="DependencyDrop_DragEnter" DragLeave="DependencyDrop_DragLeave" Drop="DependencyDrop_Drop_Command" />
 
                                         <!--  ツールチップ（詳細情報表示）  -->
                                         <Grid.ToolTip>

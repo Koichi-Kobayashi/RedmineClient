@@ -1906,13 +1906,12 @@ namespace RedmineClient.Views.Pages
         // - 同じ階層レベルで同じ親を持つタスク間でのみ移動可能
         // - 異なる階層や親が異なるタスクへの移動は無効
 
-        private Point _dragStartPoint;
-        private bool _isDragging = false;
+        #region コマンドパターン用イベントハンドラー
 
         /// <summary>
-        /// DataGridのドロップイベント
+        /// DataGridのドロップイベント（コマンドパターン用）
         /// </summary>
-        private void WbsDataGrid_Drop(object sender, DragEventArgs e)
+        private void WbsDataGrid_Drop_Command(object sender, DragEventArgs e)
         {
             try
             {
@@ -1930,7 +1929,14 @@ namespace RedmineClient.Views.Pages
                             // 同じ階層レベルで同じ親を持つタスク間での順番変更のみ許可
                             if (sourceItem.Level == targetItem.Level && sourceItem.Parent == targetItem.Parent)
                             {
-                                ViewModel.ReorderTask(sourceItem, targetItem);
+                                // コマンドパラメータを作成
+                                var parameters = new Tuple<WbsItem, WbsItem>(sourceItem, targetItem);
+                                
+                                // ViewModelのコマンドを実行
+                                if (ViewModel.TaskReorderCommand.CanExecute(parameters))
+                                {
+                                    ViewModel.TaskReorderCommand.Execute(parameters);
+                                }
                             }
                         }
                     }
@@ -1941,6 +1947,53 @@ namespace RedmineClient.Views.Pages
                 // DataGridドロップ処理でエラーが発生した場合は無視
             }
         }
+
+        /// <summary>
+        /// 先行・後続列のドロップイベント（コマンドパターン用）
+        /// </summary>
+        private void DependencyDrop_Drop_Command(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (e.Data.GetDataPresent(typeof(WbsItem)))
+                {
+                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
+                    if (sourceItem != null && sender is Border border && border.DataContext is WbsItem targetItem)
+                    {
+                        // 自分自身への依存関係は設定不可
+                        if (sourceItem == targetItem) return;
+
+                        // コマンドパラメータを作成
+                        var parameters = new Tuple<WbsItem, WbsItem, bool>(sourceItem, targetItem, true);
+                        
+                        // ViewModelのコマンドを実行
+                        if (ViewModel.SetDependencyCommand.CanExecute(parameters))
+                        {
+                            ViewModel.SetDependencyCommand.Execute(parameters);
+                        }
+
+                        // 背景色をリセット
+                        border.Background = System.Windows.Media.Brushes.Transparent;
+                        border.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                        border.BorderThickness = new Thickness(1);
+
+                        // UIを強制的に更新
+                        WbsDataGrid.Items.Refresh();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // 依存関係ドロップ処理でエラーが発生した場合は無視
+            }
+        }
+
+        #endregion コマンドパターン用イベントハンドラー
+
+        private Point _dragStartPoint;
+        private bool _isDragging = false;
+
+
 
         /// <summary>
         /// DataGridのドラッグエンターイベント
@@ -2130,42 +2183,7 @@ namespace RedmineClient.Views.Pages
         // - 循環参照が発生する場合は設定を拒否
         // - 自分自身への依存関係は設定不可
 
-        /// <summary>
-        /// 先行・後続列のドロップイベント
-        /// </summary>
-        private void DependencyDrop_Drop(object sender, DragEventArgs e)
-        {
-            try
-            {
-                if (e.Data.GetDataPresent(typeof(WbsItem)))
-                {
-                    var sourceItem = e.Data.GetData(typeof(WbsItem)) as WbsItem;
-                    if (sourceItem != null && sender is Border border && border.DataContext is WbsItem targetItem)
-                    {
-                        // 自分自身への依存関係は設定不可
-                        if (sourceItem == targetItem) return;
 
-                        // 先行・後続の関係性を設定
-                        // タスクAをタスクBにドロップしたとき、タスクAがタスクBの先行タスクになる
-                        ViewModel.SetDependency(sourceItem, targetItem, true);
-
-                        // 背景色をリセット
-                        border.Background = System.Windows.Media.Brushes.Transparent;
-                        border.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                        border.BorderThickness = new Thickness(1);
-
-                        // UIを強制的に更新
-                        WbsDataGrid.Items.Refresh();
-
-                        // Redmineへの更新を非同期で実行
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                // 依存関係ドロップ処理でエラーが発生した場合は無視
-            }
-        }
 
         /// <summary>
         /// 先行・後続列のドラッグエンターイベント

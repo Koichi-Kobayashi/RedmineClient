@@ -711,14 +711,28 @@ namespace RedmineClient.Models
         {
             if (newDependency == null) return false;
             
+            System.Diagnostics.Debug.WriteLine($"WouldCreateCycle: Checking {Title} -> {newDependency.Title}");
+            
             // 新しく追加しようとしている依存関係が現在のアイテム自身の場合は循環参照
-            if (newDependency == this) return true;
+            if (newDependency == this) 
+            {
+                System.Diagnostics.Debug.WriteLine($"WouldCreateCycle: Self-reference detected for {Title}");
+                return true;
+            }
             
             // 新しく追加しようとしている依存関係が既に先行タスクまたは後続タスクとして存在する場合は循環参照
-            if (Predecessors.Contains(newDependency) || Successors.Contains(newDependency)) return true;
+            if (Predecessors.Contains(newDependency) || Successors.Contains(newDependency)) 
+            {
+                System.Diagnostics.Debug.WriteLine($"WouldCreateCycle: Already exists as dependency for {Title}");
+                return true;
+            }
             
             // 新しく追加しようとしている依存関係が現在のアイテムに戻ってくるかをチェック
-            if (newDependency.Successors.Contains(this) || newDependency.Predecessors.Contains(this)) return true;
+            if (newDependency.Successors.Contains(this) || newDependency.Predecessors.Contains(this)) 
+            {
+                System.Diagnostics.Debug.WriteLine($"WouldCreateCycle: Reverse dependency detected for {Title}");
+                return true;
+            }
             
             // 新しく追加しようとしている依存関係を一時的に追加した状態で循環参照をチェック
             // 現在のアイテムから開始して、新しく追加される依存関係を通じて循環が発生するかをチェック
@@ -732,7 +746,9 @@ namespace RedmineClient.Models
                 // 現在のアイテムから開始して循環参照をチェック
                 // ただし、新しく追加される依存関係自体は除外してチェック
                 // また、既存の依存関係を通じて循環が発生するかもチェック
-                return HasCycleFromCurrentItemExcluding(visited, recursionStack, newDependency);
+                var hasCycle = HasCycleFromCurrentItemExcluding(visited, recursionStack, newDependency);
+                System.Diagnostics.Debug.WriteLine($"WouldCreateCycle: HasCycleFromCurrentItemExcluding returned {hasCycle} for {Title}");
+                return hasCycle;
             }
             finally
             {
@@ -935,6 +951,8 @@ namespace RedmineClient.Models
             // ただし、既存の依存関係がある場合は、それらを通じて循環が発生するかをチェック
             if (WouldCreateCycle(newDependency))
             {
+                System.Diagnostics.Debug.WriteLine($"GetCircularDependencyInfo: WouldCreateCycle returned true for {newDependency.Title}");
+                
                 // 循環参照のパスを構築
                 var cyclePath = new List<WbsItem>();
                 var visited = new HashSet<WbsItem>();
@@ -944,7 +962,8 @@ namespace RedmineClient.Models
                 Predecessors.Add(newDependency);
                 try
                 {
-                    FindCyclePathFromCurrentItem(visited, recursionStack, cyclePath);
+                    var foundCycle = FindCyclePathFromCurrentItem(visited, recursionStack, cyclePath);
+                    System.Diagnostics.Debug.WriteLine($"GetCircularDependencyInfo: FindCyclePathFromCurrentItem returned {foundCycle}, cyclePath.Count = {cyclePath.Count}");
                 }
                 finally
                 {
@@ -976,8 +995,11 @@ namespace RedmineClient.Models
         /// <returns>循環参照が存在する場合はtrue</returns>
         private bool FindCyclePathFromCurrentItem(HashSet<WbsItem> visited, HashSet<WbsItem> recursionStack, List<WbsItem> cyclePath)
         {
+            System.Diagnostics.Debug.WriteLine($"FindCyclePathFromCurrentItem: Checking {Title}, recursionStack.Count = {recursionStack.Count}, cyclePath.Count = {cyclePath.Count}");
+            
             if (recursionStack.Contains(this))
             {
+                System.Diagnostics.Debug.WriteLine($"FindCyclePathFromCurrentItem: Cycle detected for {Title}");
                 // 循環参照のパスを構築
                 var cycleStartIndex = cyclePath.IndexOf(this);
                 if (cycleStartIndex >= 0)
@@ -1016,7 +1038,11 @@ namespace RedmineClient.Models
             finally
             {
                 recursionStack.Remove(this);
-                cyclePath.RemoveAt(cyclePath.Count - 1);
+                // リストが空でない場合のみ削除
+                if (cyclePath.Count > 0)
+                {
+                    cyclePath.RemoveAt(cyclePath.Count - 1);
+                }
             }
         }
 
@@ -1065,7 +1091,11 @@ namespace RedmineClient.Models
                         return true;
                 }
 
-                cyclePath.RemoveAt(cyclePath.Count - 1);
+                // リストが空でない場合のみ削除
+                if (cyclePath.Count > 0)
+                {
+                    cyclePath.RemoveAt(cyclePath.Count - 1);
+                }
                 return false;
             }
             finally
@@ -1133,7 +1163,11 @@ namespace RedmineClient.Models
                         return true;
                 }
 
-                cyclePath.RemoveAt(cyclePath.Count - 1);
+                // リストが空でない場合のみ削除
+                if (cyclePath.Count > 0)
+                {
+                    cyclePath.RemoveAt(cyclePath.Count - 1);
+                }
                 return false;
             }
             finally

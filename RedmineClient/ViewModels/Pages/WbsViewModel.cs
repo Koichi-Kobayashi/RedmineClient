@@ -468,6 +468,10 @@ namespace RedmineClient.ViewModels.Pages
         public ICommand UpdateTaskDateCommand { get; }
         public ICommand ScheduleStartYearMonthChangedCommand { get; }
 
+        // ドラッグ&ドロップ用コマンド
+        public ICommand TaskReorderCommand { get; }
+        public ICommand SetDependencyCommand { get; }
+
         public WbsViewModel()
         {
             // 初期状態ではプログレスバーを非表示
@@ -531,6 +535,10 @@ namespace RedmineClient.ViewModels.Pages
             OpenRedmineIssueCommand = new RelayCommand<string>(OpenRedmineIssue);
             UpdateTaskDateCommand = new AsyncRelayCommand<object>(UpdateTaskDateAsync);
             ScheduleStartYearMonthChangedCommand = new RelayCommand<string>(ScheduleStartYearMonthChanged);
+
+            // ドラッグ&ドロップ用コマンド
+            TaskReorderCommand = new RelayCommand<Tuple<WbsItem, WbsItem>>(TaskReorderCommandMethod);
+            SetDependencyCommand = new RelayCommand<Tuple<WbsItem, WbsItem, bool>>(SetDependencyCommandMethod);
         }
 
         public virtual async Task OnNavigatedToAsync()
@@ -1735,6 +1743,28 @@ namespace RedmineClient.ViewModels.Pages
         {
             // 非同期処理を開始（結果は待たない）
             _ = SetDependencyAsync(sourceItem, targetItem, isPredecessor);
+        }
+
+        /// <summary>
+        /// タスクの順番を変更する（コマンド用）
+        /// </summary>
+        /// <param name="parameters">Tuple<sourceItem, targetItem></param>
+        public void TaskReorderCommandMethod(Tuple<WbsItem, WbsItem>? parameters)
+        {
+            if (parameters == null) return;
+            var (sourceItem, targetItem) = parameters;
+            ReorderTask(sourceItem, targetItem);
+        }
+
+        /// <summary>
+        /// 先行・後続の関係性を設定する（コマンド用）
+        /// </summary>
+        /// <param name="parameters">Tuple<sourceItem, targetItem, isPredecessor></param>
+        public void SetDependencyCommandMethod(Tuple<WbsItem, WbsItem, bool>? parameters)
+        {
+            if (parameters == null) return;
+            var (sourceItem, targetItem, isPredecessor) = parameters;
+            SetDependency(sourceItem, targetItem, isPredecessor);
         }
 
         /// <summary>
@@ -3523,6 +3553,28 @@ namespace RedmineClient.ViewModels.Pages
             }
             
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// タスクの順番を変更する（コマンド用）
+        /// </summary>
+        /// <param name="parameters">Tuple<sourceItem, targetItem></param>
+        private void TaskReorder(Tuple<WbsItem, WbsItem>? parameters)
+        {
+            if (parameters == null) return;
+            var (sourceItem, targetItem) = parameters;
+            ReorderTask(sourceItem, targetItem);
+        }
+
+        /// <summary>
+        /// 先行・後続の関係性を設定する（コマンド用）
+        /// </summary>
+        /// <param name="parameters">Tuple<sourceItem, targetItem, isPredecessor></param>
+        private void SetDependency(Tuple<WbsItem, WbsItem, bool>? parameters)
+        {
+            if (parameters == null) return;
+            var (sourceItem, targetItem, isPredecessor) = parameters;
+            SetDependency(sourceItem, targetItem, isPredecessor);
         }
     }
 }
