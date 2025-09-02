@@ -51,9 +51,11 @@ namespace RedmineClient.Views.Controls
 
                 if (isMonth)
                 {
-                    var s = new FormattedText($"{d:yyyy MMM}", System.Globalization.CultureInfo.CurrentUICulture,
+                    var ymCulture = System.Globalization.CultureInfo.CurrentUICulture;
+                    var ymText = new FormattedText(d.ToString("yyyy年MM月", ymCulture), ymCulture,
                         FlowDirection.LeftToRight, ft, 12, textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                    dc.DrawText(s, new Point(x + 4, 2));
+                    // 月初（1日）の縦線位置を左端として表示
+                    dc.DrawText(ymText, new Point(x + 2, 2));
                 }
                 // 曜日（日本語略称などカルチャに依存）
                 var culture = System.Globalization.CultureInfo.CurrentUICulture;
@@ -67,14 +69,16 @@ namespace RedmineClient.Views.Controls
                 double centerX = cellX + DayWidth / 2.0;
                 var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
-                // 日付（数値）を上段に、曜日を下段に
+                // 日付（数値）を中段、曜日を下段に（1行下へシフト）
                 var domText = new FormattedText(d.ToString("dd"), culture,
                         FlowDirection.LeftToRight, ft, 12, textBrush, dpi);
-                dc.DrawText(domText, new Point(centerX - domText.Width / 2.0, 18));
+                // 年月との間隔を詰める
+                dc.DrawText(domText, new Point(centerX - domText.Width / 2.0, 24));
 
                 var dowText = new FormattedText(dowStr, culture,
                         FlowDirection.LeftToRight, ft, 11, dowBrush, dpi);
-                dc.DrawText(dowText, new Point(centerX - dowText.Width / 2.0, 34));
+                // 下端に余白を確保
+                dc.DrawText(dowText, new Point(centerX - dowText.Width / 2.0, 46));
 
                 d = d.AddDays(1);
             }

@@ -174,16 +174,13 @@
                   beh:ScrollSyncBehavior.GroupKey="WBS">
       <Grid>
         <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <!-- ヘッダの高さとLeftGridの行高を合わせるスペーサー（ズレ防止） -->
-        <Border Grid.Row="0" Height="28" Background="Transparent"/>
-        <ctrls:TimelineGridOverlay Grid.Row="1" IsHitTestVisible="False"
+        <ctrls:TimelineGridOverlay Grid.Row="0" IsHitTestVisible="False"
                                    DayWidth="{Binding DayWidth}"
                                    StartDate="{Binding ViewStart}"
                                    LineBrush="#22000000"/>
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding Tasks}">
+        <ItemsControl Grid.Row="0" ItemsSource="{Binding Tasks}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <Canvas />
