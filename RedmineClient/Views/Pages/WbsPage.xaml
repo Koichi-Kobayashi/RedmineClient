@@ -378,8 +378,10 @@
 
                                         <!--  展開/折りたたみボタン（子タスクがある場合のみ表示）  -->
                                         <Border
-                                            Grid.Column="0" Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}"
-                                            Padding="4,2" Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                            Grid.Column="0"
+                                            Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}"
+                                            Padding="4,2"
+                                            Background="{DynamicResource SubtleFillColorSecondaryBrush}"
                                             BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
                                             BorderThickness="1" CornerRadius="3" Cursor="Hand"
                                             DataContext="{Binding}"
@@ -390,17 +392,10 @@
                                                 <ui:TextBlock
                                                     Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"
                                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                    Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}" />
+                                                    Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}"
+                                                    TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Border>
-
-                                        <!--  サブタスク数表示（子タスクがある場合のみ表示）  -->
-                                        <ui:TextBlock 
-                                            Grid.Column="1" Margin="4,0,8,0"
-                                            VerticalAlignment="Center" FontSize="12" 
-                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
-                                            Text="{Binding Children.Count, StringFormat={}{0}個のサブタスク}"
-                                            Visibility="{Binding HasChildren, Converter={x:Static helpers:BoolToVisibilityConverter.Instance}}" />
 
                                         <!--  子タスクがない場合のインデントスペーサー  -->
                                         <StackPanel Grid.Column="0" Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}" Orientation="Horizontal" Visibility="{Binding HasChildren, Converter={x:Static helpers:BooleanInverseConverter.Instance}}">

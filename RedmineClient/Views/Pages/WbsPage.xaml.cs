@@ -49,18 +49,15 @@ namespace RedmineClient.Views.Pages
                 {
                     await ViewModel.InitializeViewModel();
                     
-                    // 初期化完了後のデバッグ出力
+                    // 初期化完了後にDataGridのItemsSourceを設定
                     if (Application.Current != null)
                     {
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-
-                            
                             // 初期化完了後にDataGridのItemsSourceを設定
                             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && ViewModel.FlattenedWbsItems?.Count > 0)
                             {
                                 WbsDataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
-
                             }
                         });
                     }
@@ -71,7 +68,7 @@ namespace RedmineClient.Views.Pages
                 }
                 catch (Exception ex)
                 {
-
+                    // ViewModelの初期化でエラーが発生した場合は無視
                 }
             });
 
@@ -257,8 +254,6 @@ namespace RedmineClient.Views.Pages
                 // スケジュール開始年月の初期化
                 InitializeScheduleStartYearMonth();
 
-
-
                 // DataGridの初期化処理を統合実行
                 _ = InitializeDataGridAsync();
 
@@ -310,8 +305,6 @@ namespace RedmineClient.Views.Pages
                     // 無限ループを防ぐ（最大100回まで待機）
                     if (waitCount >= 100)
                     {
-                        
-
                         break;
                     }
                 }
@@ -931,8 +924,6 @@ namespace RedmineClient.Views.Pages
 
                 // スケジュール開始年月の初期化
                 InitializeScheduleStartYearMonth();
-
-
             }
             catch (Exception)
             {
@@ -980,8 +971,6 @@ namespace RedmineClient.Views.Pages
                 // エラー処理は必要に応じて実装
             }
         }
-
-
 
         private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -1134,10 +1123,6 @@ namespace RedmineClient.Views.Pages
                 // このイベントは一度だけ実行
                 dataGrid.Loaded -= WbsDataGrid_Loaded;
                 
-                
-                
-
-                
                 // ViewModelの初期化が完了するまで待機（タイムアウト付き）
                 var waitCount = 0;
                 while (ViewModel.FlattenedWbsItems == null || ViewModel.FlattenedWbsItems.Count == 0)
@@ -1170,8 +1155,8 @@ namespace RedmineClient.Views.Pages
                 {
                     try
                     {
-                                                 // プログレスバーを表示
-                         ViewModel.SetWbsLoading(true, true);
+                        // プログレスバーを表示
+                        ViewModel.SetWbsLoading(true, true);
                          ViewModel.WbsProgressMessage = "Redmineデータを読み込み中...";
                          ViewModel.WbsProgress = 0;
                         
@@ -1379,8 +1364,6 @@ namespace RedmineClient.Views.Pages
 
                 // 日付列生成処理をキャンセル
                 _generateColumnsCancellation?.Cancel();
-
-
 
                 // 未保存の変更がある場合は保存処理を実行
                 if (ViewModel != null)

@@ -521,34 +521,21 @@ namespace RedmineClient.Models
         {
             if (predecessor == null || predecessor == this) return false;
 
-            // デバッグログ：既存の先行タスクかどうかをチェック
-            bool isAlreadyPredecessor = Predecessors.Contains(predecessor);
-            System.Diagnostics.Debug.WriteLine($"AddPredecessor: {Title} -> {predecessor.Title}, Already exists: {isAlreadyPredecessor}");
-
             // 既存の先行タスクの場合は何もしない
-            if (isAlreadyPredecessor)
+            if (Predecessors.Contains(predecessor))
             {
-                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Skipping already existing predecessor {predecessor.Title} for {Title}");
                 return false;
             }
 
             // 循環参照をチェック（Predecessorsに追加する前に行う、ただしスキップ可能）
             if (!skipCycleCheck)
             {
-                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Checking circular dependency for {Title} -> {predecessor.Title}");
                 var cycleInfo = GetCircularDependencyInfo(predecessor);
                 if (cycleInfo.HasCycle)
                 {
-                    System.Diagnostics.Debug.WriteLine($"AddPredecessor: Circular dependency detected: {cycleInfo.GetDescription()}");
                     throw new InvalidOperationException($"先行タスク「{predecessor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
                 }
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"AddPredecessor: Skipping circular dependency check for {Title} -> {predecessor.Title}");
-            }
-
-            System.Diagnostics.Debug.WriteLine($"AddPredecessor: Adding predecessor {predecessor.Title} to {Title}");
             Predecessors.Add(predecessor);
             
             // 相互呼び出しをスキップしない場合のみ、後続タスクとして追加
@@ -617,34 +604,21 @@ namespace RedmineClient.Models
         {
             if (successor == null || successor == this) return false;
 
-            // デバッグログ：既存の後続タスクかどうかをチェック
-            bool isAlreadySuccessor = Successors.Contains(successor);
-            System.Diagnostics.Debug.WriteLine($"AddSuccessor: {Title} -> {successor.Title}, Already exists: {isAlreadySuccessor}");
-
             // 既存の後続タスクの場合は何もしない
-            if (isAlreadySuccessor)
+            if (Successors.Contains(successor))
             {
-                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Skipping already existing successor {successor.Title} for {Title}");
                 return false;
             }
 
             // 循環参照をチェック（Successorsに追加する前に行う、ただしスキップ可能）
             if (!skipCycleCheck)
             {
-                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Checking circular dependency for {Title} -> {successor.Title}");
                 var cycleInfo = GetCircularDependencyInfo(successor);
                 if (cycleInfo.HasCycle)
                 {
-                    System.Diagnostics.Debug.WriteLine($"AddSuccessor: Circular dependency detected: {cycleInfo.GetDescription()}");
                     throw new InvalidOperationException($"後続タスク「{successor.Title}」を追加すると循環参照が発生します。\n{cycleInfo.GetDescription()}");
                 }
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"AddSuccessor: Skipping circular dependency check for {Title} -> {successor.Title}");
-            }
-
-            System.Diagnostics.Debug.WriteLine($"AddSuccessor: Adding successor {successor.Title} to {Title}");
             Successors.Add(successor);
             
             // 相互呼び出しをスキップしない場合のみ、先行タスクとして追加

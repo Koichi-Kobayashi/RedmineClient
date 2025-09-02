@@ -2884,17 +2884,7 @@ namespace RedmineClient.ViewModels.Pages
                 return;
             }
 
-            // デバッグログ：階層構造を確認
-            System.Diagnostics.Debug.WriteLine($"AddItemToFlattenedOptimized - ID: {item.Id}, Title: {item.Title}");
-            System.Diagnostics.Debug.WriteLine($"  Level: {item.Level}, IsExpanded: {item.IsExpanded}, HasChildren: {item.HasChildren}, Children.Count: {item.Children.Count}");
-            if (item.Parent != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"  Parent: ID={item.Parent.Id}, Title={item.Parent.Title}, Level={item.Parent.Level}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"  Parent: null (Root item)");
-            }
+
 
             targetList.Add(item);
 
@@ -3570,17 +3560,7 @@ namespace RedmineClient.ViewModels.Pages
                 }
             }
 
-            // デバッグログ：階層構造を確認
-            System.Diagnostics.Debug.WriteLine($"AddItemToFlattenedForCurrentPage - ID: {item.Id}, Title: {item.Title}");
-            System.Diagnostics.Debug.WriteLine($"  Level: {item.Level}, IsExpanded: {item.IsExpanded}, HasChildren: {item.HasChildren}, Children.Count: {item.Children.Count}");
-            if (item.Parent != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"  Parent: ID={item.Parent.Id}, Title={item.Parent.Title}, Level={item.Parent.Level}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"  Parent: null (Root item)");
-            }
+
 
             FlattenedWbsItems.Add(item);
             addedItems.Add(item);
