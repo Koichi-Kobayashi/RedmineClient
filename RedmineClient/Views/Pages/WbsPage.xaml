@@ -421,7 +421,7 @@
                                                 <ui:TextBlock
                                                     Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12"
                                                     FontWeight="{Binding Level, Converter={x:Static helpers:LevelToFontWeightConverter.Instance}}"
-                                                    Foreground="Black"
+                                                    Foreground="#000000"
                                                     Text="{Binding Title}" />
 
                                                 <!--  子タスク数の表示（親タスクの場合）  -->

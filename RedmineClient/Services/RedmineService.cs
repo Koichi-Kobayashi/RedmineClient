@@ -298,12 +298,34 @@ namespace RedmineClient.Services
                 // リフレクションでParentIdを取得
                 var parentId = GetParentIdFromIssue(issue.Issue);
                 
+                // デバッグログ：ID105とID104の関係を確認
+                if (issue.Id == 105 || issue.Id == 104)
+                {
+                    System.Diagnostics.Debug.WriteLine($"BuildHierarchy - Issue ID: {issue.Id}, Subject: {issue.Subject}");
+                    System.Diagnostics.Debug.WriteLine($"  ParentId: {parentId}");
+                    if (parentId.HasValue && issueDict.ContainsKey(parentId.Value))
+                    {
+                        var parent = issueDict[parentId.Value];
+                        System.Diagnostics.Debug.WriteLine($"  Parent found: ID={parent.Id}, Subject={parent.Subject}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Parent not found or no parent");
+                    }
+                }
+                
                 if (parentId.HasValue && parentId.Value > 0)
                 {
                     if (issueDict.ContainsKey(parentId.Value))
                     {
                         var parent = issueDict[parentId.Value];
                         parent.AddChild(issue);
+                        
+                        // デバッグログ：親子関係の設定を確認
+                        if (issue.Id == 105 || issue.Id == 104)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  Parent-Child relationship established: Parent {parent.Id} -> Child {issue.Id}");
+                        }
                     }
                 }
             }

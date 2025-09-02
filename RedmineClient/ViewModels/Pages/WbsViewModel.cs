@@ -393,10 +393,15 @@ namespace RedmineClient.ViewModels.Pages
             get => _selectedProject;
             set
             {
+                System.Diagnostics.Debug.WriteLine($"SelectedProject変更: {_selectedProject?.Name} -> {value?.Name}");
+                System.Diagnostics.Debug.WriteLine($"IsRedmineConnected: {IsRedmineConnected}");
+                
                 if (SetProperty(ref _selectedProject, value))
                 {
                     if (value != null)
                     {
+                        System.Diagnostics.Debug.WriteLine($"プロジェクト選択: ID={value.Id}, 名前={value.Name}");
+                        
                         // 選択されたプロジェクトIDを保存
                         AppConfig.SelectedProjectId = value.Id;
                         AppConfig.Save();
@@ -404,6 +409,8 @@ namespace RedmineClient.ViewModels.Pages
                         // プロジェクトが変更された場合、Redmineデータを自動的に読み込む
                         if (IsRedmineConnected)
                         {
+                            System.Diagnostics.Debug.WriteLine($"Redmine接続済み - データ読み込み開始");
+                            
                             // 重複実行を防ぐためのロック
                             lock (_dataLoadingLock)
                             {
@@ -420,15 +427,21 @@ namespace RedmineClient.ViewModels.Pages
                             // 非同期処理を開始（プロパティのsetter内ではawaitできないため）
                             _ = LoadProjectDataAsync(value);
                         }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Redmine未接続 - データ読み込みをスキップ");
+                        }
                     }
                     else
                     {
+                        System.Diagnostics.Debug.WriteLine($"プロジェクト選択クリア");
                         // 接続されていない場合は何もしない（接続テストは削除）
                     }
                 }
                 else
                 {
                     // プロジェクト選択がクリアされた場合
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト選択がクリアされました");
                     AppConfig.SelectedProjectId = null;
                     AppConfig.Save();
                     WbsItems.Clear();
@@ -1208,6 +1221,10 @@ namespace RedmineClient.ViewModels.Pages
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"LoadProjectDataAsync開始: プロジェクトID={project.Id}, 名前={project.Name}");
+                System.Diagnostics.Debug.WriteLine($"Redmine接続状態: IsRedmineConnected={IsRedmineConnected}");
+                System.Diagnostics.Debug.WriteLine($"RedmineHost: {AppConfig.RedmineHost}, ApiKey設定済み: {!string.IsNullOrEmpty(AppConfig.ApiKey)}");
+                
                 // プログレスバーを表示（既に表示されている場合は上書きしない）
                 SetWbsLoading(true);
                 WbsProgress = 0;
@@ -1226,11 +1243,15 @@ namespace RedmineClient.ViewModels.Pages
                     WbsProgressMessage = "Redmineからデータを取得中...";
 
                     // 担当者リストを取得
+                    System.Diagnostics.Debug.WriteLine($"担当者リスト取得開始: プロジェクトID={project.Id}");
                     var assignees = await redmineService.GetProjectUsersAsync(project.Id).ConfigureAwait(false);
                     AvailableAssignees = assignees;
                     SelectedAssignee = "全担当者"; // デフォルトは全担当者
+                    System.Diagnostics.Debug.WriteLine($"担当者リスト取得完了: {assignees.Count}件");
 
+                    System.Diagnostics.Debug.WriteLine($"チケット取得開始: プロジェクトID={project.Id}");
                     var issues = await redmineService.GetIssuesWithHierarchyAsync(project.Id).ConfigureAwait(false);
+                    System.Diagnostics.Debug.WriteLine($"チケット取得完了: {issues?.Count ?? 0}件");
 
                     // チケットが0個の場合でも適切に処理
                     if (issues == null || issues.Count == 0)
@@ -2592,6 +2613,12 @@ namespace RedmineClient.ViewModels.Pages
                         existingItem.AddChild(childWbsItem);
                     }
                 }
+                
+                // 子アイテムがある親タスクは展開状態にする
+                if (issue.Children != null && issue.Children.Count > 0)
+                {
+                    existingItem.IsExpanded = true;
+                }
 
                 // 親チェーンから削除
                 parentChain.Remove(issue.Id);
@@ -2639,6 +2666,9 @@ namespace RedmineClient.ViewModels.Pages
                         wbsItem.AddChild(childWbsItem);
                     }
                 }
+                
+                // 子アイテムがある親タスクは展開状態にする
+                wbsItem.IsExpanded = true;
             }
 
             // 親チェーンから削除
@@ -3528,6 +3558,21 @@ namespace RedmineClient.ViewModels.Pages
                 {
                     // 担当者が一致しない場合、子アイテムも含めてスキップ
                     return;
+                }
+            }
+
+            // デバッグログ：ID105とID104の関係を確認
+            if (item.Id == "104" || item.Id == "105")
+            {
+                System.Diagnostics.Debug.WriteLine($"AddItemToFlattenedForCurrentPage - ID: {item.Id}, Title: {item.Title}");
+                System.Diagnostics.Debug.WriteLine($"  IsExpanded: {item.IsExpanded}, HasChildren: {item.HasChildren}, Children.Count: {item.Children.Count}");
+                if (item.Parent != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Parent: ID={item.Parent.Id}, Title={item.Parent.Title}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Parent: null");
                 }
             }
 
