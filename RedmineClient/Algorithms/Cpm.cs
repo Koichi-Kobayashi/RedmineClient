@@ -37,6 +37,7 @@ namespace RedmineClient.Algorithms
                             es = System.Math.Max(es, res.ES[link.PredId] + link.LagDays - t.Duration); break;
                     }
                 }
+                if (t.StartMin.HasValue) es = System.Math.Max(es, t.StartMin.Value);
                 res.ES[id] = es < 0 ? 0 : es;
                 res.EF[id] = res.ES[id] + t.Duration;
             }

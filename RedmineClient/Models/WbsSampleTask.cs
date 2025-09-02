@@ -13,6 +13,8 @@ namespace RedmineClient.Models
 
         public List<DependencyLink> Preds { get; } = new();
 
+        public int? StartMin { get; set; }
+
         private int _es; public int ES { get => _es; set { _es = value; OnPropertyChanged(); } }
         private int _ef; public int EF { get => _ef; set { _ef = value; OnPropertyChanged(); } }
         private int _ls; public int LS { get => _ls; set { _ls = value; OnPropertyChanged(); } }

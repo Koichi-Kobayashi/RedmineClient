@@ -59,9 +59,7 @@ namespace RedmineClient.ViewModels.Pages
 
         public void ApplyStartConstraint(WbsSampleTask task, int newEs)
         {
-            // 便宜上、WbsSampleTaskにStartMinを後付けせず、ESを直接調整する簡易版
-            // 厳密にやるならWbsSampleTaskへStartMinを追加し、CPMで考慮します
-            task.ES = newEs;
+            task.StartMin = newEs < 0 ? 0 : newEs;
             Recalculate();
         }
 
