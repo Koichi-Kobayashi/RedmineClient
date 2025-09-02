@@ -69,6 +69,25 @@
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="期間" Binding="{Binding Duration}" Width="*"/>
+        <DataGridTemplateColumn Header="優先度" Width="80">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Border Padding="2,0" Background="{Binding Priority, Converter={x:Static conv:PriorityToBrushConverter.Instance}}" CornerRadius="2">
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" Foreground="White" Text="{Binding Priority}"/>
+              </Border>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellEditingTemplate>
+            <DataTemplate>
+              <ComboBox SelectedValue="{Binding Priority, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                <ComboBoxItem Content="緊急"/>
+                <ComboBoxItem Content="高"/>
+                <ComboBoxItem Content="中"/>
+                <ComboBoxItem Content="低"/>
+              </ComboBox>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellEditingTemplate>
+        </DataGridTemplateColumn>
         <DataGridTextColumn Header="ES" Binding="{Binding ES}" Width="*"/>
         <DataGridTextColumn Header="EF" Binding="{Binding EF}" Width="*"/>
         <DataGridTextColumn Header="LS" Binding="{Binding LS}" Width="*"/>

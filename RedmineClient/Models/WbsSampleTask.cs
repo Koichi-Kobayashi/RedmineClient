@@ -10,6 +10,7 @@ namespace RedmineClient.Models
         public string Name { get; set; } = string.Empty;
         public int Level { get; set; }
         public int Duration { get; set; }
+        public string Priority { get; set; } = "中";
 
         public List<DependencyLink> Preds { get; } = new();
 
