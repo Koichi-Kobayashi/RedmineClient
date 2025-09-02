@@ -5,12 +5,15 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using RedmineClient.Algorithms;
 using RedmineClient.Models;
+using RedmineClient.Services;
+using Redmine.Net.Api.Types;
 
 namespace RedmineClient.ViewModels.Pages
 {
     public class WbsSampleViewModel : INotifyPropertyChanged
     {
         public ObservableCollection<WbsSampleTask> Tasks { get; } = new();
+        public ObservableCollection<Project> AvailableProjects { get; } = new();
 
         private double _dayWidth = 30.0;
         public double DayWidth { get => _dayWidth; set { _dayWidth = value; OnPropertyChanged(); } }
@@ -21,18 +24,27 @@ namespace RedmineClient.ViewModels.Pages
         private bool _showScheduleColumns = true;
         public bool ShowScheduleColumns { get => _showScheduleColumns; set { _showScheduleColumns = value; OnPropertyChanged(); } }
 
+        private Project? _selectedProject;
+        public Project? SelectedProject
+        {
+            get => _selectedProject;
+            set
+            {
+                if (!Equals(_selectedProject, value))
+                {
+                    _selectedProject = value;
+                    OnPropertyChanged();
+                    if (value != null)
+                    {
+                        _ = LoadRedmineDataAsync(value);
+                    }
+                }
+            }
+        }
+
         public WbsSampleViewModel()
         {
-            Tasks.Add(new WbsSampleTask { WbsNo = "1",   Level = 0, Name = "企画", Duration = 3 });
-            var t = new WbsSampleTask { WbsNo = "1.1", Level = 1, Name = "要件定義", Duration = 5 }; t.Preds.Add(new DependencyLink{ PredId="1", Type=LinkType.FS }); Tasks.Add(t);
-            t = new WbsSampleTask { WbsNo = "1.2", Level = 1, Name = "基本設計", Duration = 7 }; t.Preds.Add(new DependencyLink{ PredId="1.1", Type=LinkType.FS }); Tasks.Add(t);
-            t = new WbsSampleTask { WbsNo = "2",   Level = 0, Name = "実装", Duration = 10 }; t.Preds.Add(new DependencyLink{ PredId="1.2", Type=LinkType.SS }); Tasks.Add(t);
-            t = new WbsSampleTask { WbsNo = "2.1", Level = 1, Name = "フロント実装", Duration = 6 }; t.Preds.Add(new DependencyLink{ PredId="2", Type=LinkType.FS }); Tasks.Add(t);
-            t = new WbsSampleTask { WbsNo = "2.2", Level = 1, Name = "バックエンド実装", Duration = 8 }; t.Preds.Add(new DependencyLink{ PredId="2", Type=LinkType.FS }); Tasks.Add(t);
-            t = new WbsSampleTask { WbsNo = "3",   Level = 0, Name = "総合テスト", Duration = 5 }; t.Preds.Add(new DependencyLink{ PredId="2.1", Type=LinkType.FF }); t.Preds.Add(new DependencyLink{ PredId="2.2", Type=LinkType.FF }); Tasks.Add(t);
-
-            ReindexRows();
-            Recalculate();
+            _ = LoadProjectsAsync();
         }
 
         private void ReindexRows()
@@ -64,6 +76,78 @@ namespace RedmineClient.ViewModels.Pages
         {
             task.StartMin = newEs < 0 ? 0 : newEs;
             Recalculate();
+        }
+
+        public async Task LoadProjectsAsync()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
+                using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+                var projects = await svc.GetProjectsAsync();
+                AvailableProjects.Clear();
+                foreach (var p in projects.OrderBy(p => p.Name)) AvailableProjects.Add(p);
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        public async Task LoadRedmineDataAsync(Project project)
+        {
+            try
+            {
+                if (project == null) return;
+                if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
+
+                using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+                var issues = await svc.GetIssuesAsync(project.Id, limit: 1000, offset: 0);
+
+                // 期間が設定されたIssueのみ対象
+                var dated = issues.Where(i => i.StartDate.HasValue && i.DueDate.HasValue)
+                                  .OrderBy(i => i.StartDate!.Value)
+                                  .ToList();
+                if (dated.Count == 0)
+                {
+                    Tasks.Clear();
+                    OnPropertyChanged(nameof(Tasks));
+                    return;
+                }
+
+                var earliest = dated.Min(i => i.StartDate)!.Value.Date;
+                // 表示開始は月初に丸め
+                var viewStart = new DateTime(earliest.Year, earliest.Month, 1);
+                ViewStart = viewStart;
+
+                Tasks.Clear();
+                int row = 0;
+                foreach (var i in dated)
+                {
+                    var sd = i.StartDate!.Value.Date;
+                    var dd = i.DueDate!.Value.Date;
+                    if (dd < sd) dd = sd;
+                    var duration = (int)(dd - sd).TotalDays + 1;
+                    var es = (int)(sd - ViewStart).TotalDays;
+
+                    var t = new WbsSampleTask
+                    {
+                        WbsNo = i.Id.ToString(),
+                        Name = i.Subject ?? $"Issue {i.Id}",
+                        Level = 0,
+                        Duration = duration,
+                        RowIndex = row++,
+                    };
+                    t.StartMin = es < 0 ? 0 : es;
+                    Tasks.Add(t);
+                }
+
+                Recalculate();
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

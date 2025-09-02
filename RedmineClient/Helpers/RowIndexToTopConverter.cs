@@ -6,7 +6,7 @@ namespace RedmineClient.Helpers
 {
     public class RowIndexToTopConverter : IValueConverter
     {
-        public double RowHeight { get; set; } = 28.0;
+        public double RowHeight { get; set; } = 28.0; // 左右の行高を揃えるため、ItemsControl側のHeightと一致
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             => (value is int i) ? i * RowHeight : 0.0;
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
