@@ -50,9 +50,19 @@ namespace RedmineClient.Views.Controls
                         FlowDirection.LeftToRight, ft, 12, textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
                     dc.DrawText(s, new Point(x + 4, 2));
                 }
-                var dayText = new FormattedText(d.ToString("d"), System.Globalization.CultureInfo.CurrentUICulture,
-                        FlowDirection.LeftToRight, ft, 10, textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                dc.DrawText(dayText, new Point(x + 4, 22));
+                // 曜日（日本語略称などカルチャに依存）
+                var culture = System.Globalization.CultureInfo.CurrentUICulture;
+                var dowStr = d.ToString("ddd", culture);
+                Brush dowBrush = (d.DayOfWeek == DayOfWeek.Saturday) ? Brushes.Blue :
+                                 (d.DayOfWeek == DayOfWeek.Sunday) ? Brushes.Red : textBrush;
+                var dowText = new FormattedText(dowStr, culture,
+                        FlowDirection.LeftToRight, ft, 11, dowBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                dc.DrawText(dowText, new Point(x + 4, 20));
+
+                // 日付（数値）
+                var domText = new FormattedText(d.ToString("dd"), culture,
+                        FlowDirection.LeftToRight, ft, 12, textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                dc.DrawText(domText, new Point(x + 4, 36));
 
                 d = d.AddDays(1);
             }
