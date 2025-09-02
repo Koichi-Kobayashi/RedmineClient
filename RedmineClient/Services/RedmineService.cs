@@ -259,7 +259,40 @@ namespace RedmineClient.Services
         {
             try
             {
-                // 複数のプロパティ名を試行
+                // デバッグログ：Issueのプロパティを確認
+                System.Diagnostics.Debug.WriteLine($"GetParentIdFromIssue - Issue ID: {issue.Id}, Subject: {issue.Subject}");
+                
+                // Issueオブジェクトのすべてのプロパティを調査
+                var allProperties = issue.GetType().GetProperties();
+                System.Diagnostics.Debug.WriteLine($"  All properties for Issue {issue.Id}:");
+                foreach (var prop in allProperties)
+                {
+                    try
+                    {
+                        var value = prop.GetValue(issue);
+                        System.Diagnostics.Debug.WriteLine($"    {prop.Name}: {value} (Type: {prop.PropertyType})");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"    {prop.Name}: Error getting value - {ex.Message}");
+                    }
+                }
+                
+                // ParentIssueプロパティを確認
+                var parentIssueProperty = issue.GetType().GetProperty("ParentIssue");
+                if (parentIssueProperty != null)
+                {
+                    var parentIssueValue = parentIssueProperty.GetValue(issue);
+                    System.Diagnostics.Debug.WriteLine($"  ParentIssue: {parentIssueValue} (Type: {parentIssueProperty.PropertyType})");
+                    
+                    if (parentIssueValue is IdentifiableName parentIssue && parentIssue.Id > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Found ParentId from ParentIssue: {parentIssue.Id}");
+                        return parentIssue.Id;
+                    }
+                }
+                
+                // 複数のプロパティ名を試行（フォールバック）
                 var propertyNames = new[] { "ParentId", "parent_id", "Parent", "parent" };
 
                 foreach (var propertyName in propertyNames)
@@ -268,20 +301,38 @@ namespace RedmineClient.Services
                     if (property != null)
                     {
                         var value = property.GetValue(issue);
+                        System.Diagnostics.Debug.WriteLine($"  Property {propertyName}: {value} (Type: {property.PropertyType})");
+                        
                         if (value is int intValue)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  Found ParentId: {intValue}");
                             return intValue;
+                        }
                         // 修正: int?型の値はobjectとして返されるため、直接キャストしてnull判定
                         if (property.PropertyType == typeof(int?))
-                            return (int?)value;
+                        {
+                            var nullableValue = (int?)value;
+                            System.Diagnostics.Debug.WriteLine($"  Found ParentId (nullable): {nullableValue}");
+                            return nullableValue;
+                        }
                         if (value is IdentifiableName identifiableName && identifiableName.Id > 0)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  Found ParentId (IdentifiableName): {identifiableName.Id}");
                             return identifiableName.Id;
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Property {propertyName}: Not found");
                     }
                 }
 
+                System.Diagnostics.Debug.WriteLine($"  No ParentId found for Issue {issue.Id}");
                 return null;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"  Error getting ParentId for Issue {issue.Id}: {ex.Message}");
                 return null;
             }
         }
