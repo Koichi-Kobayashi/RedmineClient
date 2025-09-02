@@ -19,6 +19,7 @@ namespace RedmineClient.Views.Controls
         {
             InitializeComponent();
             SizeChanged += (_, __) => InvalidateVisual();
+            Loaded += (_, __) => InvalidateVisual();
         }
 
         protected override void OnRender(DrawingContext dc)
