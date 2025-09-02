@@ -83,11 +83,12 @@ namespace RedmineClient.Helpers
         
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is bool isSelected)
+            if (value is bool isConnected)
             {
-                return isSelected ? new SolidColorBrush(Colors.Blue) : new SolidColorBrush(Colors.Black);
+                // 接続状態に応じた色を返す
+                return isConnected ? new SolidColorBrush(Colors.Green) : new SolidColorBrush(Colors.Red);
             }
-            return new SolidColorBrush(Colors.Black);
+            return new SolidColorBrush(Colors.Gray);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

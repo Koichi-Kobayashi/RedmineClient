@@ -1384,14 +1384,13 @@ namespace RedmineClient.ViewModels.Pages
 
                     // 重複チェック用のHashSet
                     var addedItems = new HashSet<WbsItem>();
-                    var tempList = new List<WbsItem>();
 
                     var totalItems = WbsItems.Count;
                     var processedItems = 0;
 
                     foreach (var rootItem in WbsItems)
                     {
-                        AddItemToFlattenedWithTempList(rootItem, addedItems, tempList);
+                        AddItemToFlattened(rootItem, addedItems);
                         processedItems++;
 
                         // 進捗を更新（10アイテムごと）
@@ -1401,20 +1400,6 @@ namespace RedmineClient.ViewModels.Pages
                             WbsProgress = Math.Min(progress, 95); // 95%を超えないように制限
                             WbsProgressMessage = $"WBSリストを更新中... {processedItems}/{totalItems}";
                         }
-                    }
-
-                    // IDの昇順でソート
-                    var sortedItems = tempList.OrderBy(item => 
-                    {
-                        if (int.TryParse(item.Id, out int id))
-                            return id;
-                        return int.MaxValue; // 数値でないIDは最後に配置
-                    }).ToList();
-
-                    // ソートされたアイテムをFlattenedWbsItemsに追加
-                    foreach (var item in sortedItems)
-                    {
-                        FlattenedWbsItems.Add(item);
                     }
                 });
 
@@ -1468,14 +1453,13 @@ namespace RedmineClient.ViewModels.Pages
 
                     // 重複チェック用のHashSet
                     var addedItems = new HashSet<WbsItem>();
-                    var tempList = new List<WbsItem>();
 
                     var totalItems = WbsItems.Count;
                     var processedItems = 0;
 
                     foreach (var rootItem in WbsItems)
                     {
-                        AddItemToFlattenedWithTempList(rootItem, addedItems, tempList);
+                        AddItemToFlattened(rootItem, addedItems);
                         processedItems++;
 
                         // 進捗を更新（10アイテムごと）
@@ -1485,20 +1469,6 @@ namespace RedmineClient.ViewModels.Pages
                             WbsProgress = Math.Min(progress, 50); // 50%を超えないように制限
                             WbsProgressMessage = $"WBSリストを更新中... {WbsItems.Count} アイテムを処理中...";
                         }
-                    }
-
-                    // IDの昇順でソート
-                    var sortedItems = tempList.OrderBy(item => 
-                    {
-                        if (int.TryParse(item.Id, out int id))
-                            return id;
-                        return int.MaxValue; // 数値でないIDは最後に配置
-                    }).ToList();
-
-                    // ソートされたアイテムをFlattenedWbsItemsに追加
-                    foreach (var item in sortedItems)
-                    {
-                        FlattenedWbsItems.Add(item);
                     }
                 });
 
@@ -2890,16 +2860,7 @@ namespace RedmineClient.ViewModels.Pages
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
                 FlattenedWbsItems.Clear();
-                
-                // IDの昇順でソート
-                var sortedItems = tempList.OrderBy(item => 
-                {
-                    if (int.TryParse(item.Id, out int id))
-                        return id;
-                    return int.MaxValue; // 数値でないIDは最後に配置
-                }).ToList();
-                
-                foreach (var item in sortedItems)
+                foreach (var item in tempList)
                 {
                     FlattenedWbsItems.Add(item);
                 }
@@ -3646,29 +3607,6 @@ namespace RedmineClient.ViewModels.Pages
                 foreach (var child in item.Children)
                 {
                     AddItemToFlattened(child, addedItems);
-                }
-            }
-        }
-
-        /// <summary>
-        /// アイテムと（展開されている場合）その子アイテムを一時リストに追加（ソート用）
-        /// </summary>
-        private void AddItemToFlattenedWithTempList(WbsItem item, HashSet<WbsItem> addedItems, List<WbsItem> tempList)
-        {
-            // 重複チェック
-            if (addedItems.Contains(item))
-            {
-                return;
-            }
-
-            tempList.Add(item);
-            addedItems.Add(item);
-
-            if (item.IsExpanded && item.HasChildren)
-            {
-                foreach (var child in item.Children)
-                {
-                    AddItemToFlattenedWithTempList(child, addedItems, tempList);
                 }
             }
         }

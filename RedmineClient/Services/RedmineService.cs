@@ -94,6 +94,9 @@ namespace RedmineClient.Services
                 // 親子関係を含めて取得
                 options.QueryString.Add("include", "relations,children,parent");
                 
+                // IDの昇順でソート
+                options.QueryString.Add("sort", "id:asc");
+                
                 if (limit.HasValue)
                     options.QueryString.Add("limit", limit.Value.ToString());
                 if (offset.HasValue)

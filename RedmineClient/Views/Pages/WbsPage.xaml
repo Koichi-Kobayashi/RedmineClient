@@ -419,7 +419,7 @@
 
                                                 <!--  タスクタイトル（階層レベルに応じてフォントウェイトを変更）  -->
                                                 <ui:TextBlock
-                                                    Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12"
+                                                    Margin="4,0,0,0" VerticalAlignment="Center" FontSize="13"
                                                     FontWeight="{Binding Level, Converter={x:Static helpers:LevelToFontWeightConverter.Instance}}"
                                                     Foreground="#000000"
                                                     Text="{Binding Title}" />
