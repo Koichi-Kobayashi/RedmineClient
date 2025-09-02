@@ -1090,16 +1090,32 @@ namespace RedmineClient.Views.Pages
         /// </summary>
         private void ExpansionText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is System.Windows.Controls.TextBlock textBlock && textBlock.DataContext is WbsItem item)
+            try
             {
-                // 展開状態を切り替え
-                item.IsExpanded = !item.IsExpanded;
+                System.Diagnostics.Debug.WriteLine($"ExpansionText_MouseLeftButtonDown called. Sender type: {sender?.GetType().Name}");
+                
+                if (sender is Border expansionBorder && expansionBorder.DataContext is WbsItem item)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Toggling expansion for item: {item.Title}, Current IsExpanded: {item.IsExpanded}");
+                    
+                    // ViewModelの更新処理を実行（ViewModel内でIsExpandedを切り替える）
+                    ViewModel.ToggleExpansion(item);
+                    System.Diagnostics.Debug.WriteLine($"After ViewModel.ToggleExpansion, IsExpanded is: {item.IsExpanded}");
 
-                // ViewModelの更新処理を実行
-                ViewModel.ToggleExpansion(item);
-
-                // UIを即座に更新
-                WbsDataGrid.Items.Refresh();
+                    // UIを即座に更新
+                    WbsDataGrid.Items.Refresh();
+                    
+                    System.Diagnostics.Debug.WriteLine($"Final IsExpanded: {item.IsExpanded}");
+                }
+                else
+                {
+                    var debugBorder = sender as Border;
+                    System.Diagnostics.Debug.WriteLine($"Failed to get WbsItem from DataContext. Sender: {sender?.GetType().Name}, DataContext: {debugBorder?.DataContext?.GetType().Name}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ExpansionText_MouseLeftButtonDown: {ex.Message}");
             }
         }
 

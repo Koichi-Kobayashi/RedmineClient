@@ -73,13 +73,13 @@
                 <StackPanel Margin="0,0,16,0" VerticalAlignment="Center" Orientation="Horizontal">
                     <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" IsChecked="{Binding ViewModel.IsEditModeAfterAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     <ui:TextBlock Margin="4,8,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:追加後編集、OFF:連続追加" />
-                    <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfter, StringFormat='現在のモード: {}{0}'}" />
+                    <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfter, StringFormat=現在のモード: {0}}" />
                 </StackPanel>
 
                 <StackPanel Margin="0,0,16,0" VerticalAlignment="Center" Orientation="Horizontal">
                     <ui:ToggleSwitch Margin="0,0,8,0" Content="タスク詳細表示" IsChecked="{Binding ViewModel.IsTaskDetailVisible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     <ui:TextBlock Margin="4,8,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:詳細表示、OFF:詳細非表示" />
-                    <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsTaskDetailVisible, StringFormat='詳細表示: {}{0}'}" />
+                    <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsTaskDetailVisible, StringFormat=詳細表示: {0}}" />
                 </StackPanel>
             </StackPanel>
         </Grid>
@@ -126,7 +126,7 @@
             <ui:Button
                 Margin="0,0,8,0" Appearance="Success"
                 Command="{Binding ViewModel.RegisterItemsCommand}"
-                Content="{Binding ViewModel.NewItemsCount, StringFormat='登録 ({}{0})'}"
+                Content="{Binding ViewModel.NewItemsCount, StringFormat=登録 ({0})}"
                 Icon="CloudAdd"
                 IsEnabled="{Binding ViewModel.CanRegisterItems}"
                 ToolTip="新しく追加されたアイテムをRedmineに登録します" />
@@ -204,14 +204,14 @@
             <ui:Button Grid.Column="2" Margin="0,0,8,0" Command="{Binding ViewModel.FirstPageCommand}" Content="&lt;&lt;" ToolTip="最初のページ" />
             <ui:Button Grid.Column="3" Margin="0,0,8,0" Command="{Binding ViewModel.PreviousPageCommand}" Content="&lt;" ToolTip="前のページ" />
 
-            <ui:TextBlock Grid.Column="4" Margin="8,0,8,0" VerticalAlignment="Center" Text="{Binding ViewModel.CurrentPage, StringFormat='ページ {}{0}'}" />
+            <ui:TextBlock Grid.Column="4" Margin="8,0,8,0" VerticalAlignment="Center" Text="{Binding ViewModel.CurrentPage, StringFormat=ページ {0}}" />
 
-            <ui:TextBlock Grid.Column="5" Margin="0,0,8,0" VerticalAlignment="Center" Text="{Binding ViewModel.TotalPages, StringFormat='/ {}{0}'}" />
+            <ui:TextBlock Grid.Column="5" Margin="0,0,8,0" VerticalAlignment="Center" Text="{Binding ViewModel.TotalPages, StringFormat=/ {0}}" />
 
             <ui:Button Grid.Column="6" Margin="8,0,8,0" Command="{Binding ViewModel.NextPageCommand}" Content="&gt;" ToolTip="次のページ" />
             <ui:Button Grid.Column="7" Margin="0,0,16,0" Command="{Binding ViewModel.LastPageCommand}" Content="&gt;&gt;" ToolTip="最後のページ" />
 
-            <ui:TextBlock Grid.Column="8" Margin="0,0,0,0" VerticalAlignment="Center" Text="{Binding ViewModel.FilteredItems, StringFormat='表示中: {}{0} 件'}" />
+            <ui:TextBlock Grid.Column="8" Margin="0,0,0,0" VerticalAlignment="Center" Text="{Binding ViewModel.FilteredItems, StringFormat=表示中: {0} 件}" />
         </Grid>
 
         <!--  WBSツリービュー  -->
@@ -376,24 +376,21 @@
                                         <!--  展開/折りたたみテキストとサブタスク数表示（改善版）  -->
                                         <StackPanel Grid.Column="0" Margin="0,0,8,0" Orientation="Horizontal" Visibility="{Binding HasChildren, Converter={x:Static helpers:ObjectToVisibilityConverter.Instance}}">
                                             <Border
-                                                Margin="0,0,4,0" Padding="4,2" Background="{DynamicResource SubtleFillColorSecondaryBrush}" 
-                                                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="1" 
-                                                CornerRadius="3" Cursor="Hand" MouseLeftButtonDown="ExpansionText_MouseLeftButtonDown">
+                                                Margin="0,0,4,0" Padding="4,2"
+                                                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                                BorderThickness="1" CornerRadius="3" Cursor="Hand"
+                                                DataContext="{Binding}"
+                                                MouseLeftButtonDown="ExpansionText_MouseLeftButtonDown">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <ui:SymbolIcon 
-                                                        Symbol="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}"
-                                                        Width="12" Height="12" 
-                                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                    <ui:TextBlock 
-                                                        Margin="4,0,0,0" VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold"
+                                                    <ui:SymbolIcon Width="12" Height="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Symbol="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToIconConverter.Instance}}" />
+                                                    <ui:TextBlock
+                                                        Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"
                                                         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                         Text="{Binding IsExpanded, Converter={x:Static helpers:ExpansionToTextConverter.Instance}}" />
                                                 </StackPanel>
                                             </Border>
-                                            <ui:TextBlock 
-                                                Margin="4,0,0,0" VerticalAlignment="Center" FontSize="9" 
-                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
-                                                Text="{Binding Children.Count, StringFormat='{}{0}個のサブタスク'}" />
+                                            <ui:TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Children.Count, StringFormat={}{0}個のサブタスク}" />
                                         </StackPanel>
 
                                         <!--  階層レベル表示  -->
@@ -408,41 +405,30 @@
                                             </Border.InputBindings>
                                             <StackPanel Margin="{Binding Level, Converter={x:Static helpers:LevelToIndentConverter.Instance}}" Orientation="Horizontal">
                                                 <!--  階層インデント表示（改善版）  -->
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
                                                     <!--  階層レベルに応じた視覚的インジケーター  -->
-                                                    <ui:TextBlock 
-                                                        VerticalAlignment="Center" 
-                                                        FontFamily="Consolas, Courier New, monospace" 
-                                                        FontSize="10" 
-                                                        Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" 
-                                                        Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
-                                                    
+                                                    <ui:TextBlock VerticalAlignment="Center" FontFamily="Consolas, Courier New, monospace" FontSize="10" Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}" Text="{Binding Level, Converter={x:Static helpers:LevelToIndentStringConverter.Instance}}" />
+
                                                     <!--  親タスクの場合は階層インジケーターを追加  -->
-                                                    <ui:TextBlock 
-                                                        Margin="2,0,0,0"
-                                                        VerticalAlignment="Center" 
-                                                        FontSize="10" 
+                                                    <ui:TextBlock
+                                                        Margin="2,0,0,0" VerticalAlignment="Center" FontSize="12"
                                                         Foreground="{Binding Level, Converter={x:Static helpers:LevelToColorConverter.Instance}}"
                                                         Text="{Binding Level, Converter={x:Static helpers:LevelToHierarchyIndicatorConverter.Instance}}"
                                                         Visibility="{Binding HasChildren, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}" />
                                                 </StackPanel>
-                                                
+
                                                 <!--  タスクタイトル（階層レベルに応じてフォントウェイトを変更）  -->
-                                                <ui:TextBlock 
-                                                    Margin="4,0,0,0" 
-                                                    VerticalAlignment="Center" 
+                                                <ui:TextBlock
+                                                    Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12"
                                                     FontWeight="{Binding Level, Converter={x:Static helpers:LevelToFontWeightConverter.Instance}}"
-                                                    FontSize="{Binding Level, Converter={x:Static helpers:LevelToFontSizeConverter.Instance}}"
-                                                    Foreground="{Binding Level, Converter={x:Static helpers:LevelToTextColorConverter.Instance}}"
+                                                    Foreground="Black"
                                                     Text="{Binding Title}" />
-                                                
+
                                                 <!--  子タスク数の表示（親タスクの場合）  -->
-                                                <ui:TextBlock 
-                                                    Margin="8,0,0,0"
-                                                    VerticalAlignment="Center" 
-                                                    FontSize="9" 
+                                                <ui:TextBlock
+                                                    Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11"
                                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                    Text="{Binding Children.Count, StringFormat='({}{0}個のサブタスク)'}"
+                                                    Text="{Binding Children.Count, StringFormat=({0}個のサブタスク)}"
                                                     Visibility="{Binding HasChildren, Converter={x:Static helpers:BooleanToVisibilityConverter.Instance}}" />
                                             </StackPanel>
                                         </Border>
@@ -550,7 +536,7 @@
                                         <ui:TextBlock
                                             Grid.Column="1" MinWidth="40" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"
                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                            Text="{Binding TotalProgress, StringFormat='{}{0:F0}%'}" />
+                                            Text="{Binding TotalProgress, StringFormat={}{0:F0}%}" />
                                     </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -693,8 +679,6 @@
                                 <!--  先行タスクがある場合の強調表示  -->
                                 <DataTrigger Binding="{Binding HasPredecessors}" Value="True">
                                     <Setter Property="Background" Value="#FFF8E1" />
-                                    <Setter Property="BorderBrush" Value="#FFC107" />
-                                    <Setter Property="BorderThickness" Value="0,0,0,1" />
                                 </DataTrigger>
 
                                 <!--  選択状態の優先度を上げる  -->
@@ -810,7 +794,7 @@
                                             x:Name="ProgressSlider" Grid.Column="0" IsSnapToTickEnabled="True" Maximum="100" Minimum="0"
                                             TickFrequency="10"
                                             Value="{Binding ViewModel.SelectedItem.Progress}" />
-                                        <ui:TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Text="{Binding ViewModel.SelectedItem.Progress, StringFormat='{}{0:F0}%'}" />
+                                        <ui:TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontTypography="Caption" Text="{Binding ViewModel.SelectedItem.Progress, StringFormat={}{0:F0}%}" />
                                     </Grid>
 
                                     <!--  ステータス  -->

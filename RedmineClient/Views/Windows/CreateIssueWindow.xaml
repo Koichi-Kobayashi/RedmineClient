@@ -20,7 +20,7 @@
                          FontTypography="Title" 
                          FontSize="24" 
                          Margin="0,0,0,10" />
-            <ui:TextBlock Text="{Binding SelectedProject.Name, StringFormat='プロジェクト: {}{0}'}" 
+            <ui:TextBlock Text="{Binding SelectedProject.Name, StringFormat=プロジェクト: {0}}" 
                          FontTypography="Body" 
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         </StackPanel>
