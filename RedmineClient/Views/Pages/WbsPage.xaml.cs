@@ -181,7 +181,32 @@ namespace RedmineClient.Views.Pages
                     // エスケープキーで選択状態をクリア
                     if (ViewModel.SelectedItem != null)
                     {
+                        // ViewModelとDataGridの両方の選択状態をクリア
                         ViewModel.SelectedItem = null;
+                        if (WbsDataGrid != null)
+                        {
+                            WbsDataGrid.UnselectAll();
+                            WbsDataGrid.SelectedIndex = -1;
+                            
+                            // すべてのWbsItemのIsSelectedプロパティをfalseに設定
+                            if (ViewModel.FlattenedWbsItems != null)
+                            {
+                                foreach (var item in ViewModel.FlattenedWbsItems)
+                                {
+                                    item.IsSelected = false;
+                                }
+                            }
+                            
+                            // フォーカスを安全にクリア
+                            try
+                            {
+                                Keyboard.ClearFocus();
+                            }
+                            catch (Exception)
+                            {
+                                // フォーカス操作でエラーが発生した場合は無視
+                            }
+                        }
                         e.Handled = true;
                     }
                     break;
@@ -212,6 +237,38 @@ namespace RedmineClient.Views.Pages
                         e.Handled = true;
                     }
                     break;
+
+                case Key.Escape:
+                    // エスケープキーでDataGridの選択状態をクリア
+                    if (sender is DataGrid dataGrid)
+                    {
+                        // 選択状態をクリア
+                        dataGrid.UnselectAll();
+                        dataGrid.SelectedIndex = -1;
+                        ViewModel.SelectedItem = null;
+                        
+                        // すべてのWbsItemのIsSelectedプロパティをfalseに設定
+                        if (ViewModel.FlattenedWbsItems != null)
+                        {
+                            foreach (var item in ViewModel.FlattenedWbsItems)
+                            {
+                                item.IsSelected = false;
+                            }
+                        }
+                        
+                        // フォーカスを安全にクリア
+                        try
+                        {
+                            Keyboard.ClearFocus();
+                        }
+                        catch (Exception)
+                        {
+                            // フォーカス操作でエラーが発生した場合は無視
+                        }
+                        
+                        e.Handled = true;
+                    }
+                    break;
             }
         }
 
@@ -232,6 +289,38 @@ namespace RedmineClient.Views.Pages
                     if (ViewModel.SelectedItem != null)
                     {
                         ViewModel.DeleteSelectedItemCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.Escape:
+                    // エスケープキーでDataGridの選択状態をクリア（PreviewKeyDownで確実にキャッチ）
+                    if (sender is DataGrid dataGrid)
+                    {
+                        // 選択状態をクリア
+                        dataGrid.UnselectAll();
+                        dataGrid.SelectedIndex = -1;
+                        ViewModel.SelectedItem = null;
+                        
+                        // すべてのWbsItemのIsSelectedプロパティをfalseに設定
+                        if (ViewModel.FlattenedWbsItems != null)
+                        {
+                            foreach (var item in ViewModel.FlattenedWbsItems)
+                            {
+                                item.IsSelected = false;
+                            }
+                        }
+                        
+                        // フォーカスを安全にクリア
+                        try
+                        {
+                            Keyboard.ClearFocus();
+                        }
+                        catch (Exception)
+                        {
+                            // フォーカス操作でエラーが発生した場合は無視
+                        }
+                        
                         e.Handled = true;
                     }
                     break;
