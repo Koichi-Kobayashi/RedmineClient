@@ -11,7 +11,7 @@ namespace RedmineClient.Models
         public int Level { get; set; }
         public int Duration { get; set; }
 
-        public List<(string predId, int lagDays)> Preds { get; } = new();
+        public List<DependencyLink> Preds { get; } = new();
 
         private int _es; public int ES { get => _es; set { _es = value; OnPropertyChanged(); } }
         private int _ef; public int EF { get => _ef; set { _ef = value; OnPropertyChanged(); } }

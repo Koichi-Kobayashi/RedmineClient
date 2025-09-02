@@ -97,6 +97,7 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate>
             <Border Height="18" CornerRadius="4" ToolTip="{Binding Name}"
+                    beh:DragMoveBehavior.IsEnabled="True"
                     Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}"
                     BorderBrush="#55000000" BorderThickness="1">
               <Border.RenderTransform>

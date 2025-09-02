@@ -23,34 +23,57 @@ namespace RedmineClient.Algorithms
             {
                 var t = byId[id];
                 int es = 0;
-                foreach (var (p, lag) in t.Preds)
+                foreach (var link in t.Preds)
                 {
-                    es = System.Math.Max(es, res.EF[p] + lag);
+                    switch (link.Type)
+                    {
+                        case LinkType.FS:
+                            es = System.Math.Max(es, res.EF[link.PredId] + link.LagDays); break;
+                        case LinkType.SS:
+                            es = System.Math.Max(es, res.ES[link.PredId] + link.LagDays); break;
+                        case LinkType.FF:
+                            es = System.Math.Max(es, res.EF[link.PredId] + link.LagDays - t.Duration); break;
+                        case LinkType.SF:
+                            es = System.Math.Max(es, res.ES[link.PredId] + link.LagDays - t.Duration); break;
+                    }
                 }
-                res.ES[id] = es;
-                res.EF[id] = es + t.Duration;
+                res.ES[id] = es < 0 ? 0 : es;
+                res.EF[id] = res.ES[id] + t.Duration;
             }
 
-            var succ = new Dictionary<string, List<(string succ, int lag)>>();
+            var succ = new Dictionary<string, List<DependencyLink>>();
             foreach (var t in tasks)
+            foreach (var link in t.Preds)
             {
-                foreach (var (p, lag) in t.Preds)
-                {
-                    if (!succ.TryGetValue(p, out var list)) succ[p] = list = new();
-                    list.Add((t.WbsNo, lag));
-                }
+                if (!succ.TryGetValue(link.PredId, out var list)) succ[link.PredId] = list = new();
+                list.Add(new DependencyLink { PredId = t.WbsNo, LagDays = link.LagDays, Type = link.Type });
             }
 
             int projectFinish = topoOrder.Max(id => res.EF[id]);
+            var LS = new Dictionary<string, int>();
+            var LF = new Dictionary<string, int>();
+            foreach (var id in topoOrder) { LS[id] = int.MaxValue/4; LF[id] = projectFinish; }
+
             foreach (var id in ((IEnumerable<string>)topoOrder).Reverse())
             {
-                int lf = succ.TryGetValue(id, out var list) && list.Count > 0
-                    ? list.Min(s => res.LS[s.succ] - s.lag)
-                    : projectFinish;
-                res.LF[id] = lf;
-                res.LS[id] = lf - byId[id].Duration;
+                if (succ.TryGetValue(id, out var list))
+                {
+                    foreach (var s in list)
+                    {
+                        switch (s.Type)
+                        {
+                            case LinkType.FS: LF[id] = System.Math.Min(LF[id], LS[s.PredId] - s.LagDays); break;
+                            case LinkType.SS: LS[id] = System.Math.Min(LS[id], LS[s.PredId] - s.LagDays); break;
+                            case LinkType.FF: LF[id] = System.Math.Min(LF[id], LF[s.PredId] - s.LagDays); break;
+                            case LinkType.SF: LS[id] = System.Math.Min(LS[id], LF[s.PredId] - s.LagDays); break;
+                        }
+                    }
+                }
+                int dur = byId[id].Duration;
+                if (LS[id] == int.MaxValue/4) LS[id] = LF[id] - dur; else LF[id] = System.Math.Min(LF[id], LS[id] + dur);
             }
 
+            foreach (var id in topoOrder) { res.LS[id] = LS[id]; res.LF[id] = LF[id]; }
             return res;
         }
     }

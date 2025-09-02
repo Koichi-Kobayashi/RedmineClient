@@ -21,12 +21,12 @@ namespace RedmineClient.ViewModels.Pages
         public WbsSampleViewModel()
         {
             Tasks.Add(new WbsSampleTask { WbsNo = "1",   Level = 0, Name = "企画", Duration = 3 });
-            Tasks.Add(new WbsSampleTask { WbsNo = "1.1", Level = 1, Name = "要件定義", Duration = 5, Preds = { ("1", 0) } });
-            Tasks.Add(new WbsSampleTask { WbsNo = "1.2", Level = 1, Name = "基本設計", Duration = 7, Preds = { ("1.1", 0) } });
-            Tasks.Add(new WbsSampleTask { WbsNo = "2",   Level = 0, Name = "実装", Duration = 10, Preds = { ("1.2", 0) } });
-            Tasks.Add(new WbsSampleTask { WbsNo = "2.1", Level = 1, Name = "フロント実装", Duration = 6, Preds = { ("2", 0) } });
-            Tasks.Add(new WbsSampleTask { WbsNo = "2.2", Level = 1, Name = "バックエンド実装", Duration = 8, Preds = { ("2", 0) } });
-            Tasks.Add(new WbsSampleTask { WbsNo = "3",   Level = 0, Name = "総合テスト", Duration = 5, Preds = { ("2.1", 0), ("2.2", 0) } });
+            var t = new WbsSampleTask { WbsNo = "1.1", Level = 1, Name = "要件定義", Duration = 5 }; t.Preds.Add(new DependencyLink{ PredId="1", Type=LinkType.FS }); Tasks.Add(t);
+            t = new WbsSampleTask { WbsNo = "1.2", Level = 1, Name = "基本設計", Duration = 7 }; t.Preds.Add(new DependencyLink{ PredId="1.1", Type=LinkType.FS }); Tasks.Add(t);
+            t = new WbsSampleTask { WbsNo = "2",   Level = 0, Name = "実装", Duration = 10 }; t.Preds.Add(new DependencyLink{ PredId="1.2", Type=LinkType.SS }); Tasks.Add(t);
+            t = new WbsSampleTask { WbsNo = "2.1", Level = 1, Name = "フロント実装", Duration = 6 }; t.Preds.Add(new DependencyLink{ PredId="2", Type=LinkType.FS }); Tasks.Add(t);
+            t = new WbsSampleTask { WbsNo = "2.2", Level = 1, Name = "バックエンド実装", Duration = 8 }; t.Preds.Add(new DependencyLink{ PredId="2", Type=LinkType.FS }); Tasks.Add(t);
+            t = new WbsSampleTask { WbsNo = "3",   Level = 0, Name = "総合テスト", Duration = 5 }; t.Preds.Add(new DependencyLink{ PredId="2.1", Type=LinkType.FF }); t.Preds.Add(new DependencyLink{ PredId="2.2", Type=LinkType.FF }); Tasks.Add(t);
 
             ReindexRows();
             Recalculate();
@@ -41,7 +41,7 @@ namespace RedmineClient.ViewModels.Pages
         public void Recalculate()
         {
             var order = TopologicalSort.Run(Tasks.Select(t => t.WbsNo), edge: (u, v) =>
-                Tasks.Any(x => x.WbsNo == v && x.Preds.Any(p => p.predId == u)));
+                Tasks.Any(x => x.WbsNo == v && x.Preds.Any(p => p.PredId == u)));
 
             var res = Cpm.Run(Tasks, order);
             foreach (var t in Tasks)
@@ -55,6 +55,14 @@ namespace RedmineClient.ViewModels.Pages
             }
 
             OnPropertyChanged(nameof(Tasks));
+        }
+
+        public void ApplyStartConstraint(WbsSampleTask task, int newEs)
+        {
+            // 便宜上、WbsSampleTaskにStartMinを後付けせず、ESを直接調整する簡易版
+            // 厳密にやるならWbsSampleTaskへStartMinを追加し、CPMで考慮します
+            task.ES = newEs;
+            Recalculate();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
