@@ -320,6 +320,7 @@ namespace RedmineClient.ViewModels.Pages
             {
                 if (SetProperty(ref _selectedPageSize, value))
                 {
+                    System.Diagnostics.Debug.WriteLine($"ページサイズ変更: {_selectedPageSize} -> {value}");
                     // ページサイズが変更された場合、現在のページを1にリセットしてデータを再読み込み
                     CurrentPage = 1;
                     _ = Application.Current.Dispatcher.InvokeAsync(async () => await LoadCurrentPageData());
@@ -2339,8 +2340,9 @@ namespace RedmineClient.ViewModels.Pages
                         WbsProgressMessage = "チケットデータを取得中...";
                     });
 
-                    // 最初のページのデータを取得
-                    var offset = 0;
+                    // 最初のページのデータを取得（CurrentPage = 1なので offset = 0）
+                    var offset = (CurrentPage - 1) * SelectedPageSize;
+                    System.Diagnostics.Debug.WriteLine($"初期検索: CurrentPage={CurrentPage}, SelectedPageSize={SelectedPageSize}, offset={offset}");
                     var issues = await redmineService.GetIssuesWithHierarchyAsync(projectId, SelectedPageSize, offset).ConfigureAwait(false);
 
                     await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -3458,6 +3460,7 @@ namespace RedmineClient.ViewModels.Pages
 
                     // 現在のページのオフセットを計算
                     var offset = (CurrentPage - 1) * SelectedPageSize;
+                    System.Diagnostics.Debug.WriteLine($"ページング: CurrentPage={CurrentPage}, SelectedPageSize={SelectedPageSize}, offset={offset}");
                     
                     // 指定された範囲のチケットを取得
                     var issues = await redmineService.GetIssuesWithHierarchyAsync(SelectedProject.Id, SelectedPageSize, offset).ConfigureAwait(false);
