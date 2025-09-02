@@ -67,14 +67,14 @@ namespace RedmineClient.Views.Controls
                 double centerX = cellX + DayWidth / 2.0;
                 var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
-                var dowText = new FormattedText(dowStr, culture,
-                        FlowDirection.LeftToRight, ft, 11, dowBrush, dpi);
-                dc.DrawText(dowText, new Point(centerX - dowText.Width / 2.0, 18));
-
-                // 日付（数値）
+                // 日付（数値）を上段に、曜日を下段に
                 var domText = new FormattedText(d.ToString("dd"), culture,
                         FlowDirection.LeftToRight, ft, 12, textBrush, dpi);
-                dc.DrawText(domText, new Point(centerX - domText.Width / 2.0, 34));
+                dc.DrawText(domText, new Point(centerX - domText.Width / 2.0, 18));
+
+                var dowText = new FormattedText(dowStr, culture,
+                        FlowDirection.LeftToRight, ft, 11, dowBrush, dpi);
+                dc.DrawText(dowText, new Point(centerX - dowText.Width / 2.0, 34));
 
                 d = d.AddDays(1);
             }
