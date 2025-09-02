@@ -12,7 +12,7 @@ namespace RedmineClient.ViewModels.Pages
     {
         public ObservableCollection<WbsSampleTask> Tasks { get; } = new();
 
-        private double _dayWidth = 18.0;
+        private double _dayWidth = 30.0;
         public double DayWidth { get => _dayWidth; set { _dayWidth = value; OnPropertyChanged(); } }
 
         private DateTime _viewStart = DateTime.Today;

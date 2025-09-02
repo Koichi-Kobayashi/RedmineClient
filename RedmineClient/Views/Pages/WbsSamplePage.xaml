@@ -103,44 +103,53 @@
     <ScrollViewer x:Name="RightScroll" Grid.Row="2" Grid.Column="2"
                   HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                   beh:ScrollSyncBehavior.GroupKey="WBS">
-      <ItemsControl ItemsSource="{Binding Tasks}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <Canvas />
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemContainerStyle>
-          <Style TargetType="ContentPresenter">
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="Canvas.Top" Value="{Binding RowIndex, Converter={StaticResource RowToTop}}"/>
-          </Style>
-        </ItemsControl.ItemContainerStyle>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <Border Height="18" CornerRadius="4" ToolTip="{Binding Name}"
-                    beh:DragMoveBehavior.IsEnabled="True"
-                    Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}"
-                    BorderBrush="#55000000" BorderThickness="1">
-              <Border.RenderTransform>
-                <TranslateTransform>
-                  <TranslateTransform.X>
-                    <MultiBinding Converter="{StaticResource EsToX}">
-                      <Binding Path="ES"/>
-                      <Binding Path="DataContext.DayWidth" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
-                    </MultiBinding>
-                  </TranslateTransform.X>
-                </TranslateTransform>
-              </Border.RenderTransform>
-              <Border.Width>
-                <MultiBinding Converter="{StaticResource DurToW}">
-                  <Binding Path="Duration"/>
-                  <Binding Path="DataContext.DayWidth" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
-                </MultiBinding>
-              </Border.Width>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ctrls:TimelineGridOverlay Grid.Row="0" IsHitTestVisible="False"
+                                   DayWidth="{Binding DayWidth}"
+                                   StartDate="{Binding ViewStart}"
+                                   LineBrush="#22000000"/>
+        <ItemsControl Grid.Row="0" ItemsSource="{Binding Tasks}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <Canvas />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemContainerStyle>
+            <Style TargetType="ContentPresenter">
+              <Setter Property="Height" Value="28"/>
+              <Setter Property="Canvas.Top" Value="{Binding RowIndex, Converter={StaticResource RowToTop}}"/>
+            </Style>
+          </ItemsControl.ItemContainerStyle>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Height="18" CornerRadius="4" ToolTip="{Binding Name}"
+                      beh:DragMoveBehavior.IsEnabled="True"
+                      Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}"
+                      BorderBrush="#55000000" BorderThickness="1">
+                <Border.RenderTransform>
+                  <TranslateTransform>
+                    <TranslateTransform.X>
+                      <MultiBinding Converter="{StaticResource EsToX}">
+                        <Binding Path="ES"/>
+                        <Binding Path="DataContext.DayWidth" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                      </MultiBinding>
+                    </TranslateTransform.X>
+                  </TranslateTransform>
+                </Border.RenderTransform>
+                <Border.Width>
+                  <MultiBinding Converter="{StaticResource DurToW}">
+                    <Binding Path="Duration"/>
+                    <Binding Path="DataContext.DayWidth" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                  </MultiBinding>
+                </Border.Width>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
     </ScrollViewer>
   </Grid>
 </Page>

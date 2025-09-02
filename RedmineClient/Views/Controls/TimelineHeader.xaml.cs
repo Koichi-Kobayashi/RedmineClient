@@ -28,9 +28,13 @@ namespace RedmineClient.Views.Controls
             var w = ActualWidth; if (w <= 0 || DayWidth <= 0) return;
             var h = ActualHeight; if (h <= 0) return;
 
-            var penLight = new Pen(new SolidColorBrush(Color.FromRgb(220,220,220)), 1);
-            var penBold  = new Pen(new SolidColorBrush(Color.FromRgb(180,180,180)), 1.5);
-            var textBrush = Brushes.Black;
+            // WBSページに近い落ち着いた配色
+            var gridLight = Color.FromRgb(220, 220, 220);
+            var gridBold  = Color.FromRgb(200, 200, 200);
+            var txt       = Color.FromRgb(60, 60, 60);
+            var penLight = new Pen(new SolidColorBrush(gridLight), 1);
+            var penBold  = new Pen(new SolidColorBrush(gridBold), 1.25);
+            var textBrush = new SolidColorBrush(txt);
 
             int days = (int)Math.Ceiling(w / DayWidth) + 1;
             var ft = new Typeface("Segoe UI");
@@ -54,16 +58,23 @@ namespace RedmineClient.Views.Controls
                 // 曜日（日本語略称などカルチャに依存）
                 var culture = System.Globalization.CultureInfo.CurrentUICulture;
                 var dowStr = d.ToString("ddd", culture);
-                Brush dowBrush = (d.DayOfWeek == DayOfWeek.Saturday) ? Brushes.Blue :
-                                 (d.DayOfWeek == DayOfWeek.Sunday) ? Brushes.Red : textBrush;
+                var sat = Color.FromRgb(70, 120, 200);
+                var sun = Color.FromRgb(200, 80, 80);
+                Brush dowBrush = (d.DayOfWeek == DayOfWeek.Saturday) ? new SolidColorBrush(sat) :
+                                 (d.DayOfWeek == DayOfWeek.Sunday) ? new SolidColorBrush(sun) : textBrush;
+                // 中央寄せ描画
+                double cellX = x;
+                double centerX = cellX + DayWidth / 2.0;
+                var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+
                 var dowText = new FormattedText(dowStr, culture,
-                        FlowDirection.LeftToRight, ft, 11, dowBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                dc.DrawText(dowText, new Point(x + 4, 20));
+                        FlowDirection.LeftToRight, ft, 11, dowBrush, dpi);
+                dc.DrawText(dowText, new Point(centerX - dowText.Width / 2.0, 18));
 
                 // 日付（数値）
                 var domText = new FormattedText(d.ToString("dd"), culture,
-                        FlowDirection.LeftToRight, ft, 12, textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                dc.DrawText(domText, new Point(x + 4, 36));
+                        FlowDirection.LeftToRight, ft, 12, textBrush, dpi);
+                dc.DrawText(domText, new Point(centerX - domText.Width / 2.0, 34));
 
                 d = d.AddDays(1);
             }
