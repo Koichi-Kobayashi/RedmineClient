@@ -18,6 +18,9 @@ namespace RedmineClient.ViewModels.Pages
         private DateTime _viewStart = DateTime.Today;
         public DateTime ViewStart { get => _viewStart; set { _viewStart = value; OnPropertyChanged(); } }
 
+        private bool _showScheduleColumns = true;
+        public bool ShowScheduleColumns { get => _showScheduleColumns; set { _showScheduleColumns = value; OnPropertyChanged(); } }
+
         public WbsSampleViewModel()
         {
             Tasks.Add(new WbsSampleTask { WbsNo = "1",   Level = 0, Name = "企画", Duration = 3 });

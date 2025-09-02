@@ -42,6 +42,8 @@
       <Separator/>
       <Button Content="Recalc CPM" Click="Recalc_Click"/>
       <Separator/>
+      <CheckBox Content="ES〜Slackを表示" IsChecked="{Binding ShowScheduleColumns, Mode=TwoWay}"/>
+      <Separator/>
       <TextBlock Text="Start:" Margin="8,0,4,0"/>
       <DatePicker SelectedDate="{Binding ViewStart, Mode=TwoWay}"/>
     </ToolBar>
@@ -90,11 +92,66 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
-        <DataGridTextColumn Header="ES" Binding="{Binding ES}" Width="*"/>
-        <DataGridTextColumn Header="EF" Binding="{Binding EF}" Width="*"/>
-        <DataGridTextColumn Header="LS" Binding="{Binding LS}" Width="*"/>
-        <DataGridTextColumn Header="LF" Binding="{Binding LF}" Width="*"/>
-        <DataGridTextColumn Header="Slack" Binding="{Binding Slack}" Width="*"/>
+        <DataGridTextColumn x:Name="ColES" Header="ES" Binding="{Binding ES}" Width="*">
+          <DataGridTextColumn.ElementStyle>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.ElementStyle>
+          <DataGridTextColumn.EditingElementStyle>
+            <Style TargetType="TextBox">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.EditingElementStyle>
+        </DataGridTextColumn>
+        <DataGridTextColumn x:Name="ColEF" Header="EF" Binding="{Binding EF}" Width="*">
+          <DataGridTextColumn.ElementStyle>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.ElementStyle>
+          <DataGridTextColumn.EditingElementStyle>
+            <Style TargetType="TextBox">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.EditingElementStyle>
+        </DataGridTextColumn>
+        <DataGridTextColumn x:Name="ColLS" Header="LS" Binding="{Binding LS}" Width="*">
+          <DataGridTextColumn.ElementStyle>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.ElementStyle>
+          <DataGridTextColumn.EditingElementStyle>
+            <Style TargetType="TextBox">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.EditingElementStyle>
+        </DataGridTextColumn>
+        <DataGridTextColumn x:Name="ColLF" Header="LF" Binding="{Binding LF}" Width="*">
+          <DataGridTextColumn.ElementStyle>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.ElementStyle>
+          <DataGridTextColumn.EditingElementStyle>
+            <Style TargetType="TextBox">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.EditingElementStyle>
+        </DataGridTextColumn>
+        <DataGridTextColumn x:Name="ColSlack" Header="Slack" Binding="{Binding Slack}" Width="*">
+          <DataGridTextColumn.ElementStyle>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.ElementStyle>
+          <DataGridTextColumn.EditingElementStyle>
+            <Style TargetType="TextBox">
+              <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}"/>
+            </Style>
+          </DataGridTextColumn.EditingElementStyle>
+        </DataGridTextColumn>
       </DataGrid.Columns>
     </DataGrid>
 
