@@ -31,6 +31,12 @@ namespace RedmineClient.ViewModels.Windows
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Diagram24 },
                 TargetPageType = typeof(Views.Pages.WbsPage)
             },
+            new NavigationViewItem()
+            {
+                Content = "WBS（サンプル）",
+                Icon = new SymbolIcon { Symbol = SymbolRegular.Timeline24 },
+                TargetPageType = typeof(Views.Pages.WbsSamplePage)
+            },
 
         };
 

@@ -1,0 +1,10 @@
+<UserControl x:Class="RedmineClient.Views.Controls.TimelineHeader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Height="42">
+  <Grid Background="White">
+    <Canvas x:Name="CanvasRoot"/>
+  </Grid>
+</UserControl>
+
+

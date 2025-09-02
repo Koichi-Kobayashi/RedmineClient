@@ -80,6 +80,10 @@ namespace RedmineClient
                 services.AddTransient<WbsPage>();
                 services.AddTransient<WbsViewModel>();
 
+                // WBS サンプルページ登録
+                services.AddTransient<WbsSamplePage>();
+                services.AddTransient<WbsSampleViewModel>();
+
                 services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }).Build();
 
