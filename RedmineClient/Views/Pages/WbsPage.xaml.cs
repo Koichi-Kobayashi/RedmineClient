@@ -54,14 +54,13 @@ namespace RedmineClient.Views.Pages
                     {
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
-                            System.Diagnostics.Debug.WriteLine($"ViewModel初期化完了: WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+
                             
                             // 初期化完了後にDataGridのItemsSourceを設定
                             if (WbsDataGrid != null && WbsDataGrid.IsLoaded && ViewModel.FlattenedWbsItems?.Count > 0)
                             {
                                 WbsDataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
-                                System.Diagnostics.Debug.WriteLine($"コンストラクタでItemsSource設定: {ViewModel.FlattenedWbsItems.Count}件");
+
                             }
                         });
                     }
@@ -72,7 +71,7 @@ namespace RedmineClient.Views.Pages
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"ViewModel初期化エラー: {ex.Message}");
+
                 }
             });
 
@@ -121,8 +120,7 @@ namespace RedmineClient.Views.Pages
                     }
                     catch (Exception ex)
                     {
-                        // 祝日データの初期化に失敗しても処理を続行（ログ出力のみ）
-                        System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー: {ex.Message}");
+                        // 祝日データの初期化に失敗しても処理を続行
                     }
                     finally
                     {
@@ -133,11 +131,28 @@ namespace RedmineClient.Views.Pages
             catch (Exception ex)
             {
                 // 祝日データの初期化に失敗しても処理を続行
-                System.Diagnostics.Debug.WriteLine($"祝日データ初期化エラー: {ex.Message}");
                 _isHolidayDataInitializing = false;
             }
             
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// ページレベルのキーボードショートカットを処理する
+        /// </summary>
+        private void Page_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    // エスケープキーで選択状態をクリア
+                    if (ViewModel.SelectedItem != null)
+                    {
+                        ViewModel.SelectedItem = null;
+                        e.Handled = true;
+                    }
+                    break;
+            }
         }
 
         /// <summary>
@@ -161,6 +176,15 @@ namespace RedmineClient.Views.Pages
                     if (ViewModel.RefreshRedmineDataCommand.CanExecute(null))
                     {
                         ViewModel.RefreshRedmineDataCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.Escape:
+                    // エスケープキーで選択状態をクリア
+                    if (ViewModel.SelectedItem != null)
+                    {
+                        ViewModel.SelectedItem = null;
                         e.Handled = true;
                     }
                     break;
@@ -292,13 +316,11 @@ namespace RedmineClient.Views.Pages
                     }
                 }
 
-                // 初期化完了後のデバッグ出力
-                System.Diagnostics.Debug.WriteLine($"DataGrid初期化完了: FlattenedWbsItems.Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
-                System.Diagnostics.Debug.WriteLine($"DataGrid初期化完了: WbsItems.Count = {ViewModel.WbsItems?.Count ?? 0}");
+                // 初期化完了
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"DataGrid初期化エラー: {ex.Message}");
+                // DataGrid初期化エラーが発生した場合は無視
             }
         }
 
@@ -344,8 +366,7 @@ namespace RedmineClient.Views.Pages
                     }
                     catch (Exception ex)
                     {
-                        // 祝日データの再初期化に失敗しても処理を続行（ログ出力のみ）
-                        System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
+                        // 祝日データの再初期化に失敗しても処理を続行
                     }
                     finally
                     {
@@ -356,7 +377,6 @@ namespace RedmineClient.Views.Pages
             catch (Exception ex)
             {
                 // 祝日データの再初期化に失敗しても処理を続行
-                System.Diagnostics.Debug.WriteLine($"祝日データ再初期化エラー: {ex.Message}");
                 _isHolidayDataRefreshing = false;
             }
             
@@ -1057,24 +1077,19 @@ namespace RedmineClient.Views.Pages
                 }
                 else if (e.PropertyName == nameof(ViewModel.FlattenedWbsItems))
                 {
-                    // FlattenedWbsItemsが変更された場合のデバッグ出力
-                    System.Diagnostics.Debug.WriteLine($"FlattenedWbsItems changed: Count = {ViewModel.FlattenedWbsItems?.Count ?? 0}");
+                    // FlattenedWbsItemsが変更された場合の処理
                     if (ViewModel.FlattenedWbsItems?.Count > 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"First item: {ViewModel.FlattenedWbsItems[0].Title}");
-                        
                         // DataGridのItemsSourceを更新
                         if (WbsDataGrid != null && WbsDataGrid.IsLoaded)
                         {
                             WbsDataGrid.ItemsSource = ViewModel.FlattenedWbsItems;
-                            System.Diagnostics.Debug.WriteLine($"PropertyChangedでItemsSource更新: {ViewModel.FlattenedWbsItems.Count}件");
                         }
                     }
                 }
                 else if (e.PropertyName == nameof(ViewModel.WbsItems))
                 {
-                    // WbsItemsが変更された場合のデバッグ出力
-                    System.Diagnostics.Debug.WriteLine($"WbsItems changed: Count = {ViewModel.WbsItems?.Count ?? 0}");
+                    // WbsItemsが変更された場合の処理
                 }
 
 
@@ -1092,30 +1107,18 @@ namespace RedmineClient.Views.Pages
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"ExpansionText_MouseLeftButtonDown called. Sender type: {sender?.GetType().Name}");
-                
                 if (sender is Border expansionBorder && expansionBorder.DataContext is WbsItem item)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Toggling expansion for item: {item.Title}, Current IsExpanded: {item.IsExpanded}");
-                    
                     // ViewModelの更新処理を実行（ViewModel内でIsExpandedを切り替える）
                     ViewModel.ToggleExpansion(item);
-                    System.Diagnostics.Debug.WriteLine($"After ViewModel.ToggleExpansion, IsExpanded is: {item.IsExpanded}");
 
                     // UIを即座に更新
                     WbsDataGrid.Items.Refresh();
-                    
-                    System.Diagnostics.Debug.WriteLine($"Final IsExpanded: {item.IsExpanded}");
-                }
-                else
-                {
-                    var debugBorder = sender as Border;
-                    System.Diagnostics.Debug.WriteLine($"Failed to get WbsItem from DataContext. Sender: {sender?.GetType().Name}, DataContext: {debugBorder?.DataContext?.GetType().Name}");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in ExpansionText_MouseLeftButtonDown: {ex.Message}");
+                // エラーが発生した場合は無視
             }
         }
 
@@ -1847,7 +1850,7 @@ namespace RedmineClient.Views.Pages
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ID列マウスクリックエラー: {ex.Message}");
+                // ID列マウスクリックエラーが発生した場合は無視
             }
         }
 
@@ -1870,7 +1873,7 @@ namespace RedmineClient.Views.Pages
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ID列ダブルクリック処理エラー: {ex.Message}");
+                // ID列ダブルクリック処理エラーが発生した場合は無視
             }
         }
 
@@ -1929,7 +1932,7 @@ namespace RedmineClient.Views.Pages
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Redmine URL構築エラー: {ex.Message}");
+                // Redmine URL構築エラーが発生した場合は再スロー
                 throw;
             }
         }
@@ -1953,8 +1956,6 @@ namespace RedmineClient.Views.Pages
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ブラウザでURLを開くエラー: {ex.Message}");
-                
                 // エラーメッセージをユーザーに表示
                 System.Windows.MessageBox.Show(
                     $"ブラウザでURLを開けませんでした: {ex.Message}",

@@ -259,35 +259,14 @@ namespace RedmineClient.Services
         {
             try
             {
-                // デバッグログ：Issueのプロパティを確認
-                System.Diagnostics.Debug.WriteLine($"GetParentIdFromIssue - Issue ID: {issue.Id}, Subject: {issue.Subject}");
-                
-                // Issueオブジェクトのすべてのプロパティを調査
-                var allProperties = issue.GetType().GetProperties();
-                System.Diagnostics.Debug.WriteLine($"  All properties for Issue {issue.Id}:");
-                foreach (var prop in allProperties)
-                {
-                    try
-                    {
-                        var value = prop.GetValue(issue);
-                        System.Diagnostics.Debug.WriteLine($"    {prop.Name}: {value} (Type: {prop.PropertyType})");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"    {prop.Name}: Error getting value - {ex.Message}");
-                    }
-                }
-                
                 // ParentIssueプロパティを確認
                 var parentIssueProperty = issue.GetType().GetProperty("ParentIssue");
                 if (parentIssueProperty != null)
                 {
                     var parentIssueValue = parentIssueProperty.GetValue(issue);
-                    System.Diagnostics.Debug.WriteLine($"  ParentIssue: {parentIssueValue} (Type: {parentIssueProperty.PropertyType})");
                     
                     if (parentIssueValue is IdentifiableName parentIssue && parentIssue.Id > 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"  Found ParentId from ParentIssue: {parentIssue.Id}");
                         return parentIssue.Id;
                     }
                 }
@@ -301,38 +280,28 @@ namespace RedmineClient.Services
                     if (property != null)
                     {
                         var value = property.GetValue(issue);
-                        System.Diagnostics.Debug.WriteLine($"  Property {propertyName}: {value} (Type: {property.PropertyType})");
                         
                         if (value is int intValue)
                         {
-                            System.Diagnostics.Debug.WriteLine($"  Found ParentId: {intValue}");
                             return intValue;
                         }
                         // 修正: int?型の値はobjectとして返されるため、直接キャストしてnull判定
                         if (property.PropertyType == typeof(int?))
                         {
                             var nullableValue = (int?)value;
-                            System.Diagnostics.Debug.WriteLine($"  Found ParentId (nullable): {nullableValue}");
                             return nullableValue;
                         }
                         if (value is IdentifiableName identifiableName && identifiableName.Id > 0)
                         {
-                            System.Diagnostics.Debug.WriteLine($"  Found ParentId (IdentifiableName): {identifiableName.Id}");
                             return identifiableName.Id;
                         }
                     }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"  Property {propertyName}: Not found");
-                    }
                 }
 
-                System.Diagnostics.Debug.WriteLine($"  No ParentId found for Issue {issue.Id}");
                 return null;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"  Error getting ParentId for Issue {issue.Id}: {ex.Message}");
                 return null;
             }
         }
@@ -352,34 +321,12 @@ namespace RedmineClient.Services
                 // リフレクションでParentIdを取得
                 var parentId = GetParentIdFromIssue(issue.Issue);
                 
-                // デバッグログ：ID105とID104の関係を確認
-                if (issue.Id == 105 || issue.Id == 104)
-                {
-                    System.Diagnostics.Debug.WriteLine($"BuildHierarchy - Issue ID: {issue.Id}, Subject: {issue.Subject}");
-                    System.Diagnostics.Debug.WriteLine($"  ParentId: {parentId}");
-                    if (parentId.HasValue && issueDict.ContainsKey(parentId.Value))
-                    {
-                        var parent = issueDict[parentId.Value];
-                        System.Diagnostics.Debug.WriteLine($"  Parent found: ID={parent.Id}, Subject={parent.Subject}");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"  Parent not found or no parent");
-                    }
-                }
-                
                 if (parentId.HasValue && parentId.Value > 0)
                 {
                     if (issueDict.ContainsKey(parentId.Value))
                     {
                         var parent = issueDict[parentId.Value];
                         parent.AddChild(issue);
-                        
-                        // デバッグログ：親子関係の設定を確認
-                        if (issue.Id == 105 || issue.Id == 104)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"  Parent-Child relationship established: Parent {parent.Id} -> Child {issue.Id}");
-                        }
                     }
                 }
             }

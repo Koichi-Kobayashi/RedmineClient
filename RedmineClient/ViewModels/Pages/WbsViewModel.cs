@@ -221,7 +221,6 @@ namespace RedmineClient.ViewModels.Pages
                     catch (RedmineClient.Services.RedmineApiException redmineEx)
                     {
                         // Redmine API固有のエラーの場合はログ出力
-                        System.Diagnostics.Debug.WriteLine($"Redmine更新エラー (タスク: {task.Title}): {redmineEx.Message}");
                         // 未保存フラグを設定
                         task.HasUnsavedChanges = true;
                         // 必要に応じてユーザーに通知
@@ -230,7 +229,6 @@ namespace RedmineClient.ViewModels.Pages
                     catch (Exception ex)
                     {
                         // その他の予期しないエラーの場合はログ出力
-                        System.Diagnostics.Debug.WriteLine($"タスク更新で予期しないエラー (タスク: {task.Title}): {ex.Message}");
                         // 未保存フラグを設定
                         task.HasUnsavedChanges = true;
                         // 必要に応じてユーザーに通知
@@ -393,14 +391,13 @@ namespace RedmineClient.ViewModels.Pages
             get => _selectedProject;
             set
             {
-                System.Diagnostics.Debug.WriteLine($"SelectedProject変更: {_selectedProject?.Name} -> {value?.Name}");
-                System.Diagnostics.Debug.WriteLine($"IsRedmineConnected: {IsRedmineConnected}");
+
                 
                 if (SetProperty(ref _selectedProject, value))
                 {
                     if (value != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"プロジェクト選択: ID={value.Id}, 名前={value.Name}");
+
                         
                         // 選択されたプロジェクトIDを保存
                         AppConfig.SelectedProjectId = value.Id;
