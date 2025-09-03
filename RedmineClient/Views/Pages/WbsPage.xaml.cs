@@ -12,9 +12,9 @@ using Wpf.Ui.Abstractions.Controls;
 namespace RedmineClient.Views.Pages
 {
     /// <summary>
-    /// WbsPage.xaml の相互作用ロジック
+    /// WbsPageV1.xaml の相互作用ロジック
     /// </summary>
-    public partial class WbsPage : INavigableView<WbsViewModel>, INavigationAware
+    public partial class WbsPageV1 : INavigableView<WbsViewModel>, INavigationAware
     {
         public WbsViewModel ViewModel { get; }
 
@@ -22,12 +22,12 @@ namespace RedmineClient.Views.Pages
         private bool _isHolidayDataInitializing = false;
         private bool _isHolidayDataRefreshing = false;
 
-        static WbsPage()
+        static WbsPageV1()
         {
             // 静的コンストラクタでの非同期処理は問題を引き起こす可能性があるため削除
         }
 
-        public WbsPage(WbsViewModel viewModel)
+        public WbsPageV1(WbsViewModel viewModel)
         {
             ViewModel = viewModel;
             DataContext = this;

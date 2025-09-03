@@ -360,7 +360,7 @@ namespace RedmineClient.Views.Controls
             var deltaX = currentPoint.X - _dragStartPoint.X;
 
             // 列幅に基づいてセル単位での移動量を計算
-            // WbsPage.xaml.csで設定されている列幅（40px）を使用
+            // WbsPageV1.xaml.csで設定されている列幅（40px）を使用
             var columnWidth = 40.0;
             
             // セル単位での移動量を計算（隣のセルに移動したら1日変わる）

@@ -77,7 +77,7 @@ namespace RedmineClient
                 // All other pages and view models
                 // AddTransientFromNamespaceは匿名型や内部クラスを誤って登録する可能性があるため、
                 // 明示的に必要なクラスのみを登録
-                services.AddTransient<WbsPage>();
+                services.AddTransient<WbsPageV1>();
                 services.AddTransient<WbsViewModel>();
 
                 // WBS V2 ページ（ガントチャート）

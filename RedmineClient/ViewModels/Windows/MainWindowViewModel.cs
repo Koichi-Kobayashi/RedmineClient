@@ -29,7 +29,7 @@ namespace RedmineClient.ViewModels.Windows
             {
                 Content = "WBS",
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Diagram24 },
-                TargetPageType = typeof(Views.Pages.WbsPage)
+                TargetPageType = typeof(Views.Pages.WbsPageV1)
             },
             new NavigationViewItem()
             {

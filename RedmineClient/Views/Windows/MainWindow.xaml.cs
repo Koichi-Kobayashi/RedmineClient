@@ -58,7 +58,7 @@ namespace RedmineClient.Views.Windows
                 try
                 {
                     // WBSページにナビゲート
-                    RootNavigation.Navigate(typeof(Views.Pages.WbsPage));
+                    RootNavigation.Navigate(typeof(Views.Pages.WbsPageV1));
                 }
                 catch
                 {
