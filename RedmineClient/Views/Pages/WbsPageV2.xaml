@@ -69,14 +69,25 @@
               CellEditEnding="LeftGrid_CellEditEnding"
               PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown"
               PreviewMouseMove="LeftGrid_PreviewMouseMove"
+              SelectionMode="Single" SelectionUnit="FullRow"
+              SelectionChanged="LeftGrid_SelectionChanged"
               beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True">
       <DataGrid.RowStyle>
         <Style TargetType="DataGridRow">
           <Setter Property="Height" Value="28"/>
+          <Setter Property="BorderBrush" Value="#0078D4"/>
+          <Setter Property="BorderThickness" Value="0"/>
+          <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+              <Setter Property="BorderThickness" Value="2"/>
+              <Setter Property="Background" Value="Transparent"/>
+            </Trigger>
+          </Style.Triggers>
         </Style>
       </DataGrid.RowStyle>
       <DataGrid.Columns>
-        <DataGridTextColumn Header="WBS" Binding="{Binding WbsNo}" Width="70"/>
+        <DataGridTextColumn x:Name="ColId" Header="ID" Binding="{Binding WbsNo}"
+                             MinWidth="60" Width="60"/>
         <DataGridTemplateColumn Header="タスク" Width="200">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
@@ -214,7 +225,7 @@
     <GridSplitter Grid.Column="1" Grid.RowSpan="3" Width="5" HorizontalAlignment="Stretch"/>
 
     <ScrollViewer x:Name="RightScroll" Grid.Row="2" Grid.Column="2"
-                  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible"
                   beh:ScrollSyncBehavior.GroupKey="WBS">
       <Grid>
         <Grid.RowDefinitions>
@@ -240,8 +251,22 @@
             <DataTemplate>
               <Border Height="18" CornerRadius="4" ToolTip="{Binding Name}"
                       beh:DragMoveBehavior.IsEnabled="True"
-                      Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}"
-                      BorderBrush="#55000000" BorderThickness="1">
+                      Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}">
+                <Border.Style>
+                  <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="#55000000"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                    <Setter Property="Panel.ZIndex" Value="1"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                        <Setter Property="BorderBrush" Value="#FF0078D4"/>
+                        <Setter Property="BorderThickness" Value="3"/>
+                        <Setter Property="Panel.ZIndex" Value="1000"/>
+                        <Setter Property="SnapsToDevicePixels" Value="True"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Border.Style>
                 <Border.RenderTransform>
                   <TranslateTransform>
                     <TranslateTransform.X>

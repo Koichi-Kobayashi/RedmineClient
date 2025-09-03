@@ -66,12 +66,21 @@ namespace RedmineClient.Views.Pages
         {
             if (e.Data.GetDataPresent(typeof(WbsSampleTask)))
             {
-                e.Effects = DragDropEffects.Copy;
                 if (sender is Border border)
                 {
-                    border.Background = System.Windows.Media.Brushes.LightGreen;
-                    border.BorderBrush = System.Windows.Media.Brushes.Green;
-                    border.BorderThickness = new Thickness(2);
+                    var source = e.Data.GetData(typeof(WbsSampleTask)) as WbsSampleTask;
+                    var target = border.DataContext as WbsSampleTask;
+                    if (source != null && target != null && ViewModel.CanSetPredecessor(source, target))
+                    {
+                        e.Effects = DragDropEffects.Copy;
+                        border.Background = System.Windows.Media.Brushes.LightGreen;
+                        border.BorderBrush = System.Windows.Media.Brushes.Green;
+                        border.BorderThickness = new Thickness(2);
+                    }
+                    else
+                    {
+                        e.Effects = DragDropEffects.None;
+                    }
                 }
             }
             else
@@ -85,7 +94,11 @@ namespace RedmineClient.Views.Pages
         {
             if (e.Data.GetDataPresent(typeof(WbsSampleTask)))
             {
-                e.Effects = DragDropEffects.Copy;
+                var source = e.Data.GetData(typeof(WbsSampleTask)) as WbsSampleTask;
+                var target = (sender as Border)?.DataContext as WbsSampleTask;
+                e.Effects = (source != null && target != null && ViewModel.CanSetPredecessor(source, target))
+                    ? DragDropEffects.Copy
+                    : DragDropEffects.None;
             }
             else
             {
@@ -110,6 +123,23 @@ namespace RedmineClient.Views.Pages
         private Point _dragStartPoint;
         private void TaskCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // 行選択を有効化して罫線スタイルを発火
+            if (sender is FrameworkElement fe)
+            {
+                var row = FindAncestor<DataGridRow>(fe);
+                if (row != null)
+                {
+                    row.IsSelected = true;
+                    // ViewModel上の選択状態を同期
+                    if (row.Item is WbsSampleTask task)
+                    {
+                        foreach (var t in ViewModel.Tasks)
+                        {
+                            t.IsSelected = ReferenceEquals(t, task);
+                        }
+                    }
+                }
+            }
             _dragStartPoint = e.GetPosition(null);
         }
 
@@ -156,6 +186,19 @@ namespace RedmineClient.Views.Pages
             }
         }
 
+        // DataGridの選択変更でも右ペインに反映
+        private void LeftGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is DataGrid grid)
+            {
+                var selected = grid.SelectedItem as WbsSampleTask;
+                foreach (var t in ViewModel.Tasks)
+                {
+                    t.IsSelected = ReferenceEquals(t, selected);
+                }
+            }
+        }
+
         private async void PredecessorCell_Drop(object sender, DragEventArgs e)
         {
             try
@@ -167,7 +210,7 @@ namespace RedmineClient.Views.Pages
                 if (sender is Border border && border.DataContext is WbsSampleTask target)
                 {
                     if (ReferenceEquals(source, target)) return;
-
+                    if (!ViewModel.CanSetPredecessor(source, target)) return;
                     await ViewModel.SetPredecessorAsync(source, target);
                 }
             }
@@ -181,6 +224,17 @@ namespace RedmineClient.Views.Pages
                 }
                 e.Handled = true;
             }
+        }
+
+        // ヘルパー: 祖先探索
+        private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        {
+            while (current != null)
+            {
+                if (current is T match) return match;
+                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            }
+            return null;
         }
     }
 }

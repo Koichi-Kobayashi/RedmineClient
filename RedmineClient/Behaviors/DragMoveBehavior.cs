@@ -106,6 +106,10 @@ namespace RedmineClient.Behaviors
             if (s is FrameworkElement fe)
             {
                 var p = e.GetPosition(fe); double dx = p.X - _startPos.X; int delta = (int)System.Math.Round(dx / _vm.DayWidth);
+                if (delta == 0)
+                {
+                    _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture(); fe.Cursor = Cursors.Arrow; return;
+                }
                 switch (_dragKind)
                 {
                     case DragKind.Move:

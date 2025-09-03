@@ -74,12 +74,76 @@ namespace RedmineClient.ViewModels.Pages
         }
 
         /// <summary>
+        /// predecessorId -> successorId の辺を追加すると循環が発生するか判定
+        /// </summary>
+        private bool WouldCreateCycle(string predecessorId, string successorId)
+        {
+            if (string.IsNullOrWhiteSpace(predecessorId) || string.IsNullOrWhiteSpace(successorId)) return true;
+            if (predecessorId == successorId) return true;
+
+            // 後続マップを構築: 各ノードから到達できる後続ノード一覧
+            var successorMap = new Dictionary<string, List<string>>();
+            foreach (var t in Tasks)
+            {
+                if (!successorMap.ContainsKey(t.WbsNo)) successorMap[t.WbsNo] = new List<string>();
+            }
+            foreach (var t in Tasks)
+            {
+                foreach (var p in t.Preds)
+                {
+                    if (!successorMap.TryGetValue(p.PredId, out var list))
+                    {
+                        list = new List<string>();
+                        successorMap[p.PredId] = list;
+                    }
+                    if (!list.Contains(t.WbsNo)) list.Add(t.WbsNo);
+                }
+            }
+
+            // 追加したい辺: predecessorId -> successorId
+            // もし既に successorId から predecessorId へ辿れるなら、辺追加で閉路ができる
+            var visited = new HashSet<string>();
+            var stack = new Stack<string>();
+            stack.Push(successorId);
+            while (stack.Count > 0)
+            {
+                var cur = stack.Pop();
+                if (!visited.Add(cur)) continue;
+                if (cur == predecessorId) return true;
+                if (successorMap.TryGetValue(cur, out var succs))
+                {
+                    foreach (var nxt in succs)
+                    {
+                        stack.Push(nxt);
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// UIからの事前チェック用: この設定が可能か（循環しないか）
+        /// </summary>
+        public bool CanSetPredecessor(WbsSampleTask source, WbsSampleTask target)
+        {
+            if (source == null || target == null) return false;
+            if (ReferenceEquals(source, target)) return false;
+            // 仕様: target を先行、source を後続にする
+            return !WouldCreateCycle(target.WbsNo, source.WbsNo);
+        }
+
+        /// <summary>
         /// 先行関係を設定し、Redmineにも作成
         /// </summary>
         public async Task SetPredecessorAsync(WbsSampleTask source, WbsSampleTask target)
         {
             if (source == null || target == null) return;
             if (ReferenceEquals(source, target)) return;
+            if (WouldCreateCycle(target.WbsNo, source.WbsNo))
+            {
+                // 循環する場合は何もしない
+                return;
+            }
 
             // 意図: 「ドロップ元(source)」の先行に「ドロップ先(target)」を設定
             var link = new DependencyLink { PredId = target.WbsNo, LagDays = 0, Type = LinkType.FS };
@@ -126,11 +190,13 @@ namespace RedmineClient.ViewModels.Pages
                 if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
 
                 using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
-                var issues = await svc.GetIssuesAsync(project.Id, limit: 1000, offset: 0);
+                // V1同等: サーバー側の取得時点でID昇順を指定
+                var issues = await svc.GetIssuesAsync(project.Id, limit: 1000, offset: 0, sort: "id:asc");
 
                 // 期間が設定されたIssueのみ対象
                 var dated = issues.Where(i => i.StartDate.HasValue && i.DueDate.HasValue)
-                                  .OrderBy(i => i.StartDate!.Value)
+                                  // サーバー側でid:asc指定済みだが、念のためクライアントでも安定化
+                                  .OrderBy(i => i.Id)
                                   .ToList();
                 if (dated.Count == 0)
                 {

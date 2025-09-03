@@ -54,6 +54,9 @@ namespace RedmineClient.Models
         // 表示用: 先行タスクIDをカンマ区切りで返す（空なら空文字）
         public string PredecessorIds => string.Join(",", _preds.Select(p => p.PredId));
 
+        private bool _isSelected;
+        public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
+
         // V2: Redmineと同期するための日付プロパティ
         private DateTime _baseDate = DateTime.Today;
         public DateTime BaseDate { get => _baseDate; set { _baseDate = value; OnPropertyChanged(); } }

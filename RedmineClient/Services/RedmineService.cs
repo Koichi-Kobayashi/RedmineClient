@@ -94,7 +94,7 @@ namespace RedmineClient.Services
                 // 親子関係を含めて取得
                 options.QueryString.Add("include", "relations,children,parent");
                 
-                // IDの昇順でソート
+                // 既定: IDの昇順でソート
                 options.QueryString.Add("sort", "id:asc");
                 
                 if (limit.HasValue)
@@ -128,6 +128,40 @@ namespace RedmineClient.Services
                     errorMessage += $" エラー: {ex.Message}";
                 }
                 
+                throw new RedmineApiException(errorMessage, ex);
+            }
+        }
+
+        /// <summary>
+        /// 指定されたプロジェクトのチケット一覧を、指定ソートで取得（非同期版）
+        /// 例: "id:asc" / "start_date:asc,id:asc"
+        /// </summary>
+        public async Task<List<Issue>> GetIssuesAsync(int projectId, int? limit, int? offset, string? sort, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                var options = new RequestOptions();
+                options.QueryString = new NameValueCollection();
+                options.QueryString.Add("project_id", projectId.ToString());
+                options.QueryString.Add("include", "relations,children,parent");
+                options.QueryString.Add("sort", string.IsNullOrWhiteSpace(sort) ? "id:asc" : sort);
+                if (limit.HasValue) options.QueryString.Add("limit", limit.Value.ToString());
+                if (offset.HasValue) options.QueryString.Add("offset", offset.Value.ToString());
+
+                var issues = await Task.Run(() => _redmineManager.Get<Issue>(options), cts.Token);
+                return issues ?? new List<Issue>();
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"プロジェクトID {projectId} のチケット一覧の取得がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"プロジェクトID {projectId} のチケット一覧の取得に失敗しました。";
+                if (ex is RedmineApiException redmineEx) errorMessage += $" Redmine API エラー: {redmineEx.Message}"; else errorMessage += $" エラー: {ex.Message}";
                 throw new RedmineApiException(errorMessage, ex);
             }
         }
