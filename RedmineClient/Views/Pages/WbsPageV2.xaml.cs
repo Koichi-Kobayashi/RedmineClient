@@ -4,6 +4,7 @@ using RedmineClient.ViewModels.Pages;
 using System.ComponentModel;
 using System.Windows.Controls;
 using RedmineClient.Models;
+using System.Windows.Input;
 
 namespace RedmineClient.Views.Pages
 {
@@ -80,6 +81,19 @@ namespace RedmineClient.Views.Pages
             e.Handled = true;
         }
 
+        private void PredecessorCell_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(WbsSampleTask)))
+            {
+                e.Effects = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
         private void PredecessorCell_DragLeave(object sender, DragEventArgs e)
         {
             if (sender is Border border)
@@ -90,6 +104,56 @@ namespace RedmineClient.Views.Pages
             }
             e.Effects = DragDropEffects.None;
             e.Handled = true;
+        }
+
+        // タスク名セルからのドラッグ開始
+        private Point _dragStartPoint;
+        private void TaskCell_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = e.GetPosition(null);
+        }
+
+        private void TaskCell_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            var pos = e.GetPosition(null);
+            if (SystemParameters.MinimumHorizontalDragDistance <= Math.Abs(pos.X - _dragStartPoint.X) ||
+                SystemParameters.MinimumVerticalDragDistance <= Math.Abs(pos.Y - _dragStartPoint.Y))
+            {
+                if (sender is FrameworkElement fe && fe.DataContext is WbsSampleTask task)
+                {
+                    var data = new DataObject(typeof(WbsSampleTask), task);
+                    DragDrop.DoDragDrop(fe, data, DragDropEffects.Copy);
+                }
+            }
+        }
+
+        // DataGrid全体でも行データをドラッグ開始できるように補完
+        private void LeftGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = e.GetPosition(null);
+        }
+
+        private void LeftGrid_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            var pos = e.GetPosition(null);
+            if (SystemParameters.MinimumHorizontalDragDistance <= Math.Abs(pos.X - _dragStartPoint.X) ||
+                SystemParameters.MinimumVerticalDragDistance <= Math.Abs(pos.Y - _dragStartPoint.Y))
+            {
+                if (sender is DataGrid grid)
+                {
+                    if (e.OriginalSource is DependencyObject dep)
+                    {
+                        var row = ItemsControl.ContainerFromElement(grid, dep) as DataGridRow;
+                        if (row?.Item is WbsSampleTask task)
+                        {
+                            var data = new DataObject(typeof(WbsSampleTask), task);
+                            DragDrop.DoDragDrop(grid, data, DragDropEffects.Copy);
+                        }
+                    }
+                }
+            }
         }
 
         private async void PredecessorCell_Drop(object sender, DragEventArgs e)

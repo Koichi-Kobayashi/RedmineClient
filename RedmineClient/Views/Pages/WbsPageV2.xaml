@@ -67,6 +67,8 @@
               EnableRowVirtualization="True" EnableColumnVirtualization="True"
               GridLinesVisibility="None"
               CellEditEnding="LeftGrid_CellEditEnding"
+              PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown"
+              PreviewMouseMove="LeftGrid_PreviewMouseMove"
               beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True">
       <DataGrid.RowStyle>
         <Style TargetType="DataGridRow">
@@ -78,7 +80,9 @@
         <DataGridTemplateColumn Header="タスク" Width="200">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <StackPanel Orientation="Horizontal">
+              <StackPanel Orientation="Horizontal"
+                          PreviewMouseLeftButtonDown="TaskCell_PreviewMouseLeftButtonDown"
+                          MouseMove="TaskCell_MouseMove">
                 <Border Width="{Binding Level, Converter={StaticResource LevelToIndent}}"/>
                 <TextBlock Text="{Binding Name}"/>
               </StackPanel>
@@ -91,6 +95,7 @@
               <Border Background="#FFF8F8F8" BorderBrush="#33000000" BorderThickness="1" CornerRadius="2"
                       AllowDrop="True"
                       DragEnter="PredecessorCell_DragEnter"
+                      DragOver="PredecessorCell_DragOver"
                       DragLeave="PredecessorCell_DragLeave"
                       Drop="PredecessorCell_Drop"
                       Padding="4,2">

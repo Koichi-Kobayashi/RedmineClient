@@ -81,15 +81,15 @@ namespace RedmineClient.ViewModels.Pages
             if (source == null || target == null) return;
             if (ReferenceEquals(source, target)) return;
 
-            // UIモデル更新（単純に先頭に1つだけ表示）
-            var link = new DependencyLink { PredId = source.WbsNo, LagDays = 0, Type = LinkType.FS };
-            target.Preds.Clear();
-            target.Preds.Add(link);
+            // 意図: 「ドロップ元(source)」の先行に「ドロップ先(target)」を設定
+            var link = new DependencyLink { PredId = target.WbsNo, LagDays = 0, Type = LinkType.FS };
+            source.Preds.Clear();
+            source.Preds.Add(link);
             OnPropertyChanged(nameof(Tasks));
 
-            // Redmineの依存関係を作成（precedes）
-            if (!int.TryParse(source.WbsNo, out var predId)) return;
-            if (!int.TryParse(target.WbsNo, out var succId)) return;
+            // Redmineの依存関係を作成（target precedes source）
+            if (!int.TryParse(target.WbsNo, out var predId)) return;   // 先行
+            if (!int.TryParse(source.WbsNo, out var succId)) return;   // 後続
             if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
 
             using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
