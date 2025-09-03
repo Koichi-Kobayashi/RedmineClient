@@ -55,7 +55,19 @@ namespace RedmineClient.Models
         public string PredecessorIds => string.Join(",", _preds.Select(p => p.PredId));
 
         private bool _isSelected;
-        public bool IsSelected { get => _isSelected; set { _isSelected = value; OnPropertyChanged(); } }
+        public bool IsSelected 
+        { 
+            get => _isSelected; 
+            set 
+            { 
+                if (_isSelected != value)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[WbsSampleTask] {Name}: IsSelected changed from {_isSelected} to {value}");
+                    _isSelected = value; 
+                    OnPropertyChanged(); 
+                }
+            } 
+        }
 
         // V2: Redmineと同期するための日付プロパティ
         private DateTime _baseDate = DateTime.Today;

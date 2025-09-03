@@ -15,17 +15,7 @@
     <convM:EsToXConverter x:Key="EsToX"/>
     <convM:DurationToWidthConverter x:Key="DurToW"/>
 
-    <!-- スクロールバー太さを2倍にする（V1相当） -->
-    <Style TargetType="ScrollBar">
-      <Style.Triggers>
-        <Trigger Property="Orientation" Value="Vertical">
-          <Setter Property="Width" Value="24"/>
-        </Trigger>
-        <Trigger Property="Orientation" Value="Horizontal">
-          <Setter Property="Height" Value="24"/>
-        </Trigger>
-      </Style.Triggers>
-    </Style>
+
 
     <Style TargetType="DataGridRow">
       <Style.Triggers>
@@ -71,7 +61,7 @@
                           DayWidth="{Binding DayWidth}"
                           StartDate="{Binding ViewStart}"/>
 
-    <DataGrid x:Name="LeftGrid" Grid.Row="2" Grid.Column="0"
+    <DataGrid x:Name="LeftGrid" Grid.Row="1" Grid.Column="0" Grid.RowSpan="2"
               ItemsSource="{Binding Tasks}"
               HeadersVisibility="Column"
               CanUserAddRows="False" CanUserDeleteRows="False"
@@ -83,12 +73,31 @@
               PreviewMouseMove="LeftGrid_PreviewMouseMove"
               SelectionMode="Single" SelectionUnit="FullRow"
               SelectionChanged="LeftGrid_SelectionChanged"
-              beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True">
+              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+              ScrollViewer.VerticalScrollBarVisibility="Auto"
+              beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True"
+              RowHeaderWidth="0"
+              AlternatingRowBackground="Transparent"
+              Background="White"
+              Margin="0"
+              Padding="0">
+      <DataGrid.Style>
+        <Style TargetType="DataGrid">
+          <Setter Property="VerticalAlignment" Value="Top"/>
+          <Setter Property="HorizontalAlignment" Value="Stretch"/>
+          <Setter Property="Margin" Value="0"/>
+          <Setter Property="Padding" Value="0"/>
+        </Style>
+      </DataGrid.Style>
       <DataGrid.RowStyle>
         <Style TargetType="DataGridRow">
           <Setter Property="Height" Value="28"/>
           <Setter Property="BorderBrush" Value="#0078D4"/>
           <Setter Property="BorderThickness" Value="0"/>
+          <Setter Property="Margin" Value="0"/>
+          <Setter Property="VerticalAlignment" Value="Top"/>
+          <Setter Property="HorizontalAlignment" Value="Stretch"/>
+          <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown"/>
           <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
               <Setter Property="BorderThickness" Value="2"/>
@@ -97,6 +106,29 @@
           </Style.Triggers>
         </Style>
       </DataGrid.RowStyle>
+      <DataGrid.ColumnHeaderStyle>
+        <Style TargetType="DataGridColumnHeader">
+          <Setter Property="Height" Value="64"/>
+          <Setter Property="Padding" Value="4,2"/>
+          <Setter Property="HorizontalContentAlignment" Value="Center"/>
+          <Setter Property="VerticalContentAlignment" Value="Center"/>
+          <Setter Property="Background" Value="#F5F5F5"/>
+          <Setter Property="BorderBrush" Value="#CCCCCC"/>
+          <Setter Property="BorderThickness" Value="0,0,1,0"/>
+          <Setter Property="FontWeight" Value="Bold"/>
+          <Setter Property="Margin" Value="0"/>
+          <Setter Property="VerticalAlignment" Value="Top"/>
+          <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+      </DataGrid.ColumnHeaderStyle>
+      <DataGrid.CellStyle>
+        <Style TargetType="DataGridCell">
+          <Setter Property="BorderBrush" Value="#CCCCCC"/>
+          <Setter Property="BorderThickness" Value="0,0,1,0"/>
+          <Setter Property="Margin" Value="0"/>
+          <Setter Property="Padding" Value="4,2"/>
+        </Style>
+      </DataGrid.CellStyle>
       <DataGrid.Columns>
         <DataGridTextColumn x:Name="ColId" Header="ID" Binding="{Binding WbsNo}"
                              MinWidth="60" Width="60"/>
@@ -237,8 +269,9 @@
     <GridSplitter Grid.Column="1" Grid.RowSpan="3" Width="5" HorizontalAlignment="Stretch"/>
 
     <ScrollViewer x:Name="RightScroll" Grid.Row="2" Grid.Column="2"
-                  HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible"
-                  beh:ScrollSyncBehavior.GroupKey="WBS">
+                  HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto"
+                  beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="False"
+                  CanContentScroll="False">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="*"/>
@@ -250,7 +283,9 @@
         <ItemsControl Grid.Row="0" ItemsSource="{Binding Tasks}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <Canvas />
+              <Canvas Width="{Binding DataContext.TimelineWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                      Height="{Binding DataContext.TimelineHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                      Background="Transparent"/>
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemContainerStyle>
@@ -263,7 +298,8 @@
             <DataTemplate>
               <Border Height="18" CornerRadius="4" ToolTip="{Binding Name}"
                       beh:DragMoveBehavior.IsEnabled="True"
-                      Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}">
+                      Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}"
+                      MinWidth="10">
                 <Border.Style>
                   <Style TargetType="Border">
                     <Setter Property="BorderBrush" Value="#55000000"/>
@@ -272,9 +308,15 @@
                     <Style.Triggers>
                       <DataTrigger Binding="{Binding IsSelected}" Value="True">
                         <Setter Property="BorderBrush" Value="#FF0078D4"/>
-                        <Setter Property="BorderThickness" Value="3"/>
+                        <Setter Property="BorderThickness" Value="4"/>
                         <Setter Property="Panel.ZIndex" Value="1000"/>
                         <Setter Property="SnapsToDevicePixels" Value="True"/>
+                        <Setter Property="Background" Value="LightBlue"/>
+                        <Setter Property="Effect">
+                          <Setter.Value>
+                            <DropShadowEffect Color="Blue" BlurRadius="5" ShadowDepth="0"/>
+                          </Setter.Value>
+                        </Setter>
                       </DataTrigger>
                     </Style.Triggers>
                   </Style>

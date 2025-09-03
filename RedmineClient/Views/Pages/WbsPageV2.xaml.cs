@@ -133,9 +133,15 @@ namespace RedmineClient.Views.Pages
                     // ViewModel上の選択状態を同期
                     if (row.Item is WbsSampleTask task)
                     {
+                        System.Diagnostics.Debug.WriteLine($"[WbsPageV2] TaskCell_PreviewMouseLeftButtonDown: Selected task = {task.Name}");
                         foreach (var t in ViewModel.Tasks)
                         {
+                            var wasSelected = t.IsSelected;
                             t.IsSelected = ReferenceEquals(t, task);
+                            if (wasSelected != t.IsSelected)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] Task {t.Name}: IsSelected changed from {wasSelected} to {t.IsSelected}");
+                            }
                         }
                     }
                 }
@@ -161,7 +167,30 @@ namespace RedmineClient.Views.Pages
         // DataGrid全体でも行データをドラッグ開始できるように補完
         private void LeftGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_PreviewMouseLeftButtonDown called");
             _dragStartPoint = e.GetPosition(null);
+        }
+
+        // DataGridRowのクリックイベント
+        private void DataGridRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WbsPageV2] DataGridRow_PreviewMouseLeftButtonDown called");
+            if (sender is DataGridRow row && row.Item is WbsSampleTask task)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] DataGridRow clicked: Task = {task.Name}");
+                row.IsSelected = true;
+                
+                // ViewModel上の選択状態を同期
+                foreach (var t in ViewModel.Tasks)
+                {
+                    var wasSelected = t.IsSelected;
+                    t.IsSelected = ReferenceEquals(t, task);
+                    if (wasSelected != t.IsSelected)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[WbsPageV2] Task {t.Name}: IsSelected changed from {wasSelected} to {t.IsSelected}");
+                    }
+                }
+            }
         }
 
         private void LeftGrid_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -189,12 +218,21 @@ namespace RedmineClient.Views.Pages
         // DataGridの選択変更でも右ペインに反映
         private void LeftGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_SelectionChanged called: Added={e.AddedItems.Count}, Removed={e.RemovedItems.Count}");
+            
             if (sender is DataGrid grid)
             {
                 var selected = grid.SelectedItem as WbsSampleTask;
+                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_SelectionChanged: Selected task = {selected?.Name ?? "null"}");
+                
                 foreach (var t in ViewModel.Tasks)
                 {
+                    var wasSelected = t.IsSelected;
                     t.IsSelected = ReferenceEquals(t, selected);
+                    if (wasSelected != t.IsSelected)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[WbsPageV2] Task {t.Name}: IsSelected changed from {wasSelected} to {t.IsSelected}");
+                    }
                 }
             }
         }

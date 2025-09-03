@@ -9,7 +9,12 @@ namespace RedmineClient.Helpers.Multi
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
             if (values.Length >= 2 && values[0] is int es && values[1] is double dayWidth)
-                return es * dayWidth;
+            {
+                var result = es * dayWidth;
+                System.Diagnostics.Debug.WriteLine($"[EsToXConverter] ES={es}, DayWidth={dayWidth}, Result={result}");
+                return result;
+            }
+            System.Diagnostics.Debug.WriteLine($"[EsToXConverter] Invalid values: {string.Join(", ", values)}");
             return 0.0;
         }
 

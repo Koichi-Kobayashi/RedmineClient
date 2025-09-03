@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Diagnostics;
 
 namespace RedmineClient.Behaviors
 {
@@ -30,6 +31,7 @@ namespace RedmineClient.Behaviors
 
                 sv.ScrollChanged += (s, ev) =>
                 {
+                    // Debug.WriteLine($"[ScrollSyncBehavior] ScrollChanged: IsMaster={GetIsMaster(sv)}, VerticalChange={ev.VerticalChange}, VerticalOffset={ev.VerticalOffset}");
                     if (!GetIsMaster(sv)) return;
                     if (ev.VerticalChange == 0) return;
                     if (Groups.TryGetValue(key, out var peers))
@@ -38,6 +40,7 @@ namespace RedmineClient.Behaviors
                         {
                             if (wr.TryGetTarget(out var other) && !ReferenceEquals(other, sv))
                             {
+                                // Debug.WriteLine($"[ScrollSyncBehavior] Syncing to other ScrollViewer: {other.Name}");
                                 other.ScrollToVerticalOffset(ev.VerticalOffset);
                             }
                         }
