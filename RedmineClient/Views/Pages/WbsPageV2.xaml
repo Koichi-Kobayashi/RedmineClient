@@ -75,6 +75,7 @@
               SelectionChanged="LeftGrid_SelectionChanged"
               ScrollViewer.HorizontalScrollBarVisibility="Auto"
               ScrollViewer.VerticalScrollBarVisibility="Auto"
+              ScrollViewer.CanContentScroll="False"
               beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True"
               RowHeaderWidth="0"
               AlternatingRowBackground="Transparent"
@@ -270,8 +271,8 @@
 
     <ScrollViewer x:Name="RightScroll" Grid.Row="2" Grid.Column="2"
                   HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto"
-                  beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="False"
-                  CanContentScroll="False">
+                  CanContentScroll="False"
+                  beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="False">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="*"/>
