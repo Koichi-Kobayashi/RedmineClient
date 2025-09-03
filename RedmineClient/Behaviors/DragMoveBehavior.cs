@@ -14,7 +14,7 @@ namespace RedmineClient.Behaviors
         public static void SetIsEnabled(DependencyObject element, bool value) => element.SetValue(IsEnabledProperty, value);
         public static bool GetIsEnabled(DependencyObject element) => (bool)element.GetValue(IsEnabledProperty);
 
-        private static bool _dragging; private static Point _startPos; private static int _startEs; private static WbsSampleTask? _task; private static WbsSampleViewModel? _vm;
+        private static bool _dragging; private static Point _startPos; private static int _startEs; private static WbsSampleTask? _task; private static WbsV2ViewModel? _vm;
         private static void OnChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is FrameworkElement fe)
@@ -46,9 +46,9 @@ namespace RedmineClient.Behaviors
                 _dragging=false; fe.ReleaseMouseCapture();
             }
         }
-        private static WbsSampleViewModel? FindVm(DependencyObject d)
+        private static WbsV2ViewModel? FindVm(DependencyObject d)
         {
-            DependencyObject? cur=d; while(cur!=null){ if(cur is FrameworkElement fe && fe.DataContext is WbsSampleViewModel vm) return vm; cur=VisualTreeHelper.GetParent(cur);} return null;
+            DependencyObject? cur=d; while(cur!=null){ if(cur is FrameworkElement fe && fe.DataContext is WbsV2ViewModel vm) return vm; cur=VisualTreeHelper.GetParent(cur);} return null;
         }
     }
 }

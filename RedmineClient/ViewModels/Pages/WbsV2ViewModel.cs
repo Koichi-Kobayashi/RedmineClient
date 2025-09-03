@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using RedmineClient.Algorithms;
 using RedmineClient.Models;
 using RedmineClient.Services;
@@ -10,7 +11,7 @@ using Redmine.Net.Api.Types;
 
 namespace RedmineClient.ViewModels.Pages
 {
-    public class WbsSampleViewModel : INotifyPropertyChanged
+    public class WbsV2ViewModel : INotifyPropertyChanged
     {
         public ObservableCollection<WbsSampleTask> Tasks { get; } = new();
         public ObservableCollection<Project> AvailableProjects { get; } = new();
@@ -42,7 +43,7 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
-        public WbsSampleViewModel()
+        public WbsV2ViewModel()
         {
             _ = LoadProjectsAsync();
         }

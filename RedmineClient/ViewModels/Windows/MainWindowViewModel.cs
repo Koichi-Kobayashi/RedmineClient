@@ -33,9 +33,9 @@ namespace RedmineClient.ViewModels.Windows
             },
             new NavigationViewItem()
             {
-                Content = "WBS（サンプル）",
+                Content = "WBS（V2 ガント）",
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Timeline24 },
-                TargetPageType = typeof(Views.Pages.WbsSamplePage)
+                TargetPageType = typeof(Views.Pages.WbsPageV2)
             },
 
         };
