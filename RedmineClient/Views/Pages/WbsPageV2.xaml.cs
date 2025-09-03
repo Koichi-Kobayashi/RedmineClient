@@ -2,6 +2,8 @@ using System.Windows;
 using Wpf.Ui.Abstractions.Controls;
 using RedmineClient.ViewModels.Pages;
 using System.ComponentModel;
+using System.Windows.Controls;
+using RedmineClient.Models;
 
 namespace RedmineClient.Views.Pages
 {
@@ -40,6 +42,22 @@ namespace RedmineClient.Views.Pages
             if (ColLS != null) ColLS.Visibility = vis;
             if (ColLF != null) ColLF.Visibility = vis;
             if (ColSlack != null) ColSlack.Visibility = vis;
+        }
+
+        // LeftGridのセル編集確定でRedmine更新
+        private async void LeftGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.Row?.Item is WbsSampleTask task)
+            {
+                try
+                {
+                    await ViewModel.UpdateIssueDatesAsync(task);
+                }
+                catch
+                {
+                    // 失敗は握りつぶす（UIは先に反映）
+                }
+            }
         }
     }
 }

@@ -138,6 +138,9 @@ namespace RedmineClient.ViewModels.Pages
                         Level = 0,
                         Duration = duration,
                         RowIndex = row++,
+                        BaseDate = ViewStart,
+                        StartDate = sd,
+                        DueDate = dd,
                     };
                     t.StartMin = es < 0 ? 0 : es;
                     Tasks.Add(t);
@@ -149,6 +152,29 @@ namespace RedmineClient.ViewModels.Pages
             {
                 // ignore
             }
+        }
+
+        /// <summary>
+        /// Redmineのチケット日付（開始/期限）を更新
+        /// </summary>
+        public async Task UpdateIssueDatesAsync(WbsSampleTask task)
+        {
+            if (task == null) return;
+            if (!int.TryParse(task.WbsNo, out var issueId)) return;
+            if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
+
+            using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+            var issue = await svc.GetIssueAsync(issueId);
+            if (issue == null) return;
+
+            // ES/Duration から日付を逆算（StartDate/DueDate優先があればそれを使う）
+            var start = task.StartDate ?? task.BaseDate.AddDays(task.ES);
+            var due = task.DueDate ?? start.AddDays(Math.Max(1, task.Duration) - 1);
+
+            issue.StartDate = start;
+            issue.DueDate = due;
+
+            await svc.UpdateIssueAsync(issue);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

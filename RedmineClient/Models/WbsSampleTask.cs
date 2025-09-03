@@ -48,6 +48,16 @@ namespace RedmineClient.Models
 
         public List<DependencyLink> Preds { get; } = new();
 
+        // V2: Redmineと同期するための日付プロパティ
+        private DateTime _baseDate = DateTime.Today;
+        public DateTime BaseDate { get => _baseDate; set { _baseDate = value; OnPropertyChanged(); } }
+
+        private DateTime? _startDate;
+        public DateTime? StartDate { get => _startDate; set { _startDate = value; OnPropertyChanged(); } }
+
+        private DateTime? _dueDate;
+        public DateTime? DueDate { get => _dueDate; set { _dueDate = value; OnPropertyChanged(); } }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

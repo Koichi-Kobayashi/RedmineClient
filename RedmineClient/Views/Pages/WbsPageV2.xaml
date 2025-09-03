@@ -66,6 +66,7 @@
               AutoGenerateColumns="False"
               EnableRowVirtualization="True" EnableColumnVirtualization="True"
               GridLinesVisibility="None"
+              CellEditEnding="LeftGrid_CellEditEnding"
               beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True">
       <DataGrid.RowStyle>
         <Style TargetType="DataGridRow">
@@ -83,6 +84,30 @@
               </StackPanel>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="開始日" Width="130">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding StartDate, StringFormat=yyyy/MM/dd}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellEditingTemplate>
+            <DataTemplate>
+              <DatePicker SelectedDate="{Binding StartDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellEditingTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="終了日" Width="130">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding DueDate, StringFormat=yyyy/MM/dd}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+          <DataGridTemplateColumn.CellEditingTemplate>
+            <DataTemplate>
+              <DatePicker SelectedDate="{Binding DueDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellEditingTemplate>
         </DataGridTemplateColumn>
         <DataGridTextColumn Header="期間" Binding="{Binding Duration}" Width="*"/>
         <DataGridTemplateColumn Header="優先度" Width="80">

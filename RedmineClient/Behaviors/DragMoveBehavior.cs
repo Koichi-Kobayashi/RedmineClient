@@ -35,14 +35,49 @@ namespace RedmineClient.Behaviors
         }
         private static void OnDown(object s, MouseButtonEventArgs e)
         { if (s is FrameworkElement fe && fe.DataContext is WbsSampleTask t){ _task=t; _vm=FindVm(fe); if(_vm==null)return; _startPos=e.GetPosition(fe); _startEs=t.ES; _dragging=true; fe.CaptureMouse(); } }
-        private static void OnMove(object s, MouseEventArgs e) { }
+        private static void OnMove(object s, MouseEventArgs e)
+        {
+            if (!_dragging || _vm == null || _task == null) return;
+            if (s is FrameworkElement fe)
+            {
+                var p = e.GetPosition(fe);
+                double dx = p.X - _startPos.X;
+                int delta = (int)System.Math.Round(dx / _vm.DayWidth);
+
+                // ESをプレビュー的に更新（見た目が即時反映される）
+                _task.ES = System.Math.Max(0, _startEs + delta);
+            }
+        }
         private static void OnUp(object s, MouseButtonEventArgs e)
         {
             if (!_dragging || _vm==null || _task==null) return;
             if (s is FrameworkElement fe)
             {
                 var p = e.GetPosition(fe); double dx = p.X - _startPos.X; int delta = (int)System.Math.Round(dx / _vm.DayWidth);
-                int newEs = System.Math.Max(0, _startEs + delta); _vm.ApplyStartConstraint(_task, newEs);
+                int newEs = System.Math.Max(0, _startEs + delta);
+                _vm.ApplyStartConstraint(_task, newEs);
+
+                // ESが確定したのでStartDate/DueDateを算出
+                var start = _task.BaseDate.AddDays(_task.ES);
+                var due = start.AddDays(System.Math.Max(1, _task.Duration) - 1);
+                _task.StartDate = start;
+                _task.DueDate = due;
+
+                // 非同期でRedmine更新
+                _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        if (_vm != null)
+                        {
+                            await _vm.UpdateIssueDatesAsync(_task);
+                        }
+                    }
+                    catch
+                    {
+                        // 失敗時は無視（UIは保持）
+                    }
+                });
                 _dragging=false; fe.ReleaseMouseCapture();
             }
         }
