@@ -85,7 +85,7 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
-        <DataGridTemplateColumn Header="先行" Width="100">
+        <DataGridTemplateColumn Header="先行" Width="120">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
               <Border Background="#FFF8F8F8" BorderBrush="#33000000" BorderThickness="1" CornerRadius="2"
@@ -94,7 +94,7 @@
                       DragLeave="PredecessorCell_DragLeave"
                       Drop="PredecessorCell_Drop"
                       Padding="4,2">
-                <TextBlock Text="{Binding Preds[0].PredId}"/>
+                <TextBlock Text="{Binding PredecessorIds}"/>
               </Border>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>

@@ -83,7 +83,7 @@ namespace RedmineClient.ViewModels.Pages
 
             // UIモデル更新（単純に先頭に1つだけ表示）
             var link = new DependencyLink { PredId = source.WbsNo, LagDays = 0, Type = LinkType.FS };
-            target.Preds.RemoveAll(_ => true);
+            target.Preds.Clear();
             target.Preds.Add(link);
             OnPropertyChanged(nameof(Tasks));
 

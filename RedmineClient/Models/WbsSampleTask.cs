@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 namespace RedmineClient.Models
 {
@@ -46,7 +48,11 @@ namespace RedmineClient.Models
         private string _priority = "中";
         public string Priority { get => _priority; set { _priority = value; OnPropertyChanged(); } }
 
-        public List<DependencyLink> Preds { get; } = new();
+        private readonly ObservableCollection<DependencyLink> _preds = new();
+        public ObservableCollection<DependencyLink> Preds => _preds;
+
+        // 表示用: 先行タスクIDをカンマ区切りで返す（空なら空文字）
+        public string PredecessorIds => string.Join(",", _preds.Select(p => p.PredId));
 
         // V2: Redmineと同期するための日付プロパティ
         private DateTime _baseDate = DateTime.Today;
@@ -57,6 +63,11 @@ namespace RedmineClient.Models
 
         private DateTime? _dueDate;
         public DateTime? DueDate { get => _dueDate; set { _dueDate = value; OnPropertyChanged(); } }
+
+        public WbsSampleTask()
+        {
+            _preds.CollectionChanged += (_, __) => OnPropertyChanged(nameof(PredecessorIds));
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
