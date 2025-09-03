@@ -59,6 +59,65 @@ namespace RedmineClient.Views.Pages
                 }
             }
         }
+
+        // 先行タスク列 D&D
+        private void PredecessorCell_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(WbsSampleTask)))
+            {
+                e.Effects = DragDropEffects.Copy;
+                if (sender is Border border)
+                {
+                    border.Background = System.Windows.Media.Brushes.LightGreen;
+                    border.BorderBrush = System.Windows.Media.Brushes.Green;
+                    border.BorderThickness = new Thickness(2);
+                }
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private void PredecessorCell_DragLeave(object sender, DragEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                border.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                border.BorderBrush = System.Windows.Media.Brushes.Black;
+                border.BorderThickness = new Thickness(1);
+            }
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private async void PredecessorCell_Drop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                if (!e.Data.GetDataPresent(typeof(WbsSampleTask))) return;
+                var source = e.Data.GetData(typeof(WbsSampleTask)) as WbsSampleTask;
+                if (source == null) return;
+
+                if (sender is Border border && border.DataContext is WbsSampleTask target)
+                {
+                    if (ReferenceEquals(source, target)) return;
+
+                    await ViewModel.SetPredecessorAsync(source, target);
+                }
+            }
+            finally
+            {
+                if (sender is Border border)
+                {
+                    border.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                    border.BorderBrush = System.Windows.Media.Brushes.Black;
+                    border.BorderThickness = new Thickness(1);
+                }
+                e.Handled = true;
+            }
+        }
     }
 }
 

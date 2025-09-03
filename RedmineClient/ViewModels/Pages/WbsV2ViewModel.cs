@@ -73,6 +73,29 @@ namespace RedmineClient.ViewModels.Pages
             OnPropertyChanged(nameof(Tasks));
         }
 
+        /// <summary>
+        /// 先行関係を設定し、Redmineにも作成
+        /// </summary>
+        public async Task SetPredecessorAsync(WbsSampleTask source, WbsSampleTask target)
+        {
+            if (source == null || target == null) return;
+            if (ReferenceEquals(source, target)) return;
+
+            // UIモデル更新（単純に先頭に1つだけ表示）
+            var link = new DependencyLink { PredId = source.WbsNo, LagDays = 0, Type = LinkType.FS };
+            target.Preds.RemoveAll(_ => true);
+            target.Preds.Add(link);
+            OnPropertyChanged(nameof(Tasks));
+
+            // Redmineの依存関係を作成（precedes）
+            if (!int.TryParse(source.WbsNo, out var predId)) return;
+            if (!int.TryParse(target.WbsNo, out var succId)) return;
+            if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
+
+            using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+            await svc.CreateIssueRelationAsync(predId, succId, Redmine.Net.Api.Types.IssueRelationType.Precedes);
+        }
+
         public void ApplyStartConstraint(WbsSampleTask task, int newEs)
         {
             task.StartMin = newEs < 0 ? 0 : newEs;
