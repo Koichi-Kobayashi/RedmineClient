@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -154,17 +155,35 @@ namespace RedmineClient.ViewModels.Pages
 
             // 意図: 「ドロップ元(source)」の先行に「ドロップ先(target)」を設定
             var link = new DependencyLink { PredId = target.WbsNo, LagDays = 0, Type = LinkType.FS };
-            source.Preds.Clear();
-            source.Preds.Add(link);
-            OnPropertyChanged(nameof(Tasks));
 
-            // Redmineの依存関係を作成（target precedes source）
-            if (!int.TryParse(target.WbsNo, out var predId)) return;   // 先行
-            if (!int.TryParse(source.WbsNo, out var succId)) return;   // 後続
-            if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
+            // 現在の先行関係をバックアップ（失敗時にロールバックするため）
+            var backup = source.Preds.ToList();
 
-            using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
-            await svc.CreateIssueRelationAsync(predId, succId, Redmine.Net.Api.Types.IssueRelationType.Precedes);
+            try
+            {
+                source.Preds.Clear();
+                source.Preds.Add(link);
+                OnPropertyChanged(nameof(Tasks));
+
+                // Redmineの依存関係を作成（target precedes source）
+                if (!int.TryParse(target.WbsNo, out var predId)) return;   // 先行
+                if (!int.TryParse(source.WbsNo, out var succId)) return;   // 後続
+                if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
+
+                using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+                await svc.CreateIssueRelationAsync(predId, succId, Redmine.Net.Api.Types.IssueRelationType.Precedes);
+            }
+            catch (Exception ex)
+            {
+                // 失敗したのでUI状態をロールバック
+                source.Preds.Clear();
+                foreach (var b in backup) source.Preds.Add(b);
+                OnPropertyChanged(nameof(Tasks));
+
+                throw new RedmineClient.Services.RedmineApiException(
+                    "先行タスクの設定に失敗しました。ネットワーク、APIキー、権限、Redmineの状態を確認してください。",
+                    ex);
+            }
         }
 
         public void ApplyStartConstraint(WbsSampleTask task, int newEs)
@@ -243,6 +262,16 @@ namespace RedmineClient.ViewModels.Pages
                     Tasks.Add(t);
                 }
 
+                // 既存のRedmineリレーションから先行タスクを復元
+                try
+                {
+                    BuildPredecessorsFromRelations(dated);
+                }
+                catch (Exception)
+                {
+                    // 関係復元に失敗しても処理継続
+                }
+
                 Recalculate();
                 UpdateTimelineSize();
                 
@@ -303,6 +332,122 @@ namespace RedmineClient.ViewModels.Pages
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        /// <summary>
+        /// Redmine Issue の relations から V2 タスクの先行関係を復元
+        /// </summary>
+        private void BuildPredecessorsFromRelations(List<Issue> issues)
+        {
+            if (issues == null || issues.Count == 0 || Tasks.Count == 0) return;
+
+            // ID -> Task の辞書
+            var taskById = new Dictionary<int, WbsSampleTask>();
+            foreach (var t in Tasks)
+            {
+                if (int.TryParse(t.WbsNo, out var id))
+                {
+                    taskById[id] = t;
+                }
+            }
+
+            // 各Issueの関係を読み取り、先行タスクIDをタスクに設定
+            foreach (var issue in issues)
+            {
+                var relations = TryGetRelations(issue);
+                if (relations == null) continue;
+
+                foreach (var (issueToId, relationType) in relations)
+                {
+                    var type = (relationType ?? string.Empty).ToLowerInvariant();
+
+                    // precedes/blocks: 現在のIssueが関連Issueの先行
+                    if (type == "precedes" || type == "blocks")
+                    {
+                        var predecessorId = issue.Id;
+                        var successorId = issueToId;
+
+                        if (taskById.TryGetValue(successorId, out var succTask))
+                        {
+                            var predIdStr = predecessorId.ToString();
+                            if (!succTask.Preds.Any(p => p.PredId == predIdStr))
+                            {
+                                succTask.Preds.Add(new DependencyLink { PredId = predIdStr, LagDays = 0, Type = LinkType.FS });
+                            }
+                        }
+                    }
+                    // follows/blocked_by: 関連Issueが現在のIssueの先行
+                    else if (type == "follows" || type == "blocked_by")
+                    {
+                        var predecessorId = issueToId;
+                        var successorId = issue.Id;
+
+                        if (taskById.TryGetValue(successorId, out var succTask))
+                        {
+                            var predIdStr = predecessorId.ToString();
+                            if (!succTask.Preds.Any(p => p.PredId == predIdStr))
+                            {
+                                succTask.Preds.Add(new DependencyLink { PredId = predIdStr, LagDays = 0, Type = LinkType.FS });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 先行IDの表示更新
+            OnPropertyChanged(nameof(Tasks));
+        }
+
+        /// <summary>
+        /// Issueから relation の (IssueToId, Type) の列挙を安全に取得
+        /// </summary>
+        private IEnumerable<(int IssueToId, string Type)>? TryGetRelations(Issue issue)
+        {
+            var results = new List<(int IssueToId, string Type)>();
+            try
+            {
+                var propertyNames = new[] { "Relations", "relations", "IssueRelations", "issue_relations" };
+                foreach (var name in propertyNames)
+                {
+                    var prop = issue.GetType().GetProperty(name);
+                    if (prop == null) continue;
+
+                    var value = prop.GetValue(issue);
+                    if (value is System.Collections.IEnumerable enumerable)
+                    {
+                        foreach (var rel in enumerable)
+                        {
+                            if (rel == null) continue;
+                            // redmine-net-api の IssueRelation 型を優先
+                            if (rel is Redmine.Net.Api.Types.IssueRelation ir)
+                            {
+                                results.Add((ir.IssueToId, ir.Type.ToString()));
+                            }
+                            else
+                            {
+                                // リフレクションで IssueToId / Type を読む
+                                var toProp = rel.GetType().GetProperty("IssueToId") ?? rel.GetType().GetProperty("issue_to_id");
+                                var typeProp = rel.GetType().GetProperty("Type") ?? rel.GetType().GetProperty("relation_type");
+                                if (toProp != null && typeProp != null)
+                                {
+                                    var toVal = toProp.GetValue(rel);
+                                    var typeVal = typeProp.GetValue(rel);
+                                    if (toVal is int tid && typeVal != null)
+                                    {
+                                        results.Add((tid, typeVal.ToString() ?? string.Empty));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            catch
+            {
+                // 読み取り失敗は無視
+            }
+            return results;
+        }
     }
 }
 

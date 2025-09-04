@@ -275,7 +275,7 @@
                   beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="False">
       <Grid>
         <Grid.RowDefinitions>
-          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <ctrls:TimelineGridOverlay Grid.Row="0" IsHitTestVisible="False"
                                    DayWidth="{Binding DayWidth}"

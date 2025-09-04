@@ -809,6 +809,21 @@ namespace RedmineClient.Services
             {
                 throw new RedmineApiException($"依存関係の設定がタイムアウトしました（{_timeoutSeconds}秒）");
             }
+            catch (Redmine.Net.Api.Exceptions.RedmineException rex)
+            {
+                var detail = rex.InnerException?.Message ?? rex.Message;
+                throw new RedmineApiException($"依存関係の設定に失敗しました (Redmine API): {detail}", rex);
+            }
+            catch (System.Net.WebException wex)
+            {
+                var status = wex.Status.ToString();
+                var http = (wex.Response as System.Net.HttpWebResponse)?.StatusCode;
+                throw new RedmineApiException($"依存関係の設定に失敗しました (Web): Status={status}, Http={(int?)http}", wex);
+            }
+            catch (System.IO.FileNotFoundException fex)
+            {
+                throw new RedmineApiException($"依存関係の設定に必要なライブラリ/リソースが見つかりません: {fex.Message}", fex);
+            }
             catch (Exception ex)
             {
                 throw new RedmineApiException($"依存関係の設定に失敗しました: {ex.Message}", ex);

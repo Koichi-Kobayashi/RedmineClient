@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Windows.Threading;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using RedmineClient.Services;
@@ -112,6 +113,30 @@ namespace RedmineClient
             
             // タスクでの未処理例外をキャッチ
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+            // すべての例外（処理済み例外を含む）を最初に捕捉して詳細を記録
+            AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
+        }
+
+        /// <summary>
+        /// すべてのスロー時例外を記録（ハンドルされる例外も含む）
+        /// FileNotFoundException の詳細な発生源を特定するため
+        /// </summary>
+        private void OnFirstChanceException(object? sender, FirstChanceExceptionEventArgs e)
+        {
+            try
+            {
+                if (e.Exception is FileNotFoundException fnf)
+                {
+                    var fileName = fnf.FileName ?? "(unknown)";
+                    System.Diagnostics.Debug.WriteLine($"FirstChance FileNotFoundException: File='{fileName}' Message='{fnf.Message}'");
+                    System.Diagnostics.Debug.WriteLine(fnf.ToString());
+                }
+            }
+            catch
+            {
+                // ログ中の例外は無視
+            }
         }
 
         /// <summary>

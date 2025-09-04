@@ -249,7 +249,18 @@ namespace RedmineClient.Views.Pages
                 {
                     if (ReferenceEquals(source, target)) return;
                     if (!ViewModel.CanSetPredecessor(source, target)) return;
-                    await ViewModel.SetPredecessorAsync(source, target);
+                    try
+                    {
+                        await ViewModel.SetPredecessorAsync(source, target);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show(
+                            ex.Message,
+                            "先行タスク設定エラー",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
                 }
             }
             finally
