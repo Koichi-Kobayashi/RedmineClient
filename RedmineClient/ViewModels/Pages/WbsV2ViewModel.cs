@@ -29,7 +29,7 @@ namespace RedmineClient.ViewModels.Pages
         private double _timelineHeight = 1000.0;
         public double TimelineHeight { get => _timelineHeight; set { _timelineHeight = value; OnPropertyChanged(); } }
 
-        private bool _showScheduleColumns = true;
+        private bool _showScheduleColumns = false;
         public bool ShowScheduleColumns { get => _showScheduleColumns; set { _showScheduleColumns = value; OnPropertyChanged(); } }
 
         private Project? _selectedProject;
