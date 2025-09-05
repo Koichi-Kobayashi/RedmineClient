@@ -157,17 +157,14 @@ namespace RedmineClient.Views.Pages
         // DataGrid全体でも行データをドラッグ開始できるように補完
         private void LeftGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_PreviewMouseLeftButtonDown called");
             _dragStartPoint = e.GetPosition(null);
         }
 
         // DataGridRowのクリックイベント
         private void DataGridRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"[WbsPageV2] DataGridRow_PreviewMouseLeftButtonDown called");
             if (sender is DataGridRow row && row.Item is WbsSampleTask task)
             {
-                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] DataGridRow clicked: Task = {task.Name}");
                 row.IsSelected = true;
             }
         }
@@ -197,16 +194,12 @@ namespace RedmineClient.Views.Pages
         // DataGridの選択変更でも右ペインに反映
         private void LeftGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_SelectionChanged called: Added={e.AddedItems.Count}, Removed={e.RemovedItems.Count}");
-            
             if (sender is DataGrid grid)
             {
                 var added = e.AddedItems.OfType<WbsSampleTask>();
                 var removed = e.RemovedItems.OfType<WbsSampleTask>();
                 foreach (var t in removed) t.IsSelected = false;
                 foreach (var t in added) t.IsSelected = true;
-                var sel = grid.SelectedItem as WbsSampleTask;
-                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_SelectionChanged: Selected task = {sel?.Name ?? "null"}");
             }
         }
 

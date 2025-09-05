@@ -10,11 +10,8 @@ namespace RedmineClient.Helpers.Multi
         {
             if (values.Length >= 2 && values[0] is int d && values[1] is double dayWidth)
             {
-                var result = System.Math.Max(1.0, d * dayWidth);
-                System.Diagnostics.Debug.WriteLine($"[DurationToWidthConverter] Duration={d}, DayWidth={dayWidth}, Result={result}");
-                return result;
+                return System.Math.Max(1.0, d * dayWidth);
             }
-            System.Diagnostics.Debug.WriteLine($"[DurationToWidthConverter] Invalid values: {string.Join(", ", values)}");
             return 1.0;
         }
 

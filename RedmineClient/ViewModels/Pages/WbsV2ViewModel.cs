@@ -273,14 +273,6 @@ namespace RedmineClient.ViewModels.Pages
 
                 Recalculate();
                 UpdateTimelineSize();
-                
-                // デバッグ: 最初の数個のタスクの情報を出力
-                System.Diagnostics.Debug.WriteLine($"[WbsV2ViewModel] LoadRedmineDataAsync completed: {Tasks.Count} tasks loaded");
-                for (int i = 0; i < Math.Min(5, Tasks.Count); i++)
-                {
-                    var task = Tasks[i];
-                    System.Diagnostics.Debug.WriteLine($"[WbsV2ViewModel] Task {i}: {task.Name}, ES={task.ES}, Duration={task.Duration}, RowIndex={task.RowIndex}");
-                }
             }
             catch
             {
@@ -314,17 +306,15 @@ namespace RedmineClient.ViewModels.Pages
         private void UpdateTimelineSize()
         {
             // タイムラインのサイズを更新（タスク数と日数に基づく）
-            System.Diagnostics.Debug.WriteLine($"[WbsV2ViewModel] UpdateTimelineSize: Tasks.Count={Tasks.Count}");
             if (Tasks.Count > 0)
             {
                 TimelineHeight = Math.Max(1000, Tasks.Count * 30 + 100); // タスク数 * 行高 + 余白
                 var maxEndDate = Tasks.Max(t => t.ES + t.Duration);
                 TimelineWidth = Math.Max(2000, maxEndDate * DayWidth + 200); // 最大終了日 * 日幅 + 余白
-                System.Diagnostics.Debug.WriteLine($"[WbsV2ViewModel] UpdateTimelineSize: TimelineWidth={TimelineWidth}, TimelineHeight={TimelineHeight}");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[WbsV2ViewModel] UpdateTimelineSize: No tasks, using default size");
+                // no-op
             }
         }
 

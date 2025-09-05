@@ -10,11 +10,8 @@ namespace RedmineClient.Helpers.Multi
         {
             if (values.Length >= 2 && values[0] is int es && values[1] is double dayWidth)
             {
-                var result = es * dayWidth;
-                System.Diagnostics.Debug.WriteLine($"[EsToXConverter] ES={es}, DayWidth={dayWidth}, Result={result}");
-                return result;
+                return es * dayWidth;
             }
-            System.Diagnostics.Debug.WriteLine($"[EsToXConverter] Invalid values: {string.Join(", ", values)}");
             return 0.0;
         }
 
