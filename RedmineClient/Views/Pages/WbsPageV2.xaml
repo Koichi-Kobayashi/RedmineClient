@@ -64,10 +64,10 @@
             BorderThickness="1">
             <DataGrid
                 x:Name="LeftGrid" Width="920" Margin="0,-64,0,0" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True"
-                CellEditEnding="LeftGrid_CellEditEnding" FrozenColumnCount="1"
-                ItemsSource="{Binding Tasks}" CanUserAddRows="False"
-                PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                SelectionChanged="LeftGrid_SelectionChanged">
+                CanUserAddRows="False" CellEditEnding="LeftGrid_CellEditEnding" FrozenColumnCount="1" HeadersVisibility="Column"
+                ItemsSource="{Binding Tasks}"
+                PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" RowHeaderWidth="0" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="LeftGrid_SelectionChanged" SelectionMode="Single" SelectionUnit="FullRow">
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Setter Property="Height" Value="28" />
@@ -93,9 +93,9 @@
                         <Setter Property="VerticalContentAlignment" Value="Center" />
                         <Setter Property="Background" Value="#F5F5F5" />
                         <Setter Property="BorderBrush" Value="#CCCCCC" />
-                        <Setter Property="BorderThickness" Value="0,0,1,0" />
+                        <Setter Property="BorderThickness" Value="1,1,0,1" />
                         <Setter Property="FontWeight" Value="Bold" />
-                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,0" />
                         <Setter Property="VerticalAlignment" Value="Top" />
                         <Setter Property="HorizontalAlignment" Value="Stretch" />
                     </Style>
@@ -104,7 +104,7 @@
                     <Style TargetType="DataGridCell">
                         <Setter Property="BorderBrush" Value="#CCCCCC" />
                         <Setter Property="BorderThickness" Value="0,0,1,0" />
-                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,0" />
                         <Setter Property="Padding" Value="4,2" />
                     </Style>
                 </DataGrid.CellStyle>
