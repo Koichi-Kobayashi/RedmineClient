@@ -66,7 +66,7 @@ namespace RedmineClient.Views.Pages
                 {
                     // タスクがキャンセルされた場合は何もしない
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // ViewModelの初期化でエラーが発生した場合は無視
                 }
@@ -115,7 +115,7 @@ namespace RedmineClient.Views.Pages
                     {
                         await RedmineClient.Services.HolidayService.ForceUpdateAsync();
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // 祝日データの初期化に失敗しても処理を続行
                     }
@@ -125,7 +125,7 @@ namespace RedmineClient.Views.Pages
                     }
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // 祝日データの初期化に失敗しても処理を続行
                 _isHolidayDataInitializing = false;
@@ -400,7 +400,7 @@ namespace RedmineClient.Views.Pages
 
                 // 初期化完了
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // DataGrid初期化エラーが発生した場合は無視
             }
@@ -446,7 +446,7 @@ namespace RedmineClient.Views.Pages
                     {
                         await RedmineClient.Services.HolidayService.ForceUpdateAsync();
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // 祝日データの再初期化に失敗しても処理を続行
                     }
@@ -456,7 +456,7 @@ namespace RedmineClient.Views.Pages
                     }
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // 祝日データの再初期化に失敗しても処理を続行
                 _isHolidayDataRefreshing = false;
@@ -1207,7 +1207,7 @@ namespace RedmineClient.Views.Pages
                     WbsDataGrid.Items.Refresh();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // エラーが発生した場合は無視
             }
@@ -1933,7 +1933,7 @@ namespace RedmineClient.Views.Pages
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // ID列マウスクリックエラーが発生した場合は無視
             }
@@ -1956,7 +1956,7 @@ namespace RedmineClient.Views.Pages
                     OpenUrlInBrowser(redmineUrl);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // ID列ダブルクリック処理エラーが発生した場合は無視
             }
@@ -2015,7 +2015,7 @@ namespace RedmineClient.Views.Pages
                 // チケットURLを構築
                 return $"{normalizedHost}/issues/{issueId}";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Redmine URL構築エラーが発生した場合は再スロー
                 throw;
