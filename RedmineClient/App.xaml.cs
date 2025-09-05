@@ -126,11 +126,18 @@ namespace RedmineClient
         {
             try
             {
-                if (e.Exception is FileNotFoundException fnf)
+                // redmine-net-api.XmlSerializers は不要なため抑制
+                if (e.Exception is FileNotFoundException fnf &&
+                    (fnf.FileName?.Contains("redmine-net-api.XmlSerializers", StringComparison.OrdinalIgnoreCase) == true))
                 {
-                    var fileName = fnf.FileName ?? "(unknown)";
-                    System.Diagnostics.Debug.WriteLine($"FirstChance FileNotFoundException: File='{fileName}' Message='{fnf.Message}'");
-                    System.Diagnostics.Debug.WriteLine(fnf.ToString());
+                    return;
+                }
+
+                if (e.Exception is FileNotFoundException fnf2)
+                {
+                    var fileName = fnf2.FileName ?? "(unknown)";
+                    System.Diagnostics.Debug.WriteLine($"FirstChance FileNotFoundException: File='{fileName}' Message='{fnf2.Message}'");
+                    System.Diagnostics.Debug.WriteLine(fnf2.ToString());
                 }
             }
             catch

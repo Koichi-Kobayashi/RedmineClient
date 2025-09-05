@@ -64,7 +64,9 @@ namespace RedmineClient.Models
                 {
                     System.Diagnostics.Debug.WriteLine($"[WbsSampleTask] {Name}: IsSelected changed from {_isSelected} to {value}");
                     _isSelected = value; 
-                    OnPropertyChanged(); 
+                    OnPropertyChanged();
+                    // 先行ID表示の再評価を強制（選択切替時に消える現象対策）
+                    OnPropertyChanged(nameof(PredecessorIds));
                 }
             } 
         }

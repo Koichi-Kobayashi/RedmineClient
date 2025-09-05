@@ -76,7 +76,7 @@
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
                     <Setter Property="Height" Value="28" />
-                    <Setter Property="BorderBrush" Value="#0078D4" />
+                    <Setter Property="BorderBrush" Value="Transparent" />
                     <Setter Property="BorderThickness" Value="0" />
                     <Setter Property="Margin" Value="0" />
                     <Setter Property="VerticalAlignment" Value="Top" />
@@ -84,7 +84,7 @@
                     <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown" />
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="BorderThickness" Value="2" />
+                            <Setter Property="BorderThickness" Value="1" />
                             <Setter Property="Background" Value="Transparent" />
                         </Trigger>
                     </Style.Triggers>
@@ -131,7 +131,7 @@
                             <Border
                                 Padding="4,2" AllowDrop="True" Background="#FFF8F8F8" BorderBrush="#33000000" BorderThickness="1"
                                 CornerRadius="2" DragEnter="PredecessorCell_DragEnter" DragLeave="PredecessorCell_DragLeave" DragOver="PredecessorCell_DragOver" Drop="PredecessorCell_Drop">
-                                <TextBlock Text="{Binding PredecessorIds}" />
+                                <TextBlock Text="{Binding PredecessorIds}" Foreground="Black" />
                             </Border>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>

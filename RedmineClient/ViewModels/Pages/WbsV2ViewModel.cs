@@ -153,7 +153,7 @@ namespace RedmineClient.ViewModels.Pages
                 return;
             }
 
-            // 意図: 「ドロップ元(source)」の先行に「ドロップ先(target)」を設定
+            // 意図: 「ドロップ元(source)」の先行に「ドロップ先(target)」を追加
             var link = new DependencyLink { PredId = target.WbsNo, LagDays = 0, Type = LinkType.FS };
 
             // 現在の先行関係をバックアップ（失敗時にロールバックするため）
@@ -161,8 +161,11 @@ namespace RedmineClient.ViewModels.Pages
 
             try
             {
-                source.Preds.Clear();
-                source.Preds.Add(link);
+                // 既に同じ先行があれば追加しない（重複回避）
+                if (!source.Preds.Any(p => p.PredId == link.PredId))
+                {
+                    source.Preds.Add(link);
+                }
                 OnPropertyChanged(nameof(Tasks));
 
                 // Redmineの依存関係を作成（target precedes source）
@@ -175,11 +178,7 @@ namespace RedmineClient.ViewModels.Pages
             }
             catch (Exception ex)
             {
-                // 失敗したのでUI状態をロールバック
-                source.Preds.Clear();
-                foreach (var b in backup) source.Preds.Add(b);
-                OnPropertyChanged(nameof(Tasks));
-
+                // サーバー同期に失敗してもUI上の設定は保持し、ユーザーに通知する
                 throw new RedmineClient.Services.RedmineApiException(
                     "先行タスクの設定に失敗しました。ネットワーク、APIキー、権限、Redmineの状態を確認してください。",
                     ex);

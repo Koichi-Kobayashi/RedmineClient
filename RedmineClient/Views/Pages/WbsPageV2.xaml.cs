@@ -130,19 +130,9 @@ namespace RedmineClient.Views.Pages
                 if (row != null)
                 {
                     row.IsSelected = true;
-                    // ViewModel上の選択状態を同期
                     if (row.Item is WbsSampleTask task)
                     {
                         System.Diagnostics.Debug.WriteLine($"[WbsPageV2] TaskCell_PreviewMouseLeftButtonDown: Selected task = {task.Name}");
-                        foreach (var t in ViewModel.Tasks)
-                        {
-                            var wasSelected = t.IsSelected;
-                            t.IsSelected = ReferenceEquals(t, task);
-                            if (wasSelected != t.IsSelected)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] Task {t.Name}: IsSelected changed from {wasSelected} to {t.IsSelected}");
-                            }
-                        }
                     }
                 }
             }
@@ -179,17 +169,6 @@ namespace RedmineClient.Views.Pages
             {
                 System.Diagnostics.Debug.WriteLine($"[WbsPageV2] DataGridRow clicked: Task = {task.Name}");
                 row.IsSelected = true;
-                
-                // ViewModel上の選択状態を同期
-                foreach (var t in ViewModel.Tasks)
-                {
-                    var wasSelected = t.IsSelected;
-                    t.IsSelected = ReferenceEquals(t, task);
-                    if (wasSelected != t.IsSelected)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[WbsPageV2] Task {t.Name}: IsSelected changed from {wasSelected} to {t.IsSelected}");
-                    }
-                }
             }
         }
 
@@ -222,18 +201,12 @@ namespace RedmineClient.Views.Pages
             
             if (sender is DataGrid grid)
             {
-                var selected = grid.SelectedItem as WbsSampleTask;
-                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_SelectionChanged: Selected task = {selected?.Name ?? "null"}");
-                
-                foreach (var t in ViewModel.Tasks)
-                {
-                    var wasSelected = t.IsSelected;
-                    t.IsSelected = ReferenceEquals(t, selected);
-                    if (wasSelected != t.IsSelected)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[WbsPageV2] Task {t.Name}: IsSelected changed from {wasSelected} to {t.IsSelected}");
-                    }
-                }
+                var added = e.AddedItems.OfType<WbsSampleTask>();
+                var removed = e.RemovedItems.OfType<WbsSampleTask>();
+                foreach (var t in removed) t.IsSelected = false;
+                foreach (var t in added) t.IsSelected = true;
+                var sel = grid.SelectedItem as WbsSampleTask;
+                System.Diagnostics.Debug.WriteLine($"[WbsPageV2] LeftGrid_SelectionChanged: Selected task = {sel?.Name ?? "null"}");
             }
         }
 

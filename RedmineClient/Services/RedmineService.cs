@@ -796,6 +796,16 @@ namespace RedmineClient.Services
                 var issueRelation = new IssueRelation();
                 issueRelation.Type = relationType; // 先行タスクなど
                 issueRelation.IssueToId = relatedIssueId; // 関連タスクのID
+                // 念のため IssueId をリフレクションで設定（ライブラリの実装差異に対応）
+                try
+                {
+                    var issueIdProp = typeof(IssueRelation).GetProperty("IssueId");
+                    if (issueIdProp?.CanWrite == true)
+                    {
+                        issueIdProp.SetValue(issueRelation, issueId);
+                    }
+                }
+                catch { /* ignore */ }
 
                 // RedmineManagerのCreateメソッドを使用して依存関係を作成
                 var createdRelation = await Task.Run(() => _redmineManager.Create<IssueRelation>(issueRelation, issueId.ToString()), cts.Token);
