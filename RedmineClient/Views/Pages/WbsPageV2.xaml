@@ -92,7 +92,7 @@
             </DataGrid.RowStyle>
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Height" Value="64" />
+                    <Setter Property="Height" Value="62" />
                     <Setter Property="Padding" Value="4,2" />
                     <Setter Property="HorizontalContentAlignment" Value="Center" />
                     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -131,7 +131,7 @@
                             <Border
                                 Padding="4,2" AllowDrop="True" Background="#FFF8F8F8" BorderBrush="#33000000" BorderThickness="1"
                                 CornerRadius="2" DragEnter="PredecessorCell_DragEnter" DragLeave="PredecessorCell_DragLeave" DragOver="PredecessorCell_DragOver" Drop="PredecessorCell_Drop">
-                                <TextBlock Text="{Binding PredecessorIds}" Foreground="Black" />
+                                <TextBlock Foreground="Black" Text="{Binding PredecessorIds}" />
                             </Border>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
