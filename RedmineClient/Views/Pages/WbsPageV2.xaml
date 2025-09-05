@@ -76,7 +76,7 @@
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
                     <Setter Property="Height" Value="28" />
-                    <Setter Property="BorderBrush" Value="Transparent" />
+                    <Setter Property="BorderBrush" Value="#0078D4" />
                     <Setter Property="BorderThickness" Value="0" />
                     <Setter Property="Margin" Value="0" />
                     <Setter Property="VerticalAlignment" Value="Top" />
@@ -274,6 +274,7 @@
                                 ToolTip="{Binding Name}">
                                 <Border.Style>
                                     <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="#55000000" />
                                         <Setter Property="BorderThickness" Value="1" />
                                         <Setter Property="Panel.ZIndex" Value="1" />
                                         <Style.Triggers>
