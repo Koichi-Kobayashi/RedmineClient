@@ -223,7 +223,7 @@ namespace RedmineClient.Views.Pages
                     // マウスホイールの回転量に基づいてスクロール
                     var delta = args.Delta;
                     var currentOffset = scrollViewer.VerticalOffset;
-                    var newOffset = currentOffset - (delta / 120.0) * 20; // 20ピクセルずつスクロール
+                    var newOffset = currentOffset - (delta / 120.0) * 28; // 行高28pxに合わせてスクロール
                     
                     // スクロール範囲内に制限
                     newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));
@@ -272,7 +272,7 @@ namespace RedmineClient.Views.Pages
                 // マウスホイールの回転量に基づいてスクロール
                 var delta = e.Delta;
                 var currentOffset = scrollViewer.VerticalOffset;
-                var newOffset = currentOffset - (delta / 120.0) * 20; // 20ピクセルずつスクロール
+                var newOffset = currentOffset - (delta / 120.0) * 28; // 行高28pxに合わせてスクロール
                 
                 // スクロール範囲内に制限
                 newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));

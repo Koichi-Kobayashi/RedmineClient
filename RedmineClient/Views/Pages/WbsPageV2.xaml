@@ -63,9 +63,9 @@
             Grid.Row="2" Grid.Column="0" Margin="0" Background="White" BorderBrush="#CCCCCC"
             BorderThickness="1">
             <DataGrid
-                x:Name="LeftGrid" Width="920" Margin="0,-62,0,0" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True"
+                x:Name="LeftGrid" Width="920" Margin="0,-64,0,0" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True"
                 CellEditEnding="LeftGrid_CellEditEnding" FrozenColumnCount="1"
-                ItemsSource="{Binding Tasks}"
+                ItemsSource="{Binding Tasks}" CanUserAddRows="False"
                 PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                 SelectionChanged="LeftGrid_SelectionChanged">
                 <DataGrid.RowStyle>
@@ -87,7 +87,7 @@
                 </DataGrid.RowStyle>
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Height" Value="62" />
+                        <Setter Property="Height" Value="64" />
                         <Setter Property="Padding" Value="4,2" />
                         <Setter Property="HorizontalContentAlignment" Value="Center" />
                         <Setter Property="VerticalContentAlignment" Value="Center" />
