@@ -226,6 +226,24 @@ namespace RedmineClient.Views.Pages
             }
         }
 
+        // 右ペインのマウスホイールイベントハンドラー
+        private void RightScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is ScrollViewer scrollViewer)
+            {
+                // マウスホイールの回転量に基づいてスクロール
+                var delta = e.Delta;
+                var currentOffset = scrollViewer.VerticalOffset;
+                var newOffset = currentOffset - (delta / 120.0) * 20; // 20ピクセルずつスクロール
+                
+                // スクロール範囲内に制限
+                newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));
+                
+                scrollViewer.ScrollToVerticalOffset(newOffset);
+                e.Handled = true;
+            }
+        }
+
         // ビジュアルツリーからScrollViewerを検索するヘルパーメソッド
         private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {

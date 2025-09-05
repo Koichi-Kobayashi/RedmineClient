@@ -57,61 +57,18 @@
         <!--  右側上部にタイムライン（曜日+日付）  -->
         <ctrls:TimelineHeader Grid.Row="1" Grid.Column="2" Height="64" DayWidth="{Binding DayWidth}" StartDate="{Binding ViewStart}" />
 
-        <DataGrid
-            x:Name="LeftGrid" Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Margin="0"
-            Padding="0" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True" AlternatingRowBackground="Transparent" AutoGenerateColumns="False"
-            Background="White" CanUserAddRows="False" CanUserDeleteRows="False" CellEditEnding="LeftGrid_CellEditEnding" EnableColumnVirtualization="True"
-            EnableRowVirtualization="True" GridLinesVisibility="None" HeadersVisibility="Column"
-            ItemsSource="{Binding Tasks}"
-            PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" PreviewMouseWheel="LeftGrid_PreviewMouseWheel" RowHeaderWidth="0" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Auto"
-            ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="LeftGrid_SelectionChanged" SelectionMode="Single" SelectionUnit="FullRow"
-            FrozenColumnCount="0">
-            <DataGrid.Style>
-                <Style TargetType="DataGrid">
-                    <Setter Property="VerticalAlignment" Value="Top" />
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
-                    <Setter Property="Margin" Value="0" />
-                    <Setter Property="Padding" Value="0" />
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="DataGrid">
-                                <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="2" SnapsToDevicePixels="True">
-                                    <ScrollViewer x:Name="DG_ScrollViewer" Focusable="false">
-                                        <ScrollViewer.Template>
-                                            <ControlTemplate TargetType="ScrollViewer">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="*"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <Button Command="{x:Static DataGrid.SelectAllCommand}" Focusable="false" Visibility="{Binding HeadersVisibility, ConverterParameter={x:Static DataGridHeadersVisibility.All}, Converter={x:Static DataGrid.HeadersVisibilityConverter}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}" Width="{Binding CellsPanelHorizontalOffset, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"/>
-                                                    <DataGridColumnHeadersPresenter x:Name="PART_ColumnHeadersPresenter" Grid.Column="1" Visibility="{Binding HeadersVisibility, ConverterParameter={x:Static DataGridHeadersVisibility.Column}, Converter={x:Static DataGrid.HeadersVisibilityConverter}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"/>
-                                                    <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.ColumnSpan="2" Grid.Row="1" Content="{TemplateBinding Content}" ContentStringFormat="{TemplateBinding ContentStringFormat}" ContentTemplate="{TemplateBinding ContentTemplate}" CanContentScroll="{TemplateBinding CanContentScroll}"/>
-                                                    <ScrollBar x:Name="PART_VerticalScrollBar" AutomationProperties.AutomationId="VerticalScrollBar" Cursor="Arrow" Grid.Column="2" Maximum="{TemplateBinding ScrollableHeight}" Orientation="Vertical" Grid.Row="1" Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" ViewportSize="{TemplateBinding ViewportHeight}"/>
-                                                    <Grid Grid.Column="1" Grid.Row="2">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="{Binding NonFrozenColumnsViewportHorizontalOffset, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <ScrollBar x:Name="PART_HorizontalScrollBar" AutomationProperties.AutomationId="HorizontalScrollBar" Cursor="Arrow" Grid.Column="1" Maximum="{TemplateBinding ScrollableWidth}" Orientation="Horizontal" Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" ViewportSize="{TemplateBinding ViewportWidth}"/>
-                                                    </Grid>
-                                                </Grid>
-                                            </ControlTemplate>
-                                        </ScrollViewer.Template>
-                                        <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                                    </ScrollViewer>
-                                </Border>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </DataGrid.Style>
+        <!-- 左ペインの固定枠 -->
+        <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Margin="0" 
+                BorderBrush="#CCCCCC" BorderThickness="1" Background="White">
+            <DataGrid
+                x:Name="LeftGrid" Width="920"
+                ItemsSource="{Binding Tasks}"
+                PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" 
+                SelectionChanged="LeftGrid_SelectionChanged" CellEditEnding="LeftGrid_CellEditEnding"
+                FrozenColumnCount="1"
+                ScrollViewer.CanContentScroll="False"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                ScrollViewer.HorizontalScrollBarVisibility="Auto">
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
                     <Setter Property="Height" Value="28" />
@@ -199,7 +156,7 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellEditingTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Width="*" Binding="{Binding Duration}" Header="期間" />
+                <DataGridTextColumn Width="80" MinWidth="80" Binding="{Binding Duration}" Header="期間" />
                 <DataGridTemplateColumn Width="80" Header="優先度">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -280,13 +237,16 @@
                     </DataGridTextColumn.EditingElementStyle>
                 </DataGridTextColumn>
             </DataGrid.Columns>
-        </DataGrid>
+            </DataGrid>
+        </Border>
 
-        <GridSplitter Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
+        <GridSplitter Grid.Row="2" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
 
         <ScrollViewer
-            x:Name="RightScroll" Grid.Row="2" Grid.Column="2" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="False"
-            CanContentScroll="False" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto">
+            x:Name="RightScroll" Grid.Row="2" Grid.Column="2"
+            VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Visible"
+            CanContentScroll="False" Focusable="True" IsTabStop="True"
+            PreviewMouseWheel="RightScroll_PreviewMouseWheel">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
