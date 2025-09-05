@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Windows.Controls;
 using RedmineClient.Models;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace RedmineClient.Views.Pages
 {
@@ -203,28 +204,9 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        // マウスホイールイベントハンドラー
-        private void LeftGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (sender is DataGrid dataGrid)
-            {
-                // DataGrid内のScrollViewerを取得
-                var scrollViewer = FindVisualChild<ScrollViewer>(dataGrid);
-                if (scrollViewer != null)
-                {
-                    // マウスホイールの回転量に基づいてスクロール
-                    var delta = e.Delta;
-                    var currentOffset = scrollViewer.VerticalOffset;
-                    var newOffset = currentOffset - (delta / 120.0) * 20; // 20ピクセルずつスクロール
-                    
-                    // スクロール範囲内に制限
-                    newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));
-                    
-                    scrollViewer.ScrollToVerticalOffset(newOffset);
-                    e.Handled = true;
-                }
-            }
-        }
+
+
+
 
         // ビジュアルツリーからScrollViewerを検索するヘルパーメソッド
         private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject

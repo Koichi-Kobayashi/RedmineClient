@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Redmine.Net.Api.Types;
 using RedmineClient.Services;
-using RedmineClient.ViewModels;
 using RedmineClient.ViewModels.Windows;
 using RedmineClient.Views.Windows;
 using Wpf.Ui.Abstractions.Controls;
@@ -536,7 +535,7 @@ namespace RedmineClient.ViewModels.Pages
             WbsProgress = 0;
             WbsProgressMessage = "";
 
-            // 設定からスケジュール開始年月を読み込み（getアクセサーを呼び出さない）
+            // 設定からスケジュール開f始年月を読み込み（getアクセサーを呼び出さない）
             _scheduleStartYearMonth = AppConfig.GetScheduleStartYearMonthForInitialization();
 
             // Redmineサービスを初期化
