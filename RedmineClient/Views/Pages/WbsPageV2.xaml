@@ -115,7 +115,7 @@
             </DataGrid.CellStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn x:Name="ColId" Width="60" MinWidth="60" Binding="{Binding WbsNo}" Header="ID" />
-                <DataGridTemplateColumn Width="200" Header="タスク">
+                <DataGridTemplateColumn Width="400" Header="タスク">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel MouseMove="TaskCell_MouseMove" Orientation="Horizontal" PreviewMouseLeftButtonDown="TaskCell_PreviewMouseLeftButtonDown">
