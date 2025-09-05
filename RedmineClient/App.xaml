@@ -11,58 +11,6 @@
                 <ui:ThemesDictionary Theme="Light" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
-
-            <!--  カスタムスクロールバースタイル  -->
-            <Style TargetType="ScrollBar">
-                <Setter Property="Width" Value="20" />
-                <Setter Property="MinWidth" Value="20" />
-                <Style.Triggers>
-                    <Trigger Property="Orientation" Value="Horizontal">
-                        <Setter Property="Height" Value="20" />
-                        <Setter Property="MinHeight" Value="20" />
-                        <Setter Property="Width" Value="Auto" />
-                        <Setter Property="MinWidth" Value="0" />
-                    </Trigger>
-                </Style.Triggers>
-            </Style>
-
-            <!--  ScrollViewerのスタイル  -->
-            <Style TargetType="ScrollViewer">
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="ScrollViewer">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-
-                                <ScrollContentPresenter Grid.Row="0" Grid.Column="0" CanContentScroll="{TemplateBinding CanContentScroll}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
-
-                                <ScrollBar
-                                    Name="PART_VerticalScrollBar" Grid.Row="0" Grid.Column="1" MinWidth="12"
-                                    Maximum="{TemplateBinding ScrollableHeight}"
-                                    Orientation="Vertical"
-                                    ViewportSize="{TemplateBinding ViewportHeight}"
-                                    Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
-                                    Value="{TemplateBinding VerticalOffset}" />
-
-                                <ScrollBar
-                                    Name="PART_HorizontalScrollBar" Grid.Row="1" Grid.Column="0" MinHeight="12"
-                                    Maximum="{TemplateBinding ScrollableWidth}"
-                                    Orientation="Horizontal"
-                                    ViewportSize="{TemplateBinding ViewportWidth}"
-                                    Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
-                                    Value="{TemplateBinding HorizontalOffset}" />
-                            </Grid>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
