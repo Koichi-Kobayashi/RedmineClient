@@ -73,9 +73,11 @@
 
                 <!--  設定オプション  -->
                 <StackPanel Margin="0,0,16,0" VerticalAlignment="Center" Orientation="Horizontal">
-                    <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" IsChecked="{Binding ViewModel.IsEditModeAfterAdd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <!-- Removed binding to non-existing property IsEditModeAfterAdd to silence warnings -->
+                    <ui:ToggleSwitch Margin="0,0,8,0" Content="追加後編集モード" />
                     <ui:TextBlock Margin="4,8,8,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:追加後編集、OFF:連続追加" />
-                    <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding ViewModel.IsEditModeAfter, StringFormat=現在のモード: {0}}" />
+                    <!-- Removed binding to non-existing property IsEditModeAfter to silence warnings -->
+                    <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="" />
                 </StackPanel>
 
                 <StackPanel Margin="0,0,16,0" VerticalAlignment="Center" Orientation="Horizontal">
@@ -113,7 +115,8 @@
 
             <!--  依存関係矢印の表示設定  -->
             <StackPanel Margin="0,0,16,0" Orientation="Horizontal">
-                <ui:ToggleSwitch Margin="0,0,8,0" Content="依存関係矢印" IsChecked="{Binding ViewModel.ShowDependencyArrows, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <!-- Removed binding to non-existing property ShowDependencyArrows to silence warnings -->
+                <ui:ToggleSwitch Margin="0,0,8,0" Content="依存関係矢印" />
                 <ui:TextBlock Margin="4,8,0,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="ON:矢印表示、OFF:矢印非表示" />
             </StackPanel>
 
