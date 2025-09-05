@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Windows.Controls;
 using RedmineClient.Models;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace RedmineClient.Views.Pages
 {
@@ -203,34 +204,71 @@ namespace RedmineClient.Views.Pages
             }
         }
 
-        // マウスホイールイベントハンドラー
-        private void LeftGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+
+
+
+
+        // 右ペインのLoadedイベントハンドラー
+        private void RightScroll_Loaded(object sender, RoutedEventArgs e)
         {
-            if (sender is DataGrid dataGrid)
+            System.Diagnostics.Debug.WriteLine("RightScroll_Loaded called");
+            
+            if (sender is ScrollViewer scrollViewer)
             {
-                // DataGrid内のScrollViewerを取得
-                var scrollViewer = FindVisualChild<ScrollViewer>(dataGrid);
-                if (scrollViewer != null)
+                // マウスホイールイベントを動的に追加
+                scrollViewer.PreviewMouseWheel += (s, args) =>
                 {
+                    System.Diagnostics.Debug.WriteLine($"RightScroll dynamic PreviewMouseWheel called: Delta={args.Delta}");
+                    
                     // マウスホイールの回転量に基づいてスクロール
-                    var delta = e.Delta;
+                    var delta = args.Delta;
                     var currentOffset = scrollViewer.VerticalOffset;
                     var newOffset = currentOffset - (delta / 120.0) * 20; // 20ピクセルずつスクロール
                     
                     // スクロール範囲内に制限
                     newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));
                     
+                    System.Diagnostics.Debug.WriteLine($"RightScroll dynamic scrolling to: {newOffset}");
                     scrollViewer.ScrollToVerticalOffset(newOffset);
-                    e.Handled = true;
-                }
+                    args.Handled = true;
+                };
             }
+        }
+
+        // Page Loaded: 右ペインのホイールを握り潰されても捕捉する
+        private void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (RightScroll != null)
+            {
+                // handledEventsToo: true で既にHandledになったイベントも受け取る
+                RightScroll.AddHandler(UIElement.PreviewMouseWheelEvent,
+                    new MouseWheelEventHandler(RightScroll_PreviewMouseWheel),
+                    true);
+            }
+        }
+
+        // 右ペイン ItemsControl 側でホイール発生時に親ScrollViewerへ委譲
+        private void RightItems_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (RightScroll == null) return;
+
+            var delta = e.Delta;
+            var currentOffset = RightScroll.VerticalOffset;
+            var newOffset = currentOffset - (delta / 120.0) * 20;
+            newOffset = Math.Max(0, Math.Min(newOffset, RightScroll.ScrollableHeight));
+            RightScroll.ScrollToVerticalOffset(newOffset);
+            e.Handled = true;
         }
 
         // 右ペインのマウスホイールイベントハンドラー
         private void RightScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine($"RightScroll_PreviewMouseWheel called: Delta={e.Delta}");
+            
             if (sender is ScrollViewer scrollViewer)
             {
+                System.Diagnostics.Debug.WriteLine($"RightScroll ScrollViewer: CurrentOffset={scrollViewer.VerticalOffset}, ScrollableHeight={scrollViewer.ScrollableHeight}, ViewportHeight={scrollViewer.ViewportHeight}, ExtentHeight={scrollViewer.ExtentHeight}");
+                
                 // マウスホイールの回転量に基づいてスクロール
                 var delta = e.Delta;
                 var currentOffset = scrollViewer.VerticalOffset;
@@ -239,8 +277,13 @@ namespace RedmineClient.Views.Pages
                 // スクロール範囲内に制限
                 newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));
                 
+                System.Diagnostics.Debug.WriteLine($"RightScroll scrolling to: {newOffset}");
                 scrollViewer.ScrollToVerticalOffset(newOffset);
                 e.Handled = true;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("RightScroll sender is not ScrollViewer");
             }
         }
 
