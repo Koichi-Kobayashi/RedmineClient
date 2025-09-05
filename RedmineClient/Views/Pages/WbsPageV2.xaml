@@ -29,7 +29,7 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="440" />
+            <ColumnDefinition Width="840" />
             <ColumnDefinition Width="5" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
@@ -243,7 +243,7 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <GridSplitter Grid.RowSpan="3" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
+        <GridSplitter Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
 
         <ScrollViewer
             x:Name="RightScroll" Grid.Row="2" Grid.Column="2" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="False"
