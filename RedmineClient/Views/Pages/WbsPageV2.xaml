@@ -63,7 +63,7 @@
             Background="White" CanUserAddRows="False" CanUserDeleteRows="False" CellEditEnding="LeftGrid_CellEditEnding" EnableColumnVirtualization="True"
             EnableRowVirtualization="True" GridLinesVisibility="None" HeadersVisibility="Column"
             ItemsSource="{Binding Tasks}"
-            PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" RowHeaderWidth="0" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+            PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" PreviewMouseWheel="LeftGrid_PreviewMouseWheel" RowHeaderWidth="0" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Auto"
             ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="LeftGrid_SelectionChanged" SelectionMode="Single" SelectionUnit="FullRow">
             <DataGrid.Style>
                 <Style TargetType="DataGrid">

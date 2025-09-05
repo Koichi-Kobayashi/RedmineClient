@@ -246,7 +246,7 @@
                     ItemsSource="{Binding ViewModel.FlattenedWbsItems}"
                     RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     RowHeaderWidth="0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.IsDeferredScrollingEnabled="False" ScrollViewer.PanningMode="Both"
-                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto" PreviewMouseWheel="WbsDataGrid_PreviewMouseWheel"
                     SelectedItem="{Binding ViewModel.SelectedItem, Mode=TwoWay}"
                     SelectionMode="Single" SelectionUnit="FullRow" VirtualizingPanel.CacheLength="3,3" VirtualizingPanel.CacheLengthUnit="Page" VirtualizingPanel.IsContainerVirtualizable="True"
                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" VirtualizingPanel.VirtualizationMode="Recycling">
