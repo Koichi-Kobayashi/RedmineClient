@@ -160,4 +160,90 @@ namespace RedmineClient.Helpers
             throw new NotImplementedException();
         }
     }
+
+    /// <summary>
+    /// 選択状態と進捗からタイムラインバーの色を決めるコンバーター
+    /// </summary>
+    public class SelectedProgressToBrushConverter : IMultiValueConverter
+    {
+        public static readonly SelectedProgressToBrushConverter Instance = new();
+
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            double progress = 0;
+            if (values.Length > 0 && values[0] is double p)
+            {
+                progress = p;
+            }
+            bool isSelected = false;
+            if (values.Length > 1 && values[1] is bool sel)
+            {
+                isSelected = sel;
+            }
+
+            if (isSelected)
+            {
+                return new SolidColorBrush(Color.FromRgb(138, 43, 226)); // BlueViolet（選択強調）
+            }
+
+            if (progress >= 100)
+            {
+                return new SolidColorBrush(Color.FromRgb(76, 175, 80));
+            }
+            else if (progress >= 75)
+            {
+                return new SolidColorBrush(Color.FromRgb(144, 238, 144));
+            }
+            else if (progress >= 50)
+            {
+                return new SolidColorBrush(Color.FromRgb(255, 235, 59));
+            }
+            else if (progress >= 25)
+            {
+                return new SolidColorBrush(Color.FromRgb(255, 152, 0));
+            }
+            else
+            {
+                return new SolidColorBrush(Color.FromRgb(173, 216, 230));
+            }
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 選択状態と日付（土日祝）で不透明度を決めるコンバーター
+    /// </summary>
+    public class SelectedDateOpacityConverter : IMultiValueConverter
+    {
+        public static readonly SelectedDateOpacityConverter Instance = new();
+
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 2) return 0.8;
+
+            bool isSelected = values[1] is bool b && b;
+            if (isSelected)
+            {
+                return 1.0;
+            }
+
+            if (values[0] is DateTime d)
+            {
+                if (RedmineClient.Services.HolidayService.IsHoliday(d) || d.DayOfWeek == DayOfWeek.Saturday || d.DayOfWeek == DayOfWeek.Sunday)
+                {
+                    return 0.3;
+                }
+            }
+            return 0.8;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

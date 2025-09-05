@@ -891,22 +891,35 @@ namespace RedmineClient.Views.Pages
 
                             taskPeriodFactory.SetValue(DraggableTaskBorder.VisibilityProperty, multiBinding);
 
-                            // 進捗に応じた背景色の設定（WbsItemから直接取得）
-                            // ただし、土日祝の場合は日付の背景色を優先するため、透明度を下げる
-                            var progressBinding = new System.Windows.Data.Binding
+                            // 背景色：選択状態は強調色、それ以外は進捗色
+                            var bgMulti = new System.Windows.Data.MultiBinding
                             {
-                                Path = new System.Windows.PropertyPath("Progress"),
-                                Converter = new TaskProgressToColorConverter()
+                                Converter = SelectedProgressToBrushConverter.Instance
                             };
-                            taskPeriodFactory.SetValue(DraggableTaskBorder.BackgroundProperty, progressBinding);
+                            bgMulti.Bindings.Add(new System.Windows.Data.Binding
+                            {
+                                Path = new System.Windows.PropertyPath("Progress")
+                            });
+                            bgMulti.Bindings.Add(new System.Windows.Data.Binding
+                            {
+                                Path = new System.Windows.PropertyPath("IsSelected")
+                            });
+                            taskPeriodFactory.SetValue(DraggableTaskBorder.BackgroundProperty, bgMulti);
 
-                            // 土日祝の場合は背景色の透明度を下げて、日付の背景色が見えるようにする
-                            var opacityBinding = new System.Windows.Data.Binding
+                            // 不透明度：選択時は常に1.0、非選択は土日祝で薄く
+                            var opMulti = new System.Windows.Data.MultiBinding
                             {
-                                Source = loopDate,
-                                Converter = new RedmineClient.Helpers.DateToOpacityConverter()
+                                Converter = SelectedDateOpacityConverter.Instance
                             };
-                            taskPeriodFactory.SetValue(DraggableTaskBorder.OpacityProperty, opacityBinding);
+                            opMulti.Bindings.Add(new System.Windows.Data.Binding
+                            {
+                                Source = loopDate
+                            });
+                            opMulti.Bindings.Add(new System.Windows.Data.Binding
+                            {
+                                Path = new System.Windows.PropertyPath("IsSelected")
+                            });
+                            taskPeriodFactory.SetValue(DraggableTaskBorder.OpacityProperty, opMulti);
 
                             // タスク情報を設定するためのイベントハンドラーを追加
                             var loadedEvent = new System.Windows.RoutedEventHandler((sender, args) =>
