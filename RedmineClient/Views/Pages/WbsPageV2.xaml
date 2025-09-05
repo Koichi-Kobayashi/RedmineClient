@@ -248,7 +248,6 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <ctrls:TimelineGridOverlay Grid.Row="0" DayWidth="{Binding DayWidth}" IsHitTestVisible="False" LineBrush="#22000000" StartDate="{Binding ViewStart}" />
                 <ItemsControl Grid.Row="0" ItemsSource="{Binding Tasks}" PreviewMouseWheel="RightItems_PreviewMouseWheel">
@@ -311,8 +310,6 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <!--  スクロール領域を確保するフィラー。タイムラインの高さに合わせてScrollViewerのExtentを拡張する  -->
-                <Border Grid.Row="1" Height="{Binding TimelineHeight}" Background="Transparent" IsHitTestVisible="False" />
             </Grid>
         </ScrollViewer>
     </Grid>

@@ -308,7 +308,7 @@ namespace RedmineClient.ViewModels.Pages
             // タイムラインのサイズを更新（タスク数と日数に基づく）
             if (Tasks.Count > 0)
             {
-                TimelineHeight = Math.Max(1000, Tasks.Count * 30 + 100); // タスク数 * 行高 + 余白
+                TimelineHeight = Math.Max(1000, Tasks.Count * 28 + 100); // タスク数 * 行高(28) + 余白
                 var maxEndDate = Tasks.Max(t => t.ES + t.Duration);
                 TimelineWidth = Math.Max(2000, maxEndDate * DayWidth + 200); // 最大終了日 * 日幅 + 余白
             }
