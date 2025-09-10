@@ -130,6 +130,9 @@ namespace RedmineClient.Behaviors
                             break;
                         }
                 }
+                
+                // 矢印を再描画
+                RefreshArrows(fe);
             }
         }
         private static void OnUp(object s, MouseButtonEventArgs e)
@@ -191,6 +194,9 @@ namespace RedmineClient.Behaviors
                 });
 
                 _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture(); fe.Cursor = Cursors.Arrow;
+                
+                // 最終的な矢印を再描画
+                RefreshArrows(fe);
             }
         }
         private static FrameworkElement? FindDragRoot(DependencyObject d)
@@ -209,6 +215,22 @@ namespace RedmineClient.Behaviors
         private static WbsV2ViewModel? FindVm(DependencyObject d)
         {
             DependencyObject? cur=d; while(cur!=null){ if(cur is FrameworkElement fe && fe.DataContext is WbsV2ViewModel vm) return vm; cur=VisualTreeHelper.GetParent(cur);} return null;
+        }
+        
+        private static void RefreshArrows(FrameworkElement element)
+        {
+            // WbsPageV2のインスタンスを探して矢印を再描画
+            DependencyObject? cur = element;
+            while (cur != null)
+            {
+                if (cur is RedmineClient.Views.Pages.WbsPageV2 page)
+                {
+                    // DrawArrowsメソッドを直接呼び出し
+                    page.DrawArrows();
+                    break;
+                }
+                cur = VisualTreeHelper.GetParent(cur);
+            }
         }
     }
 }

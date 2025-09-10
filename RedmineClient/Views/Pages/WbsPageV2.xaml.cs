@@ -422,7 +422,7 @@ namespace RedmineClient.Views.Pages
 
         private Canvas? _arrowCanvas;
 
-        private void DrawArrows()
+        public void DrawArrows()
         {
             if (ViewModel?.Tasks == null) return;
 
@@ -468,13 +468,20 @@ namespace RedmineClient.Views.Pages
             var targetX = targetTask.ES * dayWidth;
             var targetY = targetTask.RowIndex * 28 + 14;
 
-            // 矢印の線
+            // 矢のサイズ（8px幅）
+            const double arrowSize = 8.0;
+            
+            // 線の終点を矢の手前に設定
+            var lineEndX = targetX - arrowSize;
+            var lineEndY = targetY;
+
+            // 矢印の線（矢の手前で終わる）
             var line = new Line
             {
                 X1 = sourceX,
                 Y1 = sourceY,
-                X2 = targetX,
-                Y2 = targetY,
+                X2 = lineEndX,
+                Y2 = lineEndY,
                 Stroke = Brushes.Blue,
                 StrokeThickness = 2
             };
@@ -486,8 +493,8 @@ namespace RedmineClient.Views.Pages
                 Points = new PointCollection
                 {
                     new Point(targetX, targetY),
-                    new Point(targetX - 8, targetY - 4),
-                    new Point(targetX - 8, targetY + 4)
+                    new Point(targetX - arrowSize, targetY - 4),
+                    new Point(targetX - arrowSize, targetY + 4)
                 }
             };
 
