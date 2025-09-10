@@ -6,7 +6,8 @@
     xmlns:conv="clr-namespace:RedmineClient.Helpers"
     xmlns:convM="clr-namespace:RedmineClient.Helpers.Multi"
     xmlns:ctrls="clr-namespace:RedmineClient.Views.Controls"
-    xmlns:vm="clr-namespace:RedmineClient.ViewModels.Pages">
+    xmlns:vm="clr-namespace:RedmineClient.ViewModels.Pages"
+    Loaded="Page_Loaded">
 
 
     <Page.Resources>
@@ -27,7 +28,7 @@
         </Style>
     </Page.Resources>
 
-    <Grid>
+    <Grid Height="{Binding RelativeSource={RelativeSource AncestorType=Page}, Path=ActualHeight}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="840" />
             <ColumnDefinition Width="5" />
@@ -57,201 +58,200 @@
         <!--  右側上部にタイムライン（曜日+日付）  -->
         <ctrls:TimelineHeader Grid.Row="1" Grid.Column="2" Height="64" DayWidth="{Binding DayWidth}" StartDate="{Binding ViewStart}" />
 
-        <!-- 左ペインの固定枠 -->
-        <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Margin="0" 
-                BorderBrush="#CCCCCC" BorderThickness="1" Background="White">
+        <!--  左ペインの固定枠  -->
+        <Border
+            Grid.Row="2" Grid.Column="0" Margin="1,0,0,0" Background="White" BorderBrush="#CCCCCC"
+            BorderThickness="1">
             <DataGrid
-                x:Name="LeftGrid" Width="920"
+                x:Name="LeftGrid" Width="920" Margin="0,-64,0,0" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True"
+                CanUserAddRows="False" CellEditEnding="LeftGrid_CellEditEnding" FrozenColumnCount="2" HeadersVisibility="Column"
                 ItemsSource="{Binding Tasks}"
-                PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" 
-                SelectionChanged="LeftGrid_SelectionChanged" CellEditEnding="LeftGrid_CellEditEnding"
-                FrozenColumnCount="1"
-                ScrollViewer.CanContentScroll="False"
-                ScrollViewer.VerticalScrollBarVisibility="Auto"
-                ScrollViewer.HorizontalScrollBarVisibility="Auto">
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Setter Property="Height" Value="28" />
-                    <Setter Property="BorderBrush" Value="Transparent" />
-                    <Setter Property="BorderThickness" Value="0" />
-                    <Setter Property="Margin" Value="0" />
-                    <Setter Property="VerticalAlignment" Value="Top" />
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
-                    <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown" />
-                    <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="BorderThickness" Value="1" />
-                            <Setter Property="Background" Value="Transparent" />
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.RowStyle>
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Height" Value="62" />
-                    <Setter Property="Padding" Value="4,2" />
-                    <Setter Property="HorizontalContentAlignment" Value="Center" />
-                    <Setter Property="VerticalContentAlignment" Value="Center" />
-                    <Setter Property="Background" Value="#F5F5F5" />
-                    <Setter Property="BorderBrush" Value="#CCCCCC" />
-                    <Setter Property="BorderThickness" Value="0,0,1,0" />
-                    <Setter Property="FontWeight" Value="Bold" />
-                    <Setter Property="Margin" Value="0" />
-                    <Setter Property="VerticalAlignment" Value="Top" />
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
-                </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.CellStyle>
-                <Style TargetType="DataGridCell">
-                    <Setter Property="BorderBrush" Value="#CCCCCC" />
-                    <Setter Property="BorderThickness" Value="0,0,1,0" />
-                    <Setter Property="Margin" Value="0" />
-                    <Setter Property="Padding" Value="4,2" />
-                </Style>
-            </DataGrid.CellStyle>
-            <DataGrid.Columns>
-                <DataGridTextColumn x:Name="ColId" Width="60" MinWidth="60" Binding="{Binding WbsNo}" Header="ID" />
-                <DataGridTemplateColumn Width="400" Header="タスク">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <StackPanel MouseMove="TaskCell_MouseMove" Orientation="Horizontal" PreviewMouseLeftButtonDown="TaskCell_PreviewMouseLeftButtonDown">
-                                <Border Width="{Binding Level, Converter={StaticResource LevelToIndent}}" />
-                                <TextBlock Text="{Binding Name}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTemplateColumn Width="120" Header="先行">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Border
-                                Padding="4,2" AllowDrop="True" Background="#FFF8F8F8" BorderBrush="#33000000" BorderThickness="1"
-                                CornerRadius="2" DragEnter="PredecessorCell_DragEnter" DragLeave="PredecessorCell_DragLeave" DragOver="PredecessorCell_DragOver" Drop="PredecessorCell_Drop">
-                                <TextBlock Foreground="Black" Text="{Binding PredecessorIds}" />
-                            </Border>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTemplateColumn Width="130" Header="開始日">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding StartDate, StringFormat=yyyy/MM/dd}" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                    <DataGridTemplateColumn.CellEditingTemplate>
-                        <DataTemplate>
-                            <DatePicker SelectedDate="{Binding StartDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellEditingTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTemplateColumn Width="130" Header="終了日">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DueDate, StringFormat=yyyy/MM/dd}" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                    <DataGridTemplateColumn.CellEditingTemplate>
-                        <DataTemplate>
-                            <DatePicker SelectedDate="{Binding DueDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellEditingTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Width="80" MinWidth="80" Binding="{Binding Duration}" Header="期間" />
-                <DataGridTemplateColumn Width="80" Header="優先度">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Border Padding="2,0" Background="{Binding Priority, Converter={x:Static conv:PriorityToBrushConverter.Instance}}" CornerRadius="2">
-                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" Foreground="White" Text="{Binding Priority}" />
-                            </Border>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                    <DataGridTemplateColumn.CellEditingTemplate>
-                        <DataTemplate>
-                            <ComboBox SelectedValue="{Binding Priority, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                <ComboBoxItem Content="緊急" />
-                                <ComboBoxItem Content="高" />
-                                <ComboBoxItem Content="中" />
-                                <ComboBoxItem Content="低" />
-                            </ComboBox>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellEditingTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn x:Name="ColES" Width="*" Binding="{Binding ES}" Header="ES">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.EditingElementStyle>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.EditingElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn x:Name="ColEF" Width="*" Binding="{Binding EF}" Header="EF">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.EditingElementStyle>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.EditingElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn x:Name="ColLS" Width="*" Binding="{Binding LS}" Header="LS">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.EditingElementStyle>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.EditingElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn x:Name="ColLF" Width="*" Binding="{Binding LF}" Header="LF">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.EditingElementStyle>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.EditingElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn x:Name="ColSlack" Width="*" Binding="{Binding Slack}" Header="Slack">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                    <DataGridTextColumn.EditingElementStyle>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
-                        </Style>
-                    </DataGridTextColumn.EditingElementStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
+                PreviewMouseLeftButtonDown="LeftGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="LeftGrid_PreviewMouseMove" RowHeaderWidth="0" ScrollViewer.CanContentScroll="False" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="LeftGrid_SelectionChanged" SelectionMode="Single" SelectionUnit="FullRow">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="Height" Value="28" />
+                        <Setter Property="BorderBrush" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="VerticalAlignment" Value="Top" />
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                        <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown" />
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="BorderThickness" Value="1" />
+                                <Setter Property="Background" Value="Transparent" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Height" Value="64" />
+                        <Setter Property="Padding" Value="4,2" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                        <Setter Property="Background" Value="#F5F5F5" />
+                        <Setter Property="BorderBrush" Value="#CCCCCC" />
+                        <Setter Property="BorderThickness" Value="0,1,1,1" />
+                        <Setter Property="FontWeight" Value="Bold" />
+                        <Setter Property="Margin" Value="0,0,0,0" />
+                        <Setter Property="VerticalAlignment" Value="Top" />
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.CellStyle>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="BorderBrush" Value="#CCCCCC" />
+                        <Setter Property="BorderThickness" Value="0,0,1,0" />
+                        <Setter Property="Margin" Value="0,0,0,0" />
+                        <Setter Property="Padding" Value="4,2" />
+                    </Style>
+                </DataGrid.CellStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn x:Name="ColId" Width="60" MinWidth="60" Binding="{Binding WbsNo}" Header="ID" />
+                    <DataGridTemplateColumn Width="400" Header="タスク">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel MouseMove="TaskCell_MouseMove" Orientation="Horizontal" PreviewMouseLeftButtonDown="TaskCell_PreviewMouseLeftButtonDown">
+                                    <Border Width="{Binding Level, Converter={StaticResource LevelToIndent}}" />
+                                    <TextBlock Text="{Binding Name}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Width="120" Header="先行">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Padding="4,2" AllowDrop="True" Background="#FFF8F8F8" BorderBrush="#33000000" BorderThickness="1"
+                                    CornerRadius="2" DragEnter="PredecessorCell_DragEnter" DragLeave="PredecessorCell_DragLeave" DragOver="PredecessorCell_DragOver" Drop="PredecessorCell_Drop"
+                                    MouseLeftButtonDown="PredecessorCell_MouseLeftButtonDown">
+                                    <TextBlock Foreground="Black" Text="{Binding PredecessorIds}" />
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Width="130" Header="開始日">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StartDate, StringFormat=yyyy/MM/dd}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate>
+                            <DataTemplate>
+                                <DatePicker SelectedDate="{Binding StartDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellEditingTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Width="130" Header="終了日">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DueDate, StringFormat=yyyy/MM/dd}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate>
+                            <DataTemplate>
+                                <DatePicker SelectedDate="{Binding DueDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellEditingTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Width="80" MinWidth="80" Binding="{Binding Duration}" Header="期間" />
+                    <DataGridTemplateColumn Width="80" Header="優先度">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Padding="2,0" Background="{Binding Priority, Converter={x:Static conv:PriorityToBrushConverter.Instance}}" CornerRadius="2">
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" Foreground="White" Text="{Binding Priority}" />
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate>
+                            <DataTemplate>
+                                <ComboBox SelectedValue="{Binding Priority, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                    <ComboBoxItem Content="緊急" />
+                                    <ComboBoxItem Content="高" />
+                                    <ComboBoxItem Content="中" />
+                                    <ComboBoxItem Content="低" />
+                                </ComboBox>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellEditingTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn x:Name="ColES" Width="*" Binding="{Binding ES}" Header="ES">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                        <DataGridTextColumn.EditingElementStyle>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.EditingElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="ColEF" Width="*" Binding="{Binding EF}" Header="EF">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                        <DataGridTextColumn.EditingElementStyle>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.EditingElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="ColLS" Width="*" Binding="{Binding LS}" Header="LS">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                        <DataGridTextColumn.EditingElementStyle>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.EditingElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="ColLF" Width="*" Binding="{Binding LF}" Header="LF">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                        <DataGridTextColumn.EditingElementStyle>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.EditingElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn x:Name="ColSlack" Width="*" Binding="{Binding Slack}" Header="Slack">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                        <DataGridTextColumn.EditingElementStyle>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="{Binding DataContext.ShowScheduleColumns, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={x:Static conv:BoolToVisibilityConverter.Instance}}" />
+                            </Style>
+                        </DataGridTextColumn.EditingElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
             </DataGrid>
         </Border>
 
         <GridSplitter Grid.Row="2" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" />
 
         <ScrollViewer
-            x:Name="RightScroll" Grid.Row="2" Grid.Column="2"
-            VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-            CanContentScroll="False" Focusable="True">
+            x:Name="RightScroll" Grid.Row="2" Grid.Column="2" beh:ScrollSyncBehavior.GroupKey="WBS" beh:ScrollSyncBehavior.IsMaster="True"
+            CanContentScroll="False" Focusable="True" HorizontalScrollBarVisibility="Visible" IsTabStop="True" PreviewMouseWheel="RightScroll_PreviewMouseWheel"
+            VerticalScrollBarVisibility="Visible">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <ctrls:TimelineGridOverlay Grid.Row="0" DayWidth="{Binding DayWidth}" IsHitTestVisible="False" LineBrush="#22000000" StartDate="{Binding ViewStart}" />
-                <ItemsControl Grid.Row="0" ItemsSource="{Binding Tasks}">
+                <ItemsControl Grid.Row="0" ItemsSource="{Binding Tasks}" PreviewMouseWheel="RightItems_PreviewMouseWheel">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <Canvas Width="{Binding DataContext.TimelineWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Height="{Binding DataContext.TimelineHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Background="Transparent" />
@@ -266,7 +266,9 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border
-                                Height="18" MinWidth="10" beh:DragMoveBehavior.IsEnabled="True"
+                                Height="18" MinWidth="10" AllowDrop="False"
+                                beh:DragMoveBehavior.IsEnabled="True"
+                                beh:DragDropDependencyBehavior.IsEnabled="True"
                                 Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}"
                                 CornerRadius="4"
                                 ToolTip="{Binding Name}">

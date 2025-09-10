@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using RedmineClient.Models;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace RedmineClient.Views.Pages
 {
@@ -26,6 +27,8 @@ namespace RedmineClient.Views.Pages
         private void Recalc_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.Recalculate();
+            // 矢印を再描画
+            DrawArrows();
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -33,6 +36,11 @@ namespace RedmineClient.Views.Pages
             if (e.PropertyName == nameof(WbsV2ViewModel.ShowScheduleColumns))
             {
                 UpdateScheduleColumnsVisibility(ViewModel.ShowScheduleColumns);
+            }
+            else if (e.PropertyName == nameof(WbsV2ViewModel.Tasks))
+            {
+                // タスクが変更された時に矢印を再描画
+                DrawArrows();
             }
         }
 
@@ -208,6 +216,88 @@ namespace RedmineClient.Views.Pages
 
 
 
+        // 右ペインのLoadedイベントハンドラー
+        private void RightScroll_Loaded(object sender, RoutedEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("RightScroll_Loaded called");
+            
+            if (sender is ScrollViewer scrollViewer)
+            {
+                // マウスホイールイベントを動的に追加
+                scrollViewer.PreviewMouseWheel += (s, args) =>
+                {
+                    System.Diagnostics.Debug.WriteLine($"RightScroll dynamic PreviewMouseWheel called: Delta={args.Delta}");
+                    
+                    // マウスホイールの回転量に基づいてスクロール
+                    var delta = args.Delta;
+                    var currentOffset = scrollViewer.VerticalOffset;
+                    var newOffset = currentOffset - (delta / 120.0) * 28; // 行高28pxに合わせてスクロール
+                    
+                    // スクロール範囲内に制限
+                    newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));
+                    
+                    System.Diagnostics.Debug.WriteLine($"RightScroll dynamic scrolling to: {newOffset}");
+                    scrollViewer.ScrollToVerticalOffset(newOffset);
+                    args.Handled = true;
+                };
+            }
+        }
+
+        // Page Loaded: 右ペインのホイールを握り潰されても捕捉する
+        private void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (RightScroll != null)
+            {
+                // handledEventsToo: true で既にHandledになったイベントも受け取る
+                RightScroll.AddHandler(UIElement.PreviewMouseWheelEvent,
+                    new MouseWheelEventHandler(RightScroll_PreviewMouseWheel),
+                    true);
+            }
+            
+            // 矢印を描画
+            DrawArrows();
+        }
+
+        // 右ペイン ItemsControl 側でホイール発生時に親ScrollViewerへ委譲
+        private void RightItems_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (RightScroll == null) return;
+
+            var delta = e.Delta;
+            var currentOffset = RightScroll.VerticalOffset;
+            var newOffset = currentOffset - (delta / 120.0) * 20;
+            newOffset = Math.Max(0, Math.Min(newOffset, RightScroll.ScrollableHeight));
+            RightScroll.ScrollToVerticalOffset(newOffset);
+            e.Handled = true;
+        }
+
+        // 右ペインのマウスホイールイベントハンドラー
+        private void RightScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine($"RightScroll_PreviewMouseWheel called: Delta={e.Delta}");
+            
+            if (sender is ScrollViewer scrollViewer)
+            {
+                System.Diagnostics.Debug.WriteLine($"RightScroll ScrollViewer: CurrentOffset={scrollViewer.VerticalOffset}, ScrollableHeight={scrollViewer.ScrollableHeight}, ViewportHeight={scrollViewer.ViewportHeight}, ExtentHeight={scrollViewer.ExtentHeight}");
+                
+                // マウスホイールの回転量に基づいてスクロール
+                var delta = e.Delta;
+                var currentOffset = scrollViewer.VerticalOffset;
+                var newOffset = currentOffset - (delta / 120.0) * 28; // 行高28pxに合わせてスクロール
+                
+                // スクロール範囲内に制限
+                newOffset = Math.Max(0, Math.Min(newOffset, scrollViewer.ScrollableHeight));
+                
+                System.Diagnostics.Debug.WriteLine($"RightScroll scrolling to: {newOffset}");
+                scrollViewer.ScrollToVerticalOffset(newOffset);
+                e.Handled = true;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("RightScroll sender is not ScrollViewer");
+            }
+        }
+
         // ビジュアルツリーからScrollViewerを検索するヘルパーメソッド
         private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
@@ -239,6 +329,8 @@ namespace RedmineClient.Views.Pages
                     try
                     {
                         await ViewModel.SetPredecessorAsync(source, target);
+                        // 矢印を再描画
+                        DrawArrows();
                     }
                     catch (Exception ex)
                     {
@@ -262,6 +354,64 @@ namespace RedmineClient.Views.Pages
             }
         }
 
+        // 先行タスク列のクリックイベント（ダブルクリック検出）
+        private DateTime _lastClickTime = DateTime.MinValue;
+        private const int DoubleClickThresholdMs = 500; // 500ms以内の連続クリックをダブルクリックとみなす
+
+        private async void PredecessorCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is WbsSampleTask task)
+            {
+                var currentTime = DateTime.Now;
+                var timeSinceLastClick = (currentTime - _lastClickTime).TotalMilliseconds;
+                
+                if (timeSinceLastClick <= DoubleClickThresholdMs)
+                {
+                    // ダブルクリック検出
+                    _lastClickTime = DateTime.MinValue; // リセット
+                    
+                    if (task.Preds.Count == 0)
+                    {
+                        // 先行タスクがない場合は何もしない
+                        return;
+                    }
+
+                    // 確認ダイアログを表示
+                    var result = System.Windows.MessageBox.Show(
+                        $"「{task.Name}」の先行タスクをすべて削除しますか？",
+                        "先行タスク削除確認",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                    try
+                    {
+                        await ViewModel.RemoveAllPredecessorsAsync(task);
+                        // 矢印を再描画
+                        DrawArrows();
+                    }
+                    catch (Exception ex)
+                    {
+                        // エラーが発生してもUIの変更は既に完了しているので、警告のみ表示
+                        System.Diagnostics.Debug.WriteLine($"Predecessor deletion error: {ex.Message}");
+                        System.Windows.MessageBox.Show(
+                            "先行タスクの削除は完了しましたが、Redmineサーバーとの同期でエラーが発生しました。\n" +
+                            "ネットワーク接続とRedmineの設定を確認してください。",
+                            "先行タスク削除完了（同期エラー）",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                    }
+                }
+                else
+                {
+                    // シングルクリック
+                    _lastClickTime = currentTime;
+                }
+            }
+        }
+
         // ヘルパー: 祖先探索
         private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
         {
@@ -271,6 +421,88 @@ namespace RedmineClient.Views.Pages
                 current = System.Windows.Media.VisualTreeHelper.GetParent(current);
             }
             return null;
+        }
+
+        private Canvas? _arrowCanvas;
+
+        public void DrawArrows()
+        {
+            if (ViewModel?.Tasks == null) return;
+
+            // 既存の矢印をクリア
+            if (_arrowCanvas != null)
+            {
+                var parent = _arrowCanvas.Parent as Panel;
+                parent?.Children.Remove(_arrowCanvas);
+            }
+
+            // 新しいCanvasを作成
+            _arrowCanvas = new Canvas { Background = Brushes.Transparent };
+
+            // 矢印を描画
+            foreach (var task in ViewModel.Tasks)
+            {
+                foreach (var pred in task.Preds)
+                {
+                    var sourceTask = ViewModel.Tasks.FirstOrDefault(t => t.WbsNo == pred.PredId);
+                    if (sourceTask != null)
+                    {
+                        DrawArrow(sourceTask, task, ViewModel.DayWidth);
+                    }
+                }
+            }
+
+            // 右側のScrollViewerに矢印Canvasを追加
+            if (RightScroll?.Content is Grid grid)
+            {
+                grid.Children.Insert(0, _arrowCanvas); // 背景に配置
+            }
+        }
+
+        private void DrawArrow(WbsSampleTask sourceTask, WbsSampleTask targetTask, double dayWidth)
+        {
+            if (_arrowCanvas == null) return;
+
+            // ソースタスクの終了位置
+            var sourceX = sourceTask.ES * dayWidth + (sourceTask.Duration * dayWidth);
+            var sourceY = sourceTask.RowIndex * 28 + 14;
+
+            // ターゲットタスクの開始位置
+            var targetX = targetTask.ES * dayWidth;
+            var targetY = targetTask.RowIndex * 28 + 14;
+
+            // 矢のサイズ（8px幅）
+            const double arrowSize = 8.0;
+            
+            // 線の終点を矢の手前に設定
+            var lineEndX = targetX - arrowSize;
+            var lineEndY = targetY;
+
+            // 矢印の線（矢の手前で終わる）
+            var line = new Line
+            {
+                X1 = sourceX,
+                Y1 = sourceY,
+                X2 = lineEndX,
+                Y2 = lineEndY,
+                Stroke = Brushes.Blue,
+                StrokeThickness = 2
+            };
+
+            // 矢印の頭
+            var arrowHead = new Polygon
+            {
+                Fill = Brushes.Blue,
+                Points = new PointCollection
+                {
+                    new Point(targetX, targetY),
+                    new Point(targetX - arrowSize, targetY - 4),
+                    new Point(targetX - arrowSize, targetY + 4)
+                }
+            };
+
+            _arrowCanvas.Children.Add(line);
+            _arrowCanvas.Children.Add(arrowHead);
         }
     }
 }

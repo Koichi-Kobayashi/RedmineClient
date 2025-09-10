@@ -29,12 +29,16 @@ namespace RedmineClient.Behaviors
                     fe.PreviewMouseLeftButtonDown += OnDown;
                     fe.PreviewMouseMove += OnMove;
                     fe.PreviewMouseLeftButtonUp += OnUp;
+                    fe.MouseEnter += OnMouseEnter;
+                    fe.MouseLeave += OnMouseLeave;
                 }
                 else
                 {
                     fe.PreviewMouseLeftButtonDown -= OnDown;
                     fe.PreviewMouseMove -= OnMove;
                     fe.PreviewMouseLeftButtonUp -= OnUp;
+                    fe.MouseEnter -= OnMouseEnter;
+                    fe.MouseLeave -= OnMouseLeave;
                 }
             }
         }
@@ -73,6 +77,11 @@ namespace RedmineClient.Behaviors
             if (_vm == null || _task == null) return;
             if (s is FrameworkElement fe)
             {
+                // ドラッグ中はイベントを処理済みとしてマーク
+                if (_dragging)
+                {
+                    e.Handled = true;
+                }
                 // ドラッグしていないときは最小距離チェックしてドラッグ開始
                 if (!_dragging)
                 {
@@ -88,6 +97,29 @@ namespace RedmineClient.Behaviors
                         {
                             _dragging = true;
                             fe.CaptureMouse();
+                            
+                            // ドラッグ開始時に視覚的フィードバックを提供
+                            if (fe is Border border)
+                            {
+                                // ドラッグ中のスタイルを適用
+                                border.Opacity = 0.8; // 少し透明にする
+                                border.BorderBrush = System.Windows.Media.Brushes.Orange; // オレンジ色のボーダー
+                                border.BorderThickness = new Thickness(2);
+                            }
+                            
+                            // ドラッグ開始時に適切なカーソルを設定
+                            switch (_dragKind)
+                            {
+                                case DragKind.Move:
+                                    fe.Cursor = Cursors.Hand; // 移動用の手カーソル
+                                    break;
+                                case DragKind.ResizeStart:
+                                    fe.Cursor = Cursors.SizeWE; // 左端リサイズ
+                                    break;
+                                case DragKind.ResizeEnd:
+                                    fe.Cursor = Cursors.SizeWE; // 右端リサイズ
+                                    break;
+                            }
                             Debug.WriteLine($"[DragMoveBehavior] OnMove: Drag started");
                         }
                         else
@@ -98,8 +130,23 @@ namespace RedmineClient.Behaviors
                     }
                     else
                     {
+                        // ドラッグしていない時はマウス位置に応じてカーソルを設定
                         var pos = e.GetPosition(fe);
-                        fe.Cursor = (pos.X <= EDGE_HANDLE_WIDTH || pos.X >= fe.ActualWidth - EDGE_HANDLE_WIDTH) ? Cursors.SizeWE : Cursors.SizeAll;
+                        double width = fe.ActualWidth;
+                        double x = pos.X;
+                        
+                        if (x <= EDGE_HANDLE_WIDTH)
+                        {
+                            fe.Cursor = Cursors.SizeWE; // 左端：開始位置リサイズ
+                        }
+                        else if (x >= width - EDGE_HANDLE_WIDTH)
+                        {
+                            fe.Cursor = Cursors.SizeWE; // 右端：終了位置リサイズ
+                        }
+                        else
+                        {
+                            fe.Cursor = Cursors.SizeAll; // 中央：移動
+                        }
                         return;
                     }
                 }
@@ -109,11 +156,27 @@ namespace RedmineClient.Behaviors
                 int delta = (int)System.Math.Round(dx / _vm.DayWidth);
                 if (delta == _lastDelta) return; // 変化がある時だけ更新してチラつきを抑制
                 _lastDelta = delta;
+                
+                // ドラッグ中も適切なカーソルを維持
+                switch (_dragKind)
+                {
+                    case DragKind.Move:
+                        fe.Cursor = Cursors.Hand; // 移動用の手カーソル
+                        break;
+                    case DragKind.ResizeStart:
+                        fe.Cursor = Cursors.SizeWE; // 左端リサイズ
+                        break;
+                    case DragKind.ResizeEnd:
+                        fe.Cursor = Cursors.SizeWE; // 右端リサイズ
+                        break;
+                }
 
                 switch (_dragKind)
                 {
                     case DragKind.Move:
                         _task.ES = System.Math.Max(0, _startEs + delta);
+                        // 日付を更新
+                        UpdateTaskDates(_task);
                         break;
                     case DragKind.ResizeStart:
                         {
@@ -121,17 +184,57 @@ namespace RedmineClient.Behaviors
                             int newDuration = System.Math.Max(1, _startDuration - (newEs - _startEs));
                             _task.ES = newEs;
                             _task.Duration = newDuration;
+                            // 日付を更新
+                            UpdateTaskDates(_task);
                             break;
                         }
                     case DragKind.ResizeEnd:
                         {
                             int newDuration = System.Math.Max(1, _startDuration + delta);
                             _task.Duration = newDuration;
+                            // 日付を更新
+                            UpdateTaskDates(_task);
                             break;
                         }
                 }
+                
+                // 矢印を再描画
+                RefreshArrows(fe);
             }
         }
+        private static void OnMouseEnter(object s, MouseEventArgs e)
+        {
+            if (s is FrameworkElement fe && fe.DataContext is WbsSampleTask t)
+            {
+                // マウスが要素の上にある時にカーソルを設定
+                var pos = e.GetPosition(fe);
+                double width = fe.ActualWidth;
+                double x = pos.X;
+                
+                if (x <= EDGE_HANDLE_WIDTH)
+                {
+                    fe.Cursor = Cursors.SizeWE; // 左端：開始位置リサイズ
+                }
+                else if (x >= width - EDGE_HANDLE_WIDTH)
+                {
+                    fe.Cursor = Cursors.SizeWE; // 右端：終了位置リサイズ
+                }
+                else
+                {
+                    fe.Cursor = Cursors.SizeAll; // 中央：移動
+                }
+            }
+        }
+        
+        private static void OnMouseLeave(object s, MouseEventArgs e)
+        {
+            if (s is FrameworkElement fe)
+            {
+                // マウスが要素から離れた時にデフォルトカーソルに戻す
+                fe.Cursor = Cursors.Arrow;
+            }
+        }
+        
         private static void OnUp(object s, MouseButtonEventArgs e)
         {
             Debug.WriteLine($"[DragMoveBehavior] OnUp: Dragging={_dragging}, Task={_task?.Name}");
@@ -144,7 +247,34 @@ namespace RedmineClient.Behaviors
                 if (System.Math.Abs(delta) <= 1)
                 {
                     Debug.WriteLine($"[DragMoveBehavior] OnUp: Click detected, no action");
-                    _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture(); fe.Cursor = Cursors.Arrow; return;
+                    _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture();
+                    
+                    // クリック時は元のスタイルに戻す
+                    if (fe is Border clickBorder)
+                    {
+                        clickBorder.Opacity = 1.0; // 不透明度を元に戻す
+                        clickBorder.BorderBrush = System.Windows.Media.Brushes.Black; // ボーダーを元の色に戻す
+                        clickBorder.BorderThickness = new Thickness(1); // ボーダーの太さを元に戻す
+                    }
+                    
+                    // クリック時もマウス位置に応じてカーソルを設定
+                    var clickPos = Mouse.GetPosition(fe);
+                    double clickWidth = fe.ActualWidth;
+                    double clickX = clickPos.X;
+                    
+                    if (clickX <= EDGE_HANDLE_WIDTH)
+                    {
+                        fe.Cursor = Cursors.SizeWE; // 左端：開始位置リサイズ
+                    }
+                    else if (clickX >= clickWidth - EDGE_HANDLE_WIDTH)
+                    {
+                        fe.Cursor = Cursors.SizeWE; // 右端：終了位置リサイズ
+                    }
+                    else
+                    {
+                        fe.Cursor = Cursors.SizeAll; // 中央：移動
+                    }
+                    return;
                 }
                 switch (_dragKind)
                 {
@@ -190,7 +320,36 @@ namespace RedmineClient.Behaviors
                     catch { }
                 });
 
-                _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture(); fe.Cursor = Cursors.Arrow;
+                _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture();
+                
+                // ドラッグ終了時に元のスタイルに戻す
+                if (fe is Border border)
+                {
+                    border.Opacity = 1.0; // 不透明度を元に戻す
+                    border.BorderBrush = System.Windows.Media.Brushes.Black; // ボーダーを元の色に戻す
+                    border.BorderThickness = new Thickness(1); // ボーダーの太さを元に戻す
+                }
+                
+                // ドラッグ終了後はマウス位置に応じてカーソルを設定
+                var finalPos = Mouse.GetPosition(fe);
+                double width = fe.ActualWidth;
+                double x = finalPos.X;
+                
+                if (x <= EDGE_HANDLE_WIDTH)
+                {
+                    fe.Cursor = Cursors.SizeWE; // 左端：開始位置リサイズ
+                }
+                else if (x >= width - EDGE_HANDLE_WIDTH)
+                {
+                    fe.Cursor = Cursors.SizeWE; // 右端：終了位置リサイズ
+                }
+                else
+                {
+                    fe.Cursor = Cursors.SizeAll; // 中央：移動
+                }
+                
+                // 最終的な矢印を再描画
+                RefreshArrows(fe);
             }
         }
         private static FrameworkElement? FindDragRoot(DependencyObject d)
@@ -209,6 +368,35 @@ namespace RedmineClient.Behaviors
         private static WbsV2ViewModel? FindVm(DependencyObject d)
         {
             DependencyObject? cur=d; while(cur!=null){ if(cur is FrameworkElement fe && fe.DataContext is WbsV2ViewModel vm) return vm; cur=VisualTreeHelper.GetParent(cur);} return null;
+        }
+        
+        private static void RefreshArrows(FrameworkElement element)
+        {
+            // WbsPageV2のインスタンスを探して矢印を再描画
+            DependencyObject? cur = element;
+            while (cur != null)
+            {
+                if (cur is RedmineClient.Views.Pages.WbsPageV2 page)
+                {
+                    // DrawArrowsメソッドを直接呼び出し
+                    page.DrawArrows();
+                    break;
+                }
+                cur = VisualTreeHelper.GetParent(cur);
+            }
+        }
+        
+        private static void UpdateTaskDates(WbsSampleTask task)
+        {
+            if (task == null) return;
+            
+            // ES/Duration から日付を計算
+            var start = task.BaseDate.AddDays(task.ES);
+            var due = start.AddDays(System.Math.Max(1, task.Duration) - 1);
+            
+            // 日付プロパティを更新
+            task.StartDate = start;
+            task.DueDate = due;
         }
     }
 }

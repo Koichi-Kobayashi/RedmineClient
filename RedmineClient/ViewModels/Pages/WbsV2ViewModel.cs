@@ -185,6 +185,59 @@ namespace RedmineClient.ViewModels.Pages
             }
         }
 
+        /// <summary>
+        /// 指定されたタスクのすべての先行タスクを削除し、Redmineからも削除
+        /// </summary>
+        public Task RemoveAllPredecessorsAsync(WbsSampleTask task)
+        {
+            if (task == null || task.Preds.Count == 0) return Task.CompletedTask;
+
+            // 現在の先行関係をバックアップ（失敗時にロールバックするため）
+            var backup = task.Preds.ToList();
+
+            // 先行タスクをすべて削除（UI上の変更は即座に実行）
+            task.Preds.Clear();
+            OnPropertyChanged(nameof(Tasks));
+
+            // Redmineからも依存関係を削除（バックグラウンドで実行、失敗してもUIは保持）
+            if (int.TryParse(task.WbsNo, out var succId) && 
+                !string.IsNullOrEmpty(AppConfig.RedmineHost) && 
+                !string.IsNullOrEmpty(AppConfig.ApiKey))
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+                        
+                        // 各先行タスクとの関係を削除
+                        foreach (var pred in backup)
+                        {
+                            if (int.TryParse(pred.PredId, out var predId))
+                            {
+                                try
+                                {
+                                    await svc.DeleteIssueRelationAsync(predId, succId, Redmine.Net.Api.Types.IssueRelationType.Precedes);
+                                }
+                                catch (Exception ex)
+                                {
+                                    // 個別の削除に失敗しても処理を継続
+                                    System.Diagnostics.Debug.WriteLine($"Failed to delete relation {predId} -> {succId}: {ex.Message}");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Redmineの同期に失敗してもUIの変更は保持
+                        System.Diagnostics.Debug.WriteLine($"Failed to sync to Redmine: {ex.Message}");
+                    }
+                });
+            }
+            
+            return Task.CompletedTask;
+        }
+
         public void ApplyStartConstraint(WbsSampleTask task, int newEs)
         {
             task.StartMin = newEs < 0 ? 0 : newEs;
@@ -308,7 +361,7 @@ namespace RedmineClient.ViewModels.Pages
             // タイムラインのサイズを更新（タスク数と日数に基づく）
             if (Tasks.Count > 0)
             {
-                TimelineHeight = Math.Max(1000, Tasks.Count * 30 + 100); // タスク数 * 行高 + 余白
+                TimelineHeight = Math.Max(1000, Tasks.Count * 28 + 100); // タスク数 * 行高(28) + 余白
                 var maxEndDate = Tasks.Max(t => t.ES + t.Duration);
                 TimelineWidth = Math.Max(2000, maxEndDate * DayWidth + 200); // 最大終了日 * 日幅 + 余白
             }

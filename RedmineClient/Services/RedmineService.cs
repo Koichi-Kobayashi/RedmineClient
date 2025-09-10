@@ -841,6 +841,112 @@ namespace RedmineClient.Services
         }
 
         /// <summary>
+        /// チケット間の依存関係を削除（非同期版）
+        /// </summary>
+        /// <param name="issueId">先行タスクのID</param>
+        /// <param name="relatedIssueId">後続タスクのID</param>
+        /// <param name="relationType">関係の種類（follows, precedes, blocks, blocked_by等）</param>
+        /// <param name="cancellationToken">キャンセレーショントークン</param>
+        public async Task DeleteIssueRelationAsync(int issueId, int relatedIssueId, IssueRelationType relationType, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+                // まず、既存の関係を取得してIDを特定する
+                var issue = await GetIssueAsync(issueId, cts.Token);
+                if (issue == null)
+                {
+                    throw new RedmineApiException($"チケットID {issueId} が見つかりません");
+                }
+
+                // 関係のIDを取得（リフレクションを使用）
+                var relations = GetRelationsFromIssue(issue);
+                var targetRelation = relations.FirstOrDefault(r => 
+                    r.issue_to_id == relatedIssueId && 
+                    r.relation_type?.ToLower() == relationType.ToString().ToLower());
+
+                if (targetRelation == null)
+                {
+                    // 関係が見つからない場合は何もしない（既に削除済み）
+                    return;
+                }
+
+                // 関係のIDを取得するために、IssueRelationオブジェクトを取得
+                var relationId = GetRelationIdFromIssue(issue, relatedIssueId, relationType);
+                if (relationId == null)
+                {
+                    // 関係IDが取得できない場合は何もしない
+                    return;
+                }
+
+                // RedmineManagerのDeleteメソッドを使用して依存関係を削除
+                await Task.Run(() => _redmineManager.Delete<IssueRelation>(relationId.ToString()), cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw new RedmineApiException($"依存関係の削除がタイムアウトしました（{_timeoutSeconds}秒）");
+            }
+            catch (Redmine.Net.Api.Exceptions.RedmineException rex)
+            {
+                var detail = rex.InnerException?.Message ?? rex.Message;
+                throw new RedmineApiException($"依存関係の削除に失敗しました (Redmine API): {detail}", rex);
+            }
+            catch (System.Net.WebException wex)
+            {
+                var status = wex.Status.ToString();
+                var http = (wex.Response as System.Net.HttpWebResponse)?.StatusCode;
+                throw new RedmineApiException($"依存関係の削除に失敗しました (Web): Status={status}, Http={(int?)http}", wex);
+            }
+            catch (Exception ex)
+            {
+                throw new RedmineApiException($"依存関係の削除に失敗しました: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Issueから特定の関係のIDを取得
+        /// </summary>
+        private int? GetRelationIdFromIssue(Issue issue, int relatedIssueId, IssueRelationType relationType)
+        {
+            try
+            {
+                var propertyNames = new[] { "Relations", "relations", "IssueRelations", "issue_relations" };
+                
+                foreach (var propertyName in propertyNames)
+                {
+                    var property = issue.GetType().GetProperty(propertyName);
+                    if (property != null)
+                    {
+                        var value = property.GetValue(issue);
+                        if (value is IEnumerable<object> relationsEnumerable)
+                        {
+                            foreach (var relation in relationsEnumerable)
+                            {
+                                if (relation is IssueRelation issueRelation)
+                                {
+                                    if (issueRelation.IssueToId == relatedIssueId && 
+                                        issueRelation.Type.ToString().ToLower() == relationType.ToString().ToLower())
+                                    {
+                                        return issueRelation.Id;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                // 関係IDの取得でエラーが発生した場合は無視
+            }
+            
+            return null;
+        }
+
+        /// <summary>
         /// チケットにウォッチャーを追加（非同期版）
         /// </summary>
         /// <param name="issueId">チケットID</param>
