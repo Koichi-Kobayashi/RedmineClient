@@ -188,56 +188,54 @@ namespace RedmineClient.ViewModels.Pages
         /// <summary>
         /// 指定されたタスクのすべての先行タスクを削除し、Redmineからも削除
         /// </summary>
-        public async Task RemoveAllPredecessorsAsync(WbsSampleTask task)
+        public Task RemoveAllPredecessorsAsync(WbsSampleTask task)
         {
-            if (task == null || task.Preds.Count == 0) return;
+            if (task == null || task.Preds.Count == 0) return Task.CompletedTask;
 
             // 現在の先行関係をバックアップ（失敗時にロールバックするため）
             var backup = task.Preds.ToList();
 
-            try
+            // 先行タスクをすべて削除（UI上の変更は即座に実行）
+            task.Preds.Clear();
+            OnPropertyChanged(nameof(Tasks));
+
+            // Redmineからも依存関係を削除（バックグラウンドで実行、失敗してもUIは保持）
+            if (int.TryParse(task.WbsNo, out var succId) && 
+                !string.IsNullOrEmpty(AppConfig.RedmineHost) && 
+                !string.IsNullOrEmpty(AppConfig.ApiKey))
             {
-                // 先行タスクをすべて削除
-                task.Preds.Clear();
-                OnPropertyChanged(nameof(Tasks));
-
-                // Redmineからも依存関係を削除
-                if (!int.TryParse(task.WbsNo, out var succId)) return;
-                if (string.IsNullOrEmpty(AppConfig.RedmineHost) || string.IsNullOrEmpty(AppConfig.ApiKey)) return;
-
-                using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
-                
-                // 各先行タスクとの関係を削除
-                foreach (var pred in backup)
+                _ = Task.Run(async () =>
                 {
-                    if (int.TryParse(pred.PredId, out var predId))
+                    try
                     {
-                        try
+                        using var svc = new RedmineService(AppConfig.RedmineHost, AppConfig.ApiKey);
+                        
+                        // 各先行タスクとの関係を削除
+                        foreach (var pred in backup)
                         {
-                            await svc.DeleteIssueRelationAsync(predId, succId, Redmine.Net.Api.Types.IssueRelationType.Precedes);
-                        }
-                        catch (Exception ex)
-                        {
-                            // 個別の削除に失敗しても処理を継続
-                            System.Diagnostics.Debug.WriteLine($"Failed to delete relation {predId} -> {succId}: {ex.Message}");
+                            if (int.TryParse(pred.PredId, out var predId))
+                            {
+                                try
+                                {
+                                    await svc.DeleteIssueRelationAsync(predId, succId, Redmine.Net.Api.Types.IssueRelationType.Precedes);
+                                }
+                                catch (Exception ex)
+                                {
+                                    // 個別の削除に失敗しても処理を継続
+                                    System.Diagnostics.Debug.WriteLine($"Failed to delete relation {predId} -> {succId}: {ex.Message}");
+                                }
+                            }
                         }
                     }
-                }
+                    catch (Exception ex)
+                    {
+                        // Redmineの同期に失敗してもUIの変更は保持
+                        System.Diagnostics.Debug.WriteLine($"Failed to sync to Redmine: {ex.Message}");
+                    }
+                });
             }
-            catch (Exception ex)
-            {
-                // 失敗時はロールバック
-                task.Preds.Clear();
-                foreach (var pred in backup)
-                {
-                    task.Preds.Add(pred);
-                }
-                OnPropertyChanged(nameof(Tasks));
-
-                throw new RedmineClient.Services.RedmineApiException(
-                    "先行タスクの削除に失敗しました。ネットワーク、APIキー、権限、Redmineの状態を確認してください。",
-                    ex);
-            }
+            
+            return Task.CompletedTask;
         }
 
         public void ApplyStartConstraint(WbsSampleTask task, int newEs)

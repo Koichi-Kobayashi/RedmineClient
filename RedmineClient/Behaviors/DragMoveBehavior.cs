@@ -114,6 +114,8 @@ namespace RedmineClient.Behaviors
                 {
                     case DragKind.Move:
                         _task.ES = System.Math.Max(0, _startEs + delta);
+                        // 日付を更新
+                        UpdateTaskDates(_task);
                         break;
                     case DragKind.ResizeStart:
                         {
@@ -121,12 +123,16 @@ namespace RedmineClient.Behaviors
                             int newDuration = System.Math.Max(1, _startDuration - (newEs - _startEs));
                             _task.ES = newEs;
                             _task.Duration = newDuration;
+                            // 日付を更新
+                            UpdateTaskDates(_task);
                             break;
                         }
                     case DragKind.ResizeEnd:
                         {
                             int newDuration = System.Math.Max(1, _startDuration + delta);
                             _task.Duration = newDuration;
+                            // 日付を更新
+                            UpdateTaskDates(_task);
                             break;
                         }
                 }
@@ -231,6 +237,19 @@ namespace RedmineClient.Behaviors
                 }
                 cur = VisualTreeHelper.GetParent(cur);
             }
+        }
+        
+        private static void UpdateTaskDates(WbsSampleTask task)
+        {
+            if (task == null) return;
+            
+            // ES/Duration から日付を計算
+            var start = task.BaseDate.AddDays(task.ES);
+            var due = start.AddDays(System.Math.Max(1, task.Duration) - 1);
+            
+            // 日付プロパティを更新
+            task.StartDate = start;
+            task.DueDate = due;
         }
     }
 }

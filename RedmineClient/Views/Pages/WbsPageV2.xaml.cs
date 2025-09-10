@@ -385,20 +385,23 @@ namespace RedmineClient.Views.Pages
 
                     if (result == MessageBoxResult.Yes)
                     {
-                        try
-                        {
-                            await ViewModel.RemoveAllPredecessorsAsync(task);
-                            // 矢印を再描画
-                            DrawArrows();
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Windows.MessageBox.Show(
-                                ex.Message,
-                                "先行タスク削除エラー",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
-                        }
+                    try
+                    {
+                        await ViewModel.RemoveAllPredecessorsAsync(task);
+                        // 矢印を再描画
+                        DrawArrows();
+                    }
+                    catch (Exception ex)
+                    {
+                        // エラーが発生してもUIの変更は既に完了しているので、警告のみ表示
+                        System.Diagnostics.Debug.WriteLine($"Predecessor deletion error: {ex.Message}");
+                        System.Windows.MessageBox.Show(
+                            "先行タスクの削除は完了しましたが、Redmineサーバーとの同期でエラーが発生しました。\n" +
+                            "ネットワーク接続とRedmineの設定を確認してください。",
+                            "先行タスク削除完了（同期エラー）",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
                     }
                 }
                 else
