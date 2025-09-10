@@ -209,14 +209,14 @@ namespace RedmineClient.Behaviors
                     
                     // クリック時もマウス位置に応じてカーソルを設定
                     var clickPos = Mouse.GetPosition(fe);
-                    double width = fe.ActualWidth;
-                    double x = clickPos.X;
+                    double clickWidth = fe.ActualWidth;
+                    double clickX = clickPos.X;
                     
-                    if (x <= EDGE_HANDLE_WIDTH)
+                    if (clickX <= EDGE_HANDLE_WIDTH)
                     {
                         fe.Cursor = Cursors.SizeWE; // 左端：開始位置リサイズ
                     }
-                    else if (x >= width - EDGE_HANDLE_WIDTH)
+                    else if (clickX >= clickWidth - EDGE_HANDLE_WIDTH)
                     {
                         fe.Cursor = Cursors.SizeWE; // 右端：終了位置リサイズ
                     }
