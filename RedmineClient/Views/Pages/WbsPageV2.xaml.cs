@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using RedmineClient.Models;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace RedmineClient.Views.Pages
 {
@@ -26,6 +27,8 @@ namespace RedmineClient.Views.Pages
         private void Recalc_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.Recalculate();
+            // 矢印を再描画
+            DrawArrows();
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -33,6 +36,11 @@ namespace RedmineClient.Views.Pages
             if (e.PropertyName == nameof(WbsV2ViewModel.ShowScheduleColumns))
             {
                 UpdateScheduleColumnsVisibility(ViewModel.ShowScheduleColumns);
+            }
+            else if (e.PropertyName == nameof(WbsV2ViewModel.Tasks))
+            {
+                // タスクが変更された時に矢印を再描画
+                DrawArrows();
             }
         }
 
@@ -245,6 +253,9 @@ namespace RedmineClient.Views.Pages
                     new MouseWheelEventHandler(RightScroll_PreviewMouseWheel),
                     true);
             }
+            
+            // 矢印を描画
+            DrawArrows();
         }
 
         // 右ペイン ItemsControl 側でホイール発生時に親ScrollViewerへ委譲
@@ -318,6 +329,8 @@ namespace RedmineClient.Views.Pages
                     try
                     {
                         await ViewModel.SetPredecessorAsync(source, target);
+                        // 矢印を再描画
+                        DrawArrows();
                     }
                     catch (Exception ex)
                     {
@@ -341,6 +354,61 @@ namespace RedmineClient.Views.Pages
             }
         }
 
+        // 先行タスク列のクリックイベント（ダブルクリック検出）
+        private DateTime _lastClickTime = DateTime.MinValue;
+        private const int DoubleClickThresholdMs = 500; // 500ms以内の連続クリックをダブルクリックとみなす
+
+        private async void PredecessorCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is WbsSampleTask task)
+            {
+                var currentTime = DateTime.Now;
+                var timeSinceLastClick = (currentTime - _lastClickTime).TotalMilliseconds;
+                
+                if (timeSinceLastClick <= DoubleClickThresholdMs)
+                {
+                    // ダブルクリック検出
+                    _lastClickTime = DateTime.MinValue; // リセット
+                    
+                    if (task.Preds.Count == 0)
+                    {
+                        // 先行タスクがない場合は何もしない
+                        return;
+                    }
+
+                    // 確認ダイアログを表示
+                    var result = System.Windows.MessageBox.Show(
+                        $"「{task.Name}」の先行タスクをすべて削除しますか？",
+                        "先行タスク削除確認",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        try
+                        {
+                            await ViewModel.RemoveAllPredecessorsAsync(task);
+                            // 矢印を再描画
+                            DrawArrows();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Windows.MessageBox.Show(
+                                ex.Message,
+                                "先行タスク削除エラー",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                        }
+                    }
+                }
+                else
+                {
+                    // シングルクリック
+                    _lastClickTime = currentTime;
+                }
+            }
+        }
+
         // ヘルパー: 祖先探索
         private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
         {
@@ -350,6 +418,81 @@ namespace RedmineClient.Views.Pages
                 current = System.Windows.Media.VisualTreeHelper.GetParent(current);
             }
             return null;
+        }
+
+        private Canvas? _arrowCanvas;
+
+        private void DrawArrows()
+        {
+            if (ViewModel?.Tasks == null) return;
+
+            // 既存の矢印をクリア
+            if (_arrowCanvas != null)
+            {
+                var parent = _arrowCanvas.Parent as Panel;
+                parent?.Children.Remove(_arrowCanvas);
+            }
+
+            // 新しいCanvasを作成
+            _arrowCanvas = new Canvas { Background = Brushes.Transparent };
+
+            // 矢印を描画
+            foreach (var task in ViewModel.Tasks)
+            {
+                foreach (var pred in task.Preds)
+                {
+                    var sourceTask = ViewModel.Tasks.FirstOrDefault(t => t.WbsNo == pred.PredId);
+                    if (sourceTask != null)
+                    {
+                        DrawArrow(sourceTask, task, ViewModel.DayWidth);
+                    }
+                }
+            }
+
+            // 右側のScrollViewerに矢印Canvasを追加
+            if (RightScroll?.Content is Grid grid)
+            {
+                grid.Children.Insert(0, _arrowCanvas); // 背景に配置
+            }
+        }
+
+        private void DrawArrow(WbsSampleTask sourceTask, WbsSampleTask targetTask, double dayWidth)
+        {
+            if (_arrowCanvas == null) return;
+
+            // ソースタスクの終了位置
+            var sourceX = sourceTask.ES * dayWidth + (sourceTask.Duration * dayWidth);
+            var sourceY = sourceTask.RowIndex * 28 + 14;
+
+            // ターゲットタスクの開始位置
+            var targetX = targetTask.ES * dayWidth;
+            var targetY = targetTask.RowIndex * 28 + 14;
+
+            // 矢印の線
+            var line = new Line
+            {
+                X1 = sourceX,
+                Y1 = sourceY,
+                X2 = targetX,
+                Y2 = targetY,
+                Stroke = Brushes.Blue,
+                StrokeThickness = 2
+            };
+
+            // 矢印の頭
+            var arrowHead = new Polygon
+            {
+                Fill = Brushes.Blue,
+                Points = new PointCollection
+                {
+                    new Point(targetX, targetY),
+                    new Point(targetX - 8, targetY - 4),
+                    new Point(targetX - 8, targetY + 4)
+                }
+            };
+
+            _arrowCanvas.Children.Add(line);
+            _arrowCanvas.Children.Add(arrowHead);
         }
     }
 }
