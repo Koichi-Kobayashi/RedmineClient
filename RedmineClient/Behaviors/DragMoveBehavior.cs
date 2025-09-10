@@ -77,6 +77,11 @@ namespace RedmineClient.Behaviors
             if (_vm == null || _task == null) return;
             if (s is FrameworkElement fe)
             {
+                // ドラッグ中はイベントを処理済みとしてマーク
+                if (_dragging)
+                {
+                    e.Handled = true;
+                }
                 // ドラッグしていないときは最小距離チェックしてドラッグ開始
                 if (!_dragging)
                 {
@@ -92,6 +97,29 @@ namespace RedmineClient.Behaviors
                         {
                             _dragging = true;
                             fe.CaptureMouse();
+                            
+                            // ドラッグ開始時に視覚的フィードバックを提供
+                            if (fe is Border border)
+                            {
+                                // ドラッグ中のスタイルを適用
+                                border.Opacity = 0.8; // 少し透明にする
+                                border.BorderBrush = System.Windows.Media.Brushes.Orange; // オレンジ色のボーダー
+                                border.BorderThickness = new Thickness(2);
+                            }
+                            
+                            // ドラッグ開始時に適切なカーソルを設定
+                            switch (_dragKind)
+                            {
+                                case DragKind.Move:
+                                    fe.Cursor = Cursors.Hand; // 移動用の手カーソル
+                                    break;
+                                case DragKind.ResizeStart:
+                                    fe.Cursor = Cursors.SizeWE; // 左端リサイズ
+                                    break;
+                                case DragKind.ResizeEnd:
+                                    fe.Cursor = Cursors.SizeWE; // 右端リサイズ
+                                    break;
+                            }
                             Debug.WriteLine($"[DragMoveBehavior] OnMove: Drag started");
                         }
                         else
@@ -128,6 +156,20 @@ namespace RedmineClient.Behaviors
                 int delta = (int)System.Math.Round(dx / _vm.DayWidth);
                 if (delta == _lastDelta) return; // 変化がある時だけ更新してチラつきを抑制
                 _lastDelta = delta;
+                
+                // ドラッグ中も適切なカーソルを維持
+                switch (_dragKind)
+                {
+                    case DragKind.Move:
+                        fe.Cursor = Cursors.Hand; // 移動用の手カーソル
+                        break;
+                    case DragKind.ResizeStart:
+                        fe.Cursor = Cursors.SizeWE; // 左端リサイズ
+                        break;
+                    case DragKind.ResizeEnd:
+                        fe.Cursor = Cursors.SizeWE; // 右端リサイズ
+                        break;
+                }
 
                 switch (_dragKind)
                 {
@@ -207,6 +249,14 @@ namespace RedmineClient.Behaviors
                     Debug.WriteLine($"[DragMoveBehavior] OnUp: Click detected, no action");
                     _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture();
                     
+                    // クリック時は元のスタイルに戻す
+                    if (fe is Border clickBorder)
+                    {
+                        clickBorder.Opacity = 1.0; // 不透明度を元に戻す
+                        clickBorder.BorderBrush = System.Windows.Media.Brushes.Black; // ボーダーを元の色に戻す
+                        clickBorder.BorderThickness = new Thickness(1); // ボーダーの太さを元に戻す
+                    }
+                    
                     // クリック時もマウス位置に応じてカーソルを設定
                     var clickPos = Mouse.GetPosition(fe);
                     double clickWidth = fe.ActualWidth;
@@ -271,6 +321,14 @@ namespace RedmineClient.Behaviors
                 });
 
                 _dragging=false; _dragKind = DragKind.None; fe.ReleaseMouseCapture();
+                
+                // ドラッグ終了時に元のスタイルに戻す
+                if (fe is Border border)
+                {
+                    border.Opacity = 1.0; // 不透明度を元に戻す
+                    border.BorderBrush = System.Windows.Media.Brushes.Black; // ボーダーを元の色に戻す
+                    border.BorderThickness = new Thickness(1); // ボーダーの太さを元に戻す
+                }
                 
                 // ドラッグ終了後はマウス位置に応じてカーソルを設定
                 var finalPos = Mouse.GetPosition(fe);

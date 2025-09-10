@@ -266,7 +266,8 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border
-                                Height="18" MinWidth="10" beh:DragMoveBehavior.IsEnabled="True"
+                                Height="18" MinWidth="10" AllowDrop="False"
+                                beh:DragMoveBehavior.IsEnabled="True"
                                 beh:DragDropDependencyBehavior.IsEnabled="True"
                                 Background="{Binding IsCritical, Converter={StaticResource CriticalBrush}}"
                                 CornerRadius="4"
